@@ -3,13 +3,15 @@ name: Convert Excel to HTML
 on:
   push:
     paths:
-      # ⭐ File Excel: input.xlsx + 1060.xlsx (đặt trong data/)
+      # ⭐ File Excel: input.xlsx + Giao_tiếp.xlsx (đặt trong data/)
       - 'data/**'
       # File chuyên ngành
       - 'scripts/data/**'
       # Code Python
       - 'scripts/**/*.py'
       - 'scripts/config.json'
+      # ⭐ FIX.PY — chạy sau convert.py để thêm tab từ data/
+      - 'fix.py'
       - 'requirements.txt'
       # Workflow tự nó
       - '.github/workflows/convert.yml'
@@ -41,7 +43,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install openpyxl cn2an pypinyin jieba
+          pip install openpyxl cn2an pypinyin jieba pandas
 
       - name: Verify dependencies
         run: |
@@ -49,19 +51,20 @@ jobs:
           python -c "import cn2an;   print('✅ cn2an', cn2an.__version__)"
           python -c "import pypinyin; print('✅ pypinyin', pypinyin.__version__)"
           python -c "import jieba;   print('✅ jieba OK')"
+          python -c "import pandas;  print('✅ pandas', pandas.__version__)"
 
       - name: List files
         run: |
           echo "=== Root ==="
           ls -la
           echo ""
-          echo "=== data/ ==="
+          echo "=== data/ (cho fix.py) ==="
           ls -la data/ || echo "No data folder"
           echo ""
           echo "=== scripts/ ==="
           ls -la scripts/
           echo ""
-          echo "=== scripts/data/ ==="
+          echo "=== scripts/data/ (cho convert.py) ==="
           ls -la scripts/data/ || echo "No scripts/data folder"
 
       - name: Test cn2an conversion
@@ -76,43 +79,144 @@ jobs:
       - name: Pre-flight check
         run: python scripts/check.py
 
-      - name: Run convert script
+      # ═══════════════════════════════════════════════════════════════
+      #  BƯỚC 1: Build index.html gốc (tổng hợp + chuyên ngành)
+      # ═══════════════════════════════════════════════════════════════
+      - name: Run convert script (build gốc)
         run: python scripts/convert.py
 
-      - name: Verify index.html
+      # ═══════════════════════════════════════════════════════════════
+      #  VERIFY sau convert — CHỈ check những gì BẮT BUỘC phải có
+      # ═══════════════════════════════════════════════════════════════
+      - name: Verify index.html after convert
         run: |
           if [ ! -f index.html ]; then
-            echo "❌ ERROR: index.html not found"
+            echo "❌ ERROR: index.html not found after convert.py"
             exit 1
           fi
+
           SIZE=$(stat -c%s index.html)
-          echo "index.html size: $SIZE bytes"
+          echo "📦 index.html size: $SIZE bytes"
           echo ""
-          echo "Checking required elements:"
-          for el in renewalModal grantTrialIfNew dropdownRenewBtn tiktokBar zaloBtn initRenewalUI RAW_DATA; do
+
+          # ─── Ngưỡng kích thước tối thiểu (tránh file rỗng) ───
+          if [ "$SIZE" -lt 500000 ]; then
+            echo "❌ index.html quá nhỏ (< 500KB) — có thể lỗi build"
+            exit 1
+          fi
+          echo "✅ Size OK (> 500KB)"
+          echo ""
+
+          # ─── Core infrastructure — BẮT BUỘC ───
+          echo "=== Check core infrastructure (BẮT BUỘC) ==="
+          REQUIRED=(
+            "RAW_DATA"
+            "DATASET_REGISTRY"
+            "FIREBASE_CONFIG"
+            "firebase-app-compat"
+            "CURRENT_DATASET"
+          )
+          for el in "${REQUIRED[@]}"; do
             if grep -q "$el" index.html; then
               echo "  ✅ $el"
             else
               echo "  ❌ MISSING $el"
-            fi
-          done
-
-      - name: Verify datasets loaded
-        run: |
-          echo "=== Kiểm tra bộ dữ liệu trong index.html ==="
-          for ds in tonghop giaotiep; do
-            if grep -q "\"$ds\"" index.html; then
-              echo "  ✅ dataset '$ds' found"
-            else
-              echo "  ⚠️  dataset '$ds' MISSING"
+              exit 1
             fi
           done
           echo ""
-          echo "=== Kiểm tra tab Giao tiếp ==="
-          if grep -q "dsGiaotiepBtn" index.html; then
-            echo "  ✅ Nút Giao tiếp (dsGiaotiepBtn) found"
+
+          # ─── HTML structure — thẻ script phải cân bằng ───
+          echo "=== Check HTML structure ==="
+          OPEN_SCRIPT=$(grep -o "<script" index.html | wc -l)
+          CLOSE_SCRIPT=$(grep -o "</script>" index.html | wc -l)
+          echo "  <script>: $OPEN_SCRIPT"
+          echo "  </script>: $CLOSE_SCRIPT"
+          if [ "$OPEN_SCRIPT" -ne "$CLOSE_SCRIPT" ]; then
+            echo "  ❌ Số thẻ script KHÔNG khớp!"
+            exit 1
+          fi
+          echo "  ✅ Thẻ script cân bằng"
+          echo ""
+
+          # ─── Optional features — WARNING only, KHÔNG fail ───
+          echo "=== Check optional features (warning) ==="
+          OPTIONAL=(
+            "renewalModal"
+            "dropdownRenewBtn"
+            "tiktokBar"
+            "zaloBtn"
+            "grantTrialIfNew"
+            "initRenewalUI"
+          )
+          for el in "${OPTIONAL[@]}"; do
+            if grep -q "$el" index.html; then
+              echo "  ✅ $el"
+            else
+              echo "  ⚠️  $el not found (có thể không cần)"
+            fi
+          done
+
+      # ═══════════════════════════════════════════════════════════════
+      #  BƯỚC 2: Patch — thêm tab riêng cho MỌI file trong data/
+      # ═══════════════════════════════════════════════════════════════
+      - name: Run fix.py (thêm tab từ data/)
+        run: |
+          if [ -f fix.py ]; then
+            python fix.py
           else
-            echo "  ❌ Nút Giao tiếp MISSING"
+            echo "ℹ️  Không có fix.py — bỏ qua bước patch"
+          fi
+
+      # ═══════════════════════════════════════════════════════════════
+      #  VERIFY sau patch
+      # ═══════════════════════════════════════════════════════════════
+      - name: Verify datasets loaded
+        run: |
+          echo "=== Kiểm tra bộ dữ liệu trong index.html ==="
+
+          # Dataset gốc (convert.py tạo)
+          if grep -q '"tonghop"' index.html; then
+            echo "  ✅ dataset 'tonghop' found"
+          else
+            echo "  ❌ dataset 'tonghop' MISSING"
+            exit 1
+          fi
+
+          echo ""
+          echo "=== Kiểm tra file trong data/ ==="
+          if [ -d "data" ]; then
+            FOUND=0
+            for f in data/*.xlsx data/*.xls data/*.csv; do
+              [ -e "$f" ] || continue
+              FNAME=$(basename "$f")
+              case "$FNAME" in
+                ~\$*) continue ;;
+              esac
+              echo "  📄 File: $FNAME"
+              FOUND=$((FOUND + 1))
+            done
+            if [ $FOUND -eq 0 ]; then
+              echo "  ℹ️  Không có file Excel nào trong data/"
+            fi
+          else
+            echo "  ℹ️  Không có thư mục data/"
+          fi
+
+          # Kiểm tra tab Giao tiếp (nếu có file)
+          if [ -f "data/Giao_tiếp.xlsx" ] || [ -f "data/giao-tiep.xlsx" ] || [ -f "data/Giao_tiep.xlsx" ]; then
+            if grep -q '"giaotiep"' index.html; then
+              echo "  ✅ Tab 'Giao Tiếp' (dataset id 'giaotiep') found"
+            else
+              echo "  ⚠️  Tab 'Giao Tiếp' MISSING — kiểm tra log fix.py"
+            fi
+          fi
+
+          # Kiểm tra CSS override auto-fit từ fix.py
+          if grep -q 'FIX.PY: AUTO-FIT LAYOUT' index.html; then
+            echo "  ✅ CSS override từ fix.py có mặt"
+          else
+            echo "  ℹ️  Không có CSS override (có thể do data/ trống)"
           fi
 
       - name: Verify numbers converted
@@ -129,6 +233,9 @@ jobs:
             echo "⚠️  Không tìm thấy '四百八十'"
           fi
 
+      # ═══════════════════════════════════════════════════════════════
+      #  COMMIT & PUSH
+      # ═══════════════════════════════════════════════════════════════
       - name: Commit & push index.html
         run: |
           git config user.name "github-actions[bot]"
@@ -142,10 +249,25 @@ jobs:
             git push origin HEAD:${{ github.ref_name }}
           fi
 
+      # ═══════════════════════════════════════════════════════════════
+      #  UPLOAD ARTIFACT (chỉ file cần thiết cho Pages)
+      # ═══════════════════════════════════════════════════════════════
+      - name: Prepare Pages artifact
+        run: |
+          mkdir -p _site
+          cp index.html _site/
+          # Copy thêm assets nếu có
+          [ -d "assets" ] && cp -r assets _site/ || true
+          [ -d "static" ] && cp -r static _site/ || true
+          # 404 cho SPA (nếu cần)
+          [ -f "404.html" ] && cp 404.html _site/ || true
+          echo "=== Artifact contents ==="
+          ls -la _site/
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: '_site'
 
   deploy:
     needs: convert
