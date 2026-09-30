@@ -83,7 +83,7 @@
     "onboarding": {
         "demo": {
             "enabled": true,
-            "max_questions": 80,
+            "max_questions": 30,
             "hsk_allowed": [1, 2, 3],
             "topics_per_user": 5,
             "title": "Bạn quan tâm chủ đề nào?",
@@ -91,7 +91,7 @@
         },
         "trial": {
             "enabled": true,
-            "max_questions": 250,
+            "max_questions": 120,
             "hsk_allowed": [1, 2, 3, 4, 5],
             "topics_per_user": 12,
             "title": "Bạn quan tâm chủ đề nào?",
