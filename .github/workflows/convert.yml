@@ -165,7 +165,7 @@ jobs:
           if [ -f fix.py ]; then
             python fix.py
           else
-            echo "ℹ️  Không có fix.py — bỏ qua bước patch"
+            echo "ℹ️️  Không có fix.py — bỏ qua bước patch"
           fi
 
       # ═══════════════════════════════════════════════════════════════
@@ -197,7 +197,7 @@ jobs:
               FOUND=$((FOUND + 1))
             done
             if [ $FOUND -eq 0 ]; then
-              echo "  ℹ️  Không có file Excel nào trong data/"
+              echo "  ℹ️️  Không có file Excel nào trong data/"
             fi
           else
             echo "  ℹ️  Không có thư mục data/"
@@ -250,16 +250,14 @@ jobs:
           fi
 
       # ═══════════════════════════════════════════════════════════════
-      #  UPLOAD ARTIFACT (chỉ file cần thiết cho Pages)
+      #  UPLOAD ARTIFACT (Duy nhất 1 bước chuẩn bị & upload cho Pages)
       # ═══════════════════════════════════════════════════════════════
       - name: Prepare Pages artifact
         run: |
           mkdir -p _site
           cp index.html _site/
-          # Copy thêm assets nếu có
           [ -d "assets" ] && cp -r assets _site/ || true
           [ -d "static" ] && cp -r static _site/ || true
-          # 404 cho SPA (nếu cần)
           [ -f "404.html" ] && cp 404.html _site/ || true
           echo "=== Artifact contents ==="
           ls -la _site/
