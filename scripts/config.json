@@ -12,8 +12,8 @@
     "tiktok_avatar": "https://i.postimg.cc/QBD0vj6C/IMG-6296.jpg",
     "tiktok_url": "https://www.tiktok.com/@thaonoizhongwen",
 
-    "demo_limit": 60,
-    "demo_daily_limit": 100,
+    "demo_limit": 30,
+    "demo_daily_glimit": 50,
     "demo_hsk_max": 3,
 
     "trial_days": 3,
