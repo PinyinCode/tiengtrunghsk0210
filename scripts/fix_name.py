@@ -37,6 +37,7 @@ PATCH_CSS = """
     display: inline !important;
     color: inherit !important;
     opacity: .75 !important;
+    margin: 0 0.3em !important;
 }
 .ds-sub-btn .ds-sub-name.wrapped .c1 {
     display: block !important;
@@ -45,6 +46,9 @@ PATCH_CSS = """
 .ds-sub-btn .ds-sub-name.wrapped .c2 {
     display: block !important;
     white-space: nowrap !important;
+}
+.ds-sub-btn .ds-sub-name.wrapped .dash {
+    margin: 0 0 0 0.3em !important;
 }
 .ds-sub-btn .ds-sub-name.single {
     display: block !important;
@@ -113,7 +117,7 @@ PATCH_JS = """
 
             var d = document.createElement('span');
             d.className = 'dash';
-            d.textContent = ' -';
+            d.textContent = '-';
             s1.appendChild(d);
 
             spanEl.appendChild(s1);
