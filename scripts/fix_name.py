@@ -1,21 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-fix_name.py — Patch tên tab xuống dòng thông minh + tự thu nhỏ font.
+fix_name.py — Patch tên tab xuống dòng + tự thu nhỏ font.
 
-QUY TẮC:
-  - Dấu "-" chia tên thành 2 CỤM
-  - VD: "Tổ trưởng - Quản lí sản xuất"
-        → cụm 1 = "Tổ trưởng", cụm 2 = "Quản lí sản xuất"
-  - Đủ chỗ → 1 dòng: "Tổ trưởng - Quản lí sản xuất"
-  - Không đủ → 2 dòng:
-        Tổ trưởng -
-        Quản lí sản xuất
-  - Cụm 2 tự động thu nhỏ font để luôn vừa 1 dòng
+CÁCH HOẠT ĐỘNG:
+  1. Patch JS render nameSpan (thêm class ds-sub-name + data-raw-name)
+  2. Thêm CSS dùng !important để thắng CSS cũ
+  3. Thêm JS ở CUỐI cùng → chạy sau JS cũ, ghi đè
 
-Cách chạy:
-    python scripts/convert.py
-    python fix.py
-    python fix_name.py
+KHÔNG cần xoá CSS/JS cũ — chỉ cần override.
 """
 import os
 import re
@@ -33,56 +25,64 @@ if not os.path.isfile(INDEX_HTML):
         sys.exit(1)
 
 
+# ═══════════════════════════════════════════════════════════════════
+#  CSS — DÙNG !important ĐỂ THẮNG CSS CŨ
+# ═══════════════════════════════════════════════════════════════════
 PATCH_CSS = r"""
 
+/* ==== FIX_NAME.PY — OVERRIDE CSS CŨ ==== */
+
 .ds-sub-btn .ds-sub-name {
-    flex: 1 1 auto;
-    min-width: 0;
-    display: block;
-    line-height: 1.35;
-    text-align: left;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    display: block !important;
+    line-height: 1.35 !important;
+    text-align: left !important;
 }
 
 .ds-sub-btn .ds-sub-name .c1 {
-    display: inline;
-    white-space: nowrap;
+    display: inline !important;
+    white-space: nowrap !important;
 }
 
 .ds-sub-btn .ds-sub-name .c2 {
-    display: inline;
-    white-space: nowrap;
+    display: inline !important;
+    white-space: nowrap !important;
 }
 
 .ds-sub-btn .ds-sub-name .dash {
-    display: inline;
-    color: inherit;
-    opacity: .75;
+    display: inline !important;
+    color: inherit !important;
+    opacity: .75 !important;
 }
 
 .ds-sub-btn .ds-sub-name.wrapped .c1 {
-    display: block;
-    white-space: nowrap;
+    display: block !important;
+    white-space: nowrap !important;
 }
 
 .ds-sub-btn .ds-sub-name.wrapped .c2 {
-    display: block;
-    white-space: nowrap;
-    font-size: 1em;
+    display: block !important;
+    white-space: nowrap !important;
+    font-size: 1em !important;
 }
 
 .ds-sub-btn .ds-sub-name.single {
-    display: block;
-    white-space: normal;
-    overflow-wrap: anywhere;
+    display: block !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
 }
 """
 
 
+# ═══════════════════════════════════════════════════════════════════
+#  JS — CHẠY SAU CÙNG, GHI ĐÈ JS CŨ
+# ═══════════════════════════════════════════════════════════════════
 PATCH_JS = r"""
 (function() {
     'use strict';
 
-    var DEBUG = false;
+    var DEBUG = true;
 
     function splitNameByDash(name) {
         if (!name) return [name || '', ''];
@@ -124,7 +124,6 @@ PATCH_JS = r"""
         var c2 = parts[1];
 
         if (!c2) {
-            if (spanEl.__fixNameRendered === 'single') return;
             spanEl.classList.add('single');
             spanEl.classList.remove('wrapped');
             spanEl.textContent = c1;
@@ -170,7 +169,7 @@ PATCH_JS = r"""
         var isWrapped = (scrollH > lineH * 1.5);
 
         if (!isWrapped) {
-            if (DEBUG) console.log('[fix_name.py] SINGLE LINE:', raw);
+            if (DEBUG) console.log('[fix_name.py] SINGLE:', raw);
             return;
         }
 
@@ -193,58 +192,41 @@ PATCH_JS = r"""
                 var naturalWidth = c2b.getBoundingClientRect().width;
 
                 if (DEBUG) {
-                    console.log('[fix_name.py] Measure c2:', raw,
+                    console.log('[fix_name.py] c2 measure:',
                                 'natural=' + Math.round(naturalWidth),
-                                'available=' + Math.round(availableWidth));
+                                'avail=' + Math.round(availableWidth));
                 }
 
                 if (naturalWidth > availableWidth && availableWidth > 0) {
                     var ratio = availableWidth / naturalWidth;
+                    var baseFontSize = parseFloat(
+                        window.getComputedStyle(btn).fontSize
+                    ) || 14;
 
-                    if (ratio < 1) {
-                        var baseFontSize = parseFloat(
-                            window.getComputedStyle(btn).fontSize
-                        ) || 14;
+                    var newSize = baseFontSize * ratio * 0.95;
+                    var minSize = 9;
+                    if (newSize < minSize) newSize = minSize;
 
-                        var newSize = baseFontSize * ratio * 0.95;
-                        var minSize = 9;
+                    c2b.style.fontSize = newSize + 'px';
+                    c2b.style.letterSpacing = '-0.02em';
 
-                        if (newSize < minSize) newSize = minSize;
-
-                        c2b.style.fontSize = newSize + 'px';
-                        c2b.style.letterSpacing = '-0.02em';
-
-                        if (DEBUG) {
-                            console.log('[fix_name.py] SHRINK c2:',
-                                        baseFontSize + 'px ->',
-                                        newSize.toFixed(1) + 'px',
-                                        '(ratio=' + ratio.toFixed(2) + ')');
-                        }
-
-                        requestAnimationFrame(function() {
-                            var afterWidth = c2b.getBoundingClientRect().width;
-                            if (afterWidth > availableWidth) {
-                                var ratio2 = availableWidth / afterWidth;
-                                var newSize2 = newSize * ratio2 * 0.95;
-                                if (newSize2 < minSize) newSize2 = minSize;
-                                c2b.style.fontSize = newSize2 + 'px';
-                                c2b.style.letterSpacing = '-0.04em';
-                                if (DEBUG) {
-                                    console.log('[fix_name.py] SHRINK c2 pass2:',
-                                                newSize2.toFixed(1) + 'px');
-                                }
-                            }
-                        });
+                    if (DEBUG) {
+                        console.log('[fix_name.py] SHRINK:',
+                                    baseFontSize.toFixed(1) + 'px ->',
+                                    newSize.toFixed(1) + 'px');
                     }
                 }
             } catch(e) {
-                if (DEBUG) console.warn('[fix_name.py] measure c2:', e);
+                if (DEBUG) console.warn('[fix_name.py] error:', e);
             }
         });
     }
 
     function processAll() {
         var nodes = document.querySelectorAll('.ds-sub-name');
+        if (DEBUG && nodes.length > 0) {
+            console.log('[fix_name.py] processing', nodes.length, 'nodes');
+        }
         for (var i = 0; i < nodes.length; i++) {
             try {
                 processNameSpan(nodes[i]);
@@ -254,105 +236,57 @@ PATCH_JS = r"""
         }
     }
 
-    function scheduleProcess(delay) {
-        setTimeout(processAll, delay || 100);
-    }
+    // Chạy nhiều lần để chắc chắn DOM đã render
+    setTimeout(processAll, 200);
+    setTimeout(processAll, 600);
+    setTimeout(processAll, 1500);
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
-            scheduleProcess(100);
-            scheduleProcess(500);
+            setTimeout(processAll, 200);
         });
-    } else {
-        scheduleProcess(100);
-        scheduleProcess(500);
     }
 
-    var _timer = null;
-    if (typeof MutationObserver !== 'undefined') {
-        var observer = new MutationObserver(function() {
-            clearTimeout(_timer);
-            _timer = setTimeout(processAll, 150);
-        });
-        if (document.body) {
-            observer.observe(document.body, { childList: true, subtree: true });
+    // Reset khi click chuyên ngành
+    document.addEventListener('click', function(e) {
+        var target = e.target;
+        if (target && target.closest) {
+            if (target.closest('[data-dataset-group="chuyen-nganh"]')) {
+                setTimeout(processAll, 300);
+                setTimeout(processAll, 800);
+            }
         }
-    }
+    }, true);
 
-    var _resizeTimer = null;
     window.addEventListener('resize', function() {
-        clearTimeout(_resizeTimer);
-        _resizeTimer = setTimeout(function() {
+        setTimeout(function() {
             var nodes = document.querySelectorAll('.ds-sub-name');
             for (var i = 0; i < nodes.length; i++) {
                 nodes[i].__fixNameRendered = null;
             }
             processAll();
-        }, 250);
+        }, 300);
     });
 
-    document.addEventListener('click', function(e) {
-        var target = e.target;
-        if (!target) return;
-        if (target.closest &&
-            target.closest('[data-dataset-group="chuyen-nganh"]')) {
-            scheduleProcess(150);
-            scheduleProcess(400);
-        }
-    }, true);
-
-    if (DEBUG) console.log('[fix_name.py] Loaded');
+    console.log('[fix_name.py] JS loaded');
 })();
 """
 
 
 def main():
     print("=" * 62)
-    print("[fix_name.py] Patch ten tab -> xuong dong + tu thu nho font")
+    print("[fix_name.py] Patch ten tab")
     print("=" * 62)
 
     with open(INDEX_HTML, "r", encoding="utf-8") as f:
         html = f.read()
 
+    # ─── BƯỚC 1: Patch JS render nameSpan ───
     print("")
-    print("[BUOC 1] Xoa CSS cu (neu co)...")
-
-    css_old_patterns = [
-        r"\.ds-sub-btn \.ds-sub-name \.c1\s*\{[^}]*\}",
-        r"\.ds-sub-btn \.ds-sub-name \.c2\s*\{[^}]*\}",
-        r"\.ds-sub-btn \.ds-sub-name \.dash\s*\{[^}]*\}",
-        r"\.ds-sub-btn \.ds-sub-name\s*\{[^}]*\}",
-        r"\.ds-sub-btn \.ds-sub-name\.wrapped \.c1\s*\{[^}]*\}",
-        r"\.ds-sub-btn \.ds-sub-name\.wrapped \.c2\s*\{[^}]*\}",
-        r"\.ds-sub-btn \.ds-sub-name\.wrapped\.tight \.c2\s*\{[^}]*\}",
-        r"\.ds-sub-btn \.ds-sub-name\.single\s*\{[^}]*\}",
-    ]
-    for pat in css_old_patterns:
-        html = re.sub(pat, "", html)
-
-    print("   [OK] Da xoa CSS cu")
-
-    print("")
-    print("[BUOC 2] Xoa JS cu (neu co)...")
-
-    html = re.sub(
-        r"<script>\s*/\*\s*[═=]+\s*FIX_NAME[\s\S]*?</script>",
-        "",
-        html
-    )
-    html = re.sub(
-        r"<script>\s*\(function\(\)\s*\{\s*'use strict';\s*var DEBUG[\s\S]*?processNameSpan[\s\S]*?\}\)\(\);\s*</script>",
-        "",
-        html
-    )
-
-    print("   [OK] Da xoa JS cu (neu co)")
-
-    print("")
-    print("[BUOC 3] Patch JS render nameSpan...")
+    print("[1] Patch JS render nameSpan...")
 
     if "nameSpan.className = 'ds-sub-name'" in html:
-        print("   [skip] Da patch truoc do")
+        print("   [skip] Da patch")
     else:
         pat1 = re.compile(
             r"var\s+nameSpan\s*=\s*document\.createElement\(\s*['\"]span['\"]\s*\)\s*;"
@@ -375,30 +309,32 @@ def main():
         html, n1 = pat1.subn(replacement1, html, count=1)
 
         if n1 > 0:
-            print("   [OK] Da patch JS render nameSpan")
+            print("   [OK] Patched")
         else:
-            print("   [!] Khong tim thay pattern 'nameSpan'")
+            print("   [!] Khong tim thay pattern")
 
-    print("")
-    print("[BUOC 4] Them CSS moi...")
+    # ─── BƯỚC 2: Thêm CSS ───
+    them print("")
+    print("[2] Them JS CSS override...")
 
-    pat_style = re.compile(r"(\s*)(</style>)", re.MULTILINE)
-    html, n2 = pat_style.subn(r"\1" + PATCH_CSS + r"\1\2", html, count=1)
+    pat_style = re.compile(r")
+"(\s*)(</style>)",    re.MULTILINE)
+    html, n2 = pat_style.subn(r"\1" + PATCH_CSS + r"\ else:
+1\2", html, count=1)
     if n2 > 0:
-        print("   [OK] Da them CSS moi")
+        print("   [OK] Da them CSS")
     else:
         print("   [!] Khong tim thay </style>")
 
+    # ─── BƯỚC 3: Thêm JS ở CUỐI body ───
     print("")
-    print("[BUOC 5] Them JS moi...")
+    print("[3] Them JS o cuoi body...")
 
     js_block = "\n<script>\n" + PATCH_JS + "\n</script>\n"
     pat_body = re.compile(r"(\s*)(</body>)", re.MULTILINE)
     html, n3 = pat_body.subn(r"\1" + js_block + r"\1\2", html, count=1)
     if n3 > 0:
-        print("   [OK] Da them JS moi")
-    else:
-        print("   [X] Khong tim thay </body>")
+        print("   [OK] Da        print("   [X] Khong tim thay </body>")
         sys.exit(1)
 
     with open(INDEX_HTML, "w", encoding="utf-8") as f:
