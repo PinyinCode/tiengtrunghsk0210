@@ -4374,12 +4374,45 @@ function renderOnboardingTopics() {
     var cfg = getOnboardingConfig();
     var isUnlimited = !cfg || cfg.max_questions === -1 || cfg.max_questions === Infinity;
     var maxQ = (cfg && cfg.max_questions > 0) ? cfg.max_questions : getTierInfo().maxQuestions;
-    var maxPerTopic = isUnlimited ? Infinity : getMaxPerTopic(maxQ, RAW_DATA);
+
+    var allowedHsk;
+    if (cfg && cfg.hsk_allowed && cfg.hsk_allowed.length > 0) {
+        allowedHsk = cfg.hsk_allowed.map(function(n) { return 'HSK' + n; });
+    } else {
+        allowedHsk = getAllowedHskList();
+    }
+
+    // ⭐ Mở 50% số chủ đề (hardcode 0.5)
+    var UNLOCK_RATIO = 0.5;
+
+    var allTopicsFirstStt = {};
+    RAW_DATA.forEach(function(r) {
+        if (allowedHsk.indexOf(r.hsk) === -1) return;
+        var s = (r.subject || '').trim();
+        if (!s) return;
+        var stt = parseInt(r.stt);
+        if (isNaN(stt)) stt = 999999;
+        if (allTopicsFirstStt[s] === undefined || stt < allTopicsFirstStt[s]) {
+            allTopicsFirstStt[s] = stt;
+        }
+    });
+    var allTopicsList = Object.keys(allTopicsFirstStt);
+    var unlockedCount = Math.floor(allTopicsList.length * UNLOCK_RATIO);
+    if (unlockedCount < 1 && allTopicsList.length > 0) unlockedCount = 1;
+
+    var sortedAllTopics = allTopicsList.slice().sort(function(a, b) {
+        return (allTopicsFirstStt[a] || 0) - (allTopicsFirstStt[b] || 0);
+    });
+    var unlockedTopics = sortedAllTopics.slice(0, unlockedCount);
+
+    var maxPerTopic = isUnlimited ? Infinity :
+                      Math.max(1, Math.ceil(maxQ / Math.max(1, unlockedCount)));
 
     container.innerHTML = '';
     topics.forEach(function(t) {
+        var isUnlocked = isUnlimited || (unlockedTopics.indexOf(t.name) !== -1);
         var lockedInTopic = 0;
-        if (!isUnlimited && t.count > maxPerTopic) {
+        if (isUnlocked && !isUnlimited && t.count > maxPerTopic) {
             lockedInTopic = t.count - maxPerTopic;
         }
 
@@ -4387,30 +4420,47 @@ function renderOnboardingTopics() {
         btn.type = 'button';
         btn.className = 'onboarding-topic' + (_onboardingSelected[t.name] ? ' selected' : '');
         btn.dataset.topic = t.name;
-        btn.title = t.name + '\nTổng: ' + t.count + ' câu' +
-                    (lockedInTopic > 0
-                        ? '\n🔒 Còn ' + lockedInTopic + ' câu bị khoá (chỉ lấy tối đa ' + maxPerTopic + ' câu/chủ đề)'
-                        : '');
 
-        var nameSpan = document.createElement('span');
-        nameSpan.textContent = t.name.normalize ? t.name.normalize('NFC') : t.name;
-        btn.appendChild(nameSpan);
+        if (!isUnlocked) {
+            btn.classList.add('disabled');
+            btn.disabled = true;
+            btn.title = t.name + '\n🔒 Chủ đề này bị khoá\n(Không nằm trong ' +
+                        unlockedCount + '/' + allTopicsList.length + ' chủ đề được mở)';
 
-        var countSpan = document.createElement('span');
-        countSpan.className = 'count';
-        countSpan.textContent = t.count;
-        btn.appendChild(countSpan);
+            var nameSpan = document.createElement('span');
+            nameSpan.textContent = t.name.normalize ? t.name.normalize('NFC') : t.name;
+            btn.appendChild(nameSpan);
 
-        if (lockedInTopic > 0) {
-            var lockSpan = document.createElement('span');
-            lockSpan.className = 'topic-lock';
-            lockSpan.innerHTML = '<i class="fas fa-lock"></i>' + lockedInTopic;
-            btn.appendChild(lockSpan);
+            var lockCountSpan = document.createElement('span');
+            lockCountSpan.className = 'count';
+            lockCountSpan.innerHTML = '<i class="fas fa-lock" style="font-size:.7em"></i>';
+            btn.appendChild(lockCountSpan);
+        } else {
+            btn.title = t.name + '\nTổng: ' + t.count + ' câu' +
+                        (lockedInTopic > 0
+                            ? '\n🔒 Còn ' + lockedInTopic + ' câu bị khoá (chỉ lấy tối đa ' + maxPerTopic + ' câu)'
+                            : '');
+
+            var nameSpan2 = document.createElement('span');
+            nameSpan2.textContent = t.name.normalize ? t.name.normalize('NFC') : t.name;
+            btn.appendChild(nameSpan2);
+
+            var countSpan = document.createElement('span');
+            countSpan.className = 'count';
+            countSpan.textContent = t.count;
+            btn.appendChild(countSpan);
+
+            if (lockedInTopic > 0) {
+                var lockSpan = document.createElement('span');
+                lockSpan.className = 'topic-lock';
+                lockSpan.innerHTML = '<i class="fas fa-lock"></i>' + lockedInTopic;
+                btn.appendChild(lockSpan);
+            }
+
+            btn.addEventListener('click', function() {
+                onToggleOnboardingTopic(this.dataset.topic);
+            });
         }
-
-        btn.addEventListener('click', function() {
-            onToggleOnboardingTopic(this.dataset.topic);
-        });
 
         container.appendChild(btn);
     });
@@ -4635,6 +4685,7 @@ function applyOnboardingSelection(topics, scrollTop) {
     var maxQ = cfg.max_questions;
     var isUnlimitedQ = (maxQ === -1 || maxQ === Infinity);
 
+    // ⭐ HSK từ config
     var allowedHsk;
     if (cfg.hsk_allowed && Array.isArray(cfg.hsk_allowed) && cfg.hsk_allowed.length > 0) {
         allowedHsk = cfg.hsk_allowed.map(function(n) { return 'HSK' + n; });
@@ -4642,26 +4693,54 @@ function applyOnboardingSelection(topics, scrollTop) {
         allowedHsk = getAllowedHskList();
     }
 
+    // ⭐ Mở 50% số chủ đề (hardcode 0.5)
+    var UNLOCK_RATIO = 0.5;
+
+    // ⭐ Bước 1: Lấy TẤT CẢ chủ đề (theo HSK config)
+    var allTopicsFirstStt = {};
+    RAW_DATA.forEach(function(r) {
+        if (allowedHsk.indexOf(r.hsk) === -1) return;
+        var s = (r.subject || '').trim();
+        if (!s) return;
+        var stt = parseInt(r.stt);
+        if (isNaN(stt)) stt = 999999;
+        if (allTopicsFirstStt[s] === undefined || stt < allTopicsFirstStt[s]) {
+            allTopicsFirstStt[s] = stt;
+        }
+    });
+    var allTopicsList = Object.keys(allTopicsFirstStt);
+    var totalTopicsCount = allTopicsList.length;
+
+    // ⭐ Bước 2: Mở floor(N × 0.5) chủ đề (theo STT nhỏ nhất)
+    var unlockedCount = Math.floor(totalTopicsCount * UNLOCK_RATIO);
+    if (unlockedCount < 1 && totalTopicsCount > 0) unlockedCount = 1;
+
+    var sortedAllTopics = allTopicsList.slice().sort(function(a, b) {
+        return (allTopicsFirstStt[a] || 0) - (allTopicsFirstStt[b] || 0);
+    });
+    var unlockedTopics = sortedAllTopics.slice(0, unlockedCount);
+
+    // ⭐ Bước 3: Lọc pool
     var pool = RAW_DATA.filter(function(r) {
         if (allowedHsk.indexOf(r.hsk) === -1) return false;
         var s = (r.subject || '').trim();
-        return topics.indexOf(s) !== -1;
+        if (topics.indexOf(s) === -1) return false;
+        if (unlockedTopics.indexOf(s) === -1) return false;
+        return true;
     });
 
     pool.sort(function(a, b) {
-        var na = parseInt(a.stt) || 0;
-        var nb = parseInt(b.stt) || 0;
-        return na - nb;
+        return (parseInt(a.stt) || 0) - (parseInt(b.stt) || 0);
     });
 
     var final = [];
-
     if (isUnlimitedQ) {
         final = pool.slice();
     } else {
-        var maxPerTopic = getMaxPerTopic(maxQ, RAW_DATA);
-        var topicCount = {};
+        var maxPerTopic = Math.max(1, Math.ceil(maxQ / Math.max(1, unlockedCount)));
         var perHsk = Math.ceil(maxQ / allowedHsk.length);
+
+        var topicCount = {};
         var hskCount = {};
         allowedHsk.forEach(function(h) { hskCount[h] = 0; });
 
@@ -4693,35 +4772,34 @@ function applyOnboardingSelection(topics, scrollTop) {
     }
 
     final.sort(function(a, b) {
-        var na = parseInt(a.stt) || 0;
-        var nb = parseInt(b.stt) || 0;
-        return na - nb;
+        return (parseInt(a.stt) || 0) - (parseInt(b.stt) || 0);
     });
 
     window.__onboardingOverride = final;
+    window.__unlockedTopics = unlockedTopics;
 
-    // FIX: Chỉ reset filter + render khi thực sự cần
-    var needReset = scrollTop || !filtered || filtered.length === 0
-                    || (!state.search && !state.hsk && !state.subject);
-
-    if (needReset) {
-        state = { search:'', hsk:'', subject:'' };
-        if ($('searchInput')) $('searchInput').value = '';
-        if ($('hskFilter')) $('hskFilter').value = '';
-        if ($('subjectFilter')) $('subjectFilter').value = '';
-        if ($('clearSearchBtn')) $('clearSearchBtn').classList.remove('show');
-
-        filtered = final;
-        renderedCount = 0;
-        render(true);
+    if (typeof state !== 'undefined' && state) {
+        state.search = '';
+        state.hsk = '';
+        state.subject = '';
     }
+    try {
+        var si = document.getElementById('searchInput');
+        if (si) si.value = '';
+        var cb = document.getElementById('clearSearchBtn');
+        if (cb) cb.classList.remove('show');
+    } catch(e) {}
 
-    // FIX: Luôn vẽ lại banner (remove cũ + insert mới) để stats đúng tier hiện tại
-    showOnboardingActiveBanner(topics, final.length);
+    if (typeof applyFilter === 'function') applyFilter();
+    if (typeof updateResultCount === 'function') updateResultCount();
+
+    if (typeof showOnboardingActiveBanner === 'function') {
+        showOnboardingActiveBanner(topics, final.length);
+    }
 
     if (scrollTop) {
         setTimeout(function() {
-            var mainEl = $('mainContent');
+            var mainEl = document.getElementById('mainContent');
             if (mainEl) {
                 var yOffset = mainEl.getBoundingClientRect().top + window.scrollY - 100;
                 window.scrollTo({ top: yOffset, behavior: 'smooth' });
@@ -4729,7 +4807,6 @@ function applyOnboardingSelection(topics, scrollTop) {
         }, 200);
     }
 }
-
 /* ═══════════════════════════════════════════════════════════ */
 /* SỬA: ON CHANGE TOPICS CLICK — KHÔNG XÓA STORAGE NGAY         */
 /* ═══════════════════════════════════════════════════════════ */
