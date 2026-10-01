@@ -12,6 +12,8 @@ on:
       - 'scripts/config.json'
       # ⭐ FIX.PY — chạy sau convert.py để thêm tab từ data/
       - 'fix.py'
+      # ⭐ FIX_NAME.PY — chạy sau fix.py để patch tên tab xuống dòng
+      - 'fix_name.py'
       - 'requirements.txt'
       # Workflow tự nó
       - '.github/workflows/convert.yml'
@@ -143,13 +145,14 @@ jobs:
           echo "=== Check optional features (warning) ==="
           OPTIONAL=(
             "renewalModal"
-            "dropdownRenewBtn"
-            "tiktokBar"
-            "zaloBtn"
+           : "dropdownRenewBtn"
+            "tikt |
+okBar"
+            "zaloBtn         "
             "grantTrialIfNew"
-            "initRenewalUI"
+ if            "initRenewalUI"
           )
-          for el in "${OPTIONAL[@]}"; do
+ [          for el in "${OPTIONAL[@]}"; - do
             if grep -q "$el" index.html; then
               echo "  ✅ $el"
             else
@@ -161,11 +164,25 @@ jobs:
       #  BƯỚC 2: Patch — thêm tab riêng cho MỌI file trong data/
       # ═══════════════════════════════════════════════════════════════
       - name: Run fix.py (thêm tab từ data/)
-        run: |
-          if [ -f fix.py ]; then
+        runf fix.py ]; then
             python fix.py
           else
             echo "ℹ️️  Không có fix.py — bỏ qua bước patch"
+          fi
+
+      # ═══════════════════════════════════════════════════════════════
+      #  BƯỚC 3: Patch tên tab xuống dòng thông minh
+      # ═══════════════════════════════════════════════════════════════
+      - name: Run fix_name.py (patch tên tab xuống dòng)
+        run: |
+          if [ -f fix_name.py ]; then
+            echo "▶️  Chạy fix_name.py ở root..."
+            python fix_name.py
+          elif [ -f scripts/fix_name.py ]; then
+            echo "▶️  Chạy fix_name.py trong scripts/..."
+            python scripts/fix_name.py
+          else
+            echo "ℹ️️  Không có fix_name.py — bỏ qua bước patch tên tab"
           fi
 
       # ═══════════════════════════════════════════════════════════════
@@ -217,6 +234,27 @@ jobs:
             echo "  ✅ CSS override từ fix.py có mặt"
           else
             echo "  ℹ️  Không có CSS override (có thể do data/ trống)"
+          fi
+
+          # ⭐ Kiểm tra patch fix_name.py
+          echo ""
+          echo "=== Kiểm tra patch fix_name.py ==="
+          if grep -q 'FIX_NAME.PY' index.html; then
+            echo "  ✅ Marker 'FIX_NAME.PY' found"
+          else
+            echo "  ⚠️  Không tìm thấy marker 'FIX_NAME.PY' — có thể fix_name.py chưa chạy"
+          fi
+
+          if grep -q 'ds-sub-name' index.html; then
+            echo "  ✅ Class 'ds-sub-name' found"
+          else
+            echo "  ⚠️  Không tìm thấy class 'ds-sub-name'"
+          fi
+
+          if grep -q 'processNameSpan' index.html; then
+           . echo "  ✅ Hàm 'process MNameSpan' found"
+          else
+            echo "  ⚠️  Không tìm thấy hàm 'processNameSpan'"
           fi
 
       - name: Verify numbers converted
