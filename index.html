@@ -8650,50 +8650,39 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
 
 
 
-
+/* ==== FIX_NAME.PY OVERRIDE ==== */
 .ds-sub-btn .ds-sub-name {
-    flex: 1 1 auto;
-    min-width: 0;
-    display: block;
-    line-height: 1.35;
-    text-align: left;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    display: block !important;
+    line-height: 1.35 !important;
+    text-align: left !important;
 }
-
 .ds-sub-btn .ds-sub-name .c1 {
-    display: inline;
-    white-space: nowrap;
+    display: inline !important;
+    white-space: nowrap !important;
 }
-
 .ds-sub-btn .ds-sub-name .c2 {
-    display: inline;
-    white-space: nowrap;
+    display: inline !important;
+    white-space: nowrap !important;
 }
-
 .ds-sub-btn .ds-sub-name .dash {
-    display: inline;
-    color: inherit;
-    opacity: .75;
+    display: inline !important;
+    color: inherit !important;
+    opacity: .75 !important;
 }
-
 .ds-sub-btn .ds-sub-name.wrapped .c1 {
-    display: block;
-    white-space: nowrap;
+    display: block !important;
+    white-space: nowrap !important;
 }
-
 .ds-sub-btn .ds-sub-name.wrapped .c2 {
-    display: block;
-    white-space: nowrap;
-    font-size: 1em;
+    display: block !important;
+    white-space: nowrap !important;
 }
-
 .ds-sub-btn .ds-sub-name.single {
-    display: block;
-    white-space: normal;
-    overflow-wrap: anywhere;
+    display: block !important;
+    white-space: normal !important;
 }
-
-
-
 </style>
 </head>
 <body>
@@ -10392,13 +10381,11 @@ function initDatasetSelector() {
             btn.appendChild(icon);
 
             var nameSpan = document.createElement('span');
-            nameSpan.className = 'ds-sub-name';
-            var _rawName = (ds.name && ds.name.normalize)
-                           ? ds.name.normalize('NFC')
-                           : (ds.name || '');
-            nameSpan.setAttribute('data-raw-name', _rawName);
-            nameSpan.textContent = _rawName;
-            btn.appendChild(nameSpan);
+nameSpan.className = 'ds-sub-name';
+var _rawName = (ds.name && ds.name.normalize) ? ds.name.normalize('NFC') : (ds.name || '');
+nameSpan.setAttribute('data-raw-name', _rawName);
+nameSpan.textContent = _rawName;
+btn.appendChild(nameSpan);
 
             if (!canAccess) {
                 var lock = document.createElement('i');
@@ -25418,13 +25405,9 @@ window.__switchRawData = function(datasetId) {
     console.log('[fix.py] Da bind ' + NEW_IDS.length + ' tab:', NEW_IDS);
 })();
 </script>
-
 <script>
-
 (function() {
     'use strict';
-
-    var DEBUG = false;
 
     function splitNameByDash(name) {
         if (!name) return [name || '', ''];
@@ -25466,16 +25449,14 @@ window.__switchRawData = function(datasetId) {
         var c2 = parts[1];
 
         if (!c2) {
-            if (spanEl.__fixNameRendered === 'single') return;
             spanEl.classList.add('single');
             spanEl.classList.remove('wrapped');
             spanEl.textContent = c1;
-            spanEl.__fixNameRendered = 'single';
+            spanEl.__done = 'single';
             return;
         }
 
-        var needRerender = (spanEl.__fixNameRendered !== 'dual');
-        if (needRerender) {
+        if (spanEl.__done !== 'dual') {
             spanEl.innerHTML = '';
 
             var s1 = document.createElement('span');
@@ -25494,7 +25475,7 @@ window.__switchRawData = function(datasetId) {
             s2.textContent = c2;
             spanEl.appendChild(s2);
 
-            spanEl.__fixNameRendered = 'dual';
+            spanEl.__done = 'dual';
         }
 
         spanEl.classList.remove('wrapped');
@@ -25511,13 +25492,9 @@ window.__switchRawData = function(datasetId) {
         var scrollH = spanEl.scrollHeight;
         var isWrapped = (scrollH > lineH * 1.5);
 
-        if (!isWrapped) {
-            if (DEBUG) console.log('[fix_name.py] SINGLE LINE:', raw);
-            return;
-        }
+        if (!isWrapped) return;
 
         spanEl.classList.add('wrapped');
-        if (DEBUG) console.log('[fix_name.py] WRAP:', raw);
 
         requestAnimationFrame(function() {
             try {
@@ -25528,59 +25505,26 @@ window.__switchRawData = function(datasetId) {
                 var btnRect = btn.getBoundingClientRect();
                 var iconEl = btn.querySelector('i:first-child');
                 var iconWidth = iconEl ? iconEl.getBoundingClientRect().width : 0;
-                var padding = 24;
-                var gap = 8;
+                var availableWidth = btnRect.width - iconWidth - 32;
 
-                var availableWidth = btnRect.width - iconWidth - padding - gap;
                 var naturalWidth = c2b.getBoundingClientRect().width;
-
-                if (DEBUG) {
-                    console.log('[fix_name.py] Measure c2:', raw,
-                                'natural=' + Math.round(naturalWidth),
-                                'available=' + Math.round(availableWidth));
-                }
 
                 if (naturalWidth > availableWidth && availableWidth > 0) {
                     var ratio = availableWidth / naturalWidth;
+                    var baseFontSize = parseFloat(
+                        window.getComputedStyle(btn).fontSize
+                    ) || 14;
 
-                    if (ratio < 1) {
-                        var baseFontSize = parseFloat(
-                            window.getComputedStyle(btn).fontSize
-                        ) || 14;
+                    var newSize = baseFontSize * ratio * 0.95;
+                    if (newSize < 9) newSize = 9;
 
-                        var newSize = baseFontSize * ratio * 0.95;
-                        var minSize = 9;
+                    c2b.style.fontSize = newSize + 'px';
+                    c2b.style.letterSpacing = '-0.02em';
 
-                        if (newSize < minSize) newSize = minSize;
-
-                        c2b.style.fontSize = newSize + 'px';
-                        c2b.style.letterSpacing = '-0.02em';
-
-                        if (DEBUG) {
-                            console.log('[fix_name.py] SHRINK c2:',
-                                        baseFontSize + 'px ->',
-                                        newSize.toFixed(1) + 'px',
-                                        '(ratio=' + ratio.toFixed(2) + ')');
-                        }
-
-                        requestAnimationFrame(function() {
-                            var afterWidth = c2b.getBoundingClientRect().width;
-                            if (afterWidth > availableWidth) {
-                                var ratio2 = availableWidth / afterWidth;
-                                var newSize2 = newSize * ratio2 * 0.95;
-                                if (newSize2 < minSize) newSize2 = minSize;
-                                c2b.style.fontSize = newSize2 + 'px';
-                                c2b.style.letterSpacing = '-0.04em';
-                                if (DEBUG) {
-                                    console.log('[fix_name.py] SHRINK c2 pass2:',
-                                                newSize2.toFixed(1) + 'px');
-                                }
-                            }
-                        });
-                    }
+                    console.log('[fix_name] SHRINK to ' + newSize.toFixed(1) + 'px');
                 }
             } catch(e) {
-                if (DEBUG) console.warn('[fix_name.py] measure c2:', e);
+                console.warn('[fix_name] error:', e);
             }
         });
     }
@@ -25590,63 +25534,35 @@ window.__switchRawData = function(datasetId) {
         for (var i = 0; i < nodes.length; i++) {
             try {
                 processNameSpan(nodes[i]);
-            } catch(e) {
-                if (DEBUG) console.warn('[fix_name.py] error:', e);
-            }
+            } catch(e) {}
         }
     }
 
-    function scheduleProcess(delay) {
-        setTimeout(processAll, delay || 100);
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-            scheduleProcess(100);
-            scheduleProcess(500);
-        });
-    } else {
-        scheduleProcess(100);
-        scheduleProcess(500);
-    }
-
-    var _timer = null;
-    if (typeof MutationObserver !== 'undefined') {
-        var observer = new MutationObserver(function() {
-            clearTimeout(_timer);
-            _timer = setTimeout(processAll, 150);
-        });
-        if (document.body) {
-            observer.observe(document.body, { childList: true, subtree: true });
-        }
-    }
-
-    var _resizeTimer = null;
-    window.addEventListener('resize', function() {
-        clearTimeout(_resizeTimer);
-        _resizeTimer = setTimeout(function() {
-            var nodes = document.querySelectorAll('.ds-sub-name');
-            for (var i = 0; i < nodes.length; i++) {
-                nodes[i].__fixNameRendered = null;
-            }
-            processAll();
-        }, 250);
-    });
+    setTimeout(processAll, 200);
+    setTimeout(processAll, 600);
+    setTimeout(processAll, 1500);
 
     document.addEventListener('click', function(e) {
         var target = e.target;
-        if (!target) return;
-        if (target.closest &&
-            target.closest('[data-dataset-group="chuyen-nganh"]')) {
-            scheduleProcess(150);
-            scheduleProcess(400);
+        if (target && target.closest) {
+            if (target.closest('[data-dataset-group="chuyen-nganh"]')) {
+                setTimeout(processAll, 300);
+                setTimeout(processAll, 800);
+            }
         }
     }, true);
 
-    if (DEBUG) console.log('[fix_name.py] Loaded');
+    window.addEventListener('resize', function() {
+        setTimeout(function() {
+            var nodes = document.querySelectorAll('.ds-sub-name');
+            for (var i = 0; i < nodes.length; i++) {
+                nodes[i].__done = null;
+            }
+            processAll();
+        }, 300);
+    });
+
+    console.log('[fix_name.py] JS loaded');
 })();
-
-</script>
-
-</body>
+</script></body>
 </html>
