@@ -8657,18 +8657,18 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
     display: block;
     line-height: 1.35;
     text-align: left;
-    word-break: normal;
     overflow-wrap: anywhere;
 }
 
 .ds-sub-btn .ds-sub-name .c1 {
     display: inline;
-    white-space: normal;
+    white-space: nowrap;
 }
 
 .ds-sub-btn .ds-sub-name .c2 {
     display: inline;
     white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 .ds-sub-btn .ds-sub-name .dash {
@@ -8679,11 +8679,14 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
 
 .ds-sub-btn .ds-sub-name.wrapped .c1 {
     display: block;
+    white-space: nowrap;
 }
 
 .ds-sub-btn .ds-sub-name.wrapped .c2 {
     display: block;
+    white-space: normal;
     font-size: 0.94em;
+    overflow-wrap: anywhere;
 }
 
 .ds-sub-btn .ds-sub-name.wrapped.tight .c2 {
@@ -25522,7 +25525,7 @@ window.__switchRawData = function(datasetId) {
         }
 
         spanEl.classList.add('wrapped');
-        if (DEBUG) console.log('[fix_name.py] WRAP:', raw);
+        if (DEBUG) console.log('[fix_name.py] WRAP:',. raw);
 
         requestAnimationFrame(function() {
             try {
@@ -25541,7 +25544,7 @@ window.__switchRawData = function(datasetId) {
                         var c2ScrollH2 = c2b.scrollHeight;
                         if (c2ScrollH2 > c2LineH2 * 1.5) {
                             c2b.style.fontSize = '0.8em';
-                            c2b.style.letterSpacing = '-0.02em';
+                            c2b.styleletterSpacing = '-0.02em';
                             if (DEBUG) console.log('[fix_name.py] FORCE TIGHT:', raw);
                         }
                     }, 60);
