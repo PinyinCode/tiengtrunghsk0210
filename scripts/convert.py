@@ -278,8 +278,12 @@ if os.path.isdir(DATA_DIR):
                 continue
 
             display_name = filename.rsplit(".", 1)[0].replace("_", " ").strip()
+            # ⭐ FIX: Normalize NFC để match ICON_MAP (tránh bug NFD từ Linux/macOS)
+            display_name = unicodedata.normalize("NFC", display_name)
             if display_name.islower() or display_name.isupper():
                 display_name = display_name.title()
+
+            dataset_id = slugify_dataset_id(filename)
 
             dataset_id = slugify_dataset_id(filename)
             base_id = dataset_id
