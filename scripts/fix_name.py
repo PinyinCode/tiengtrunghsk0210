@@ -1,50 +1,38 @@
 # -*- coding: utf-8 -*-
 """
-fix_name.py — Patch SAU KHI build: tên tab xuống dòng thông minh.
-
-KHÔNG đụng vào convert.py, ui_template.py, fix.py.
-Chạy SAU KHI convert.py + fix.py đã chạy xong.
+fix_name.py — Patch tên tab xuống dòng thông minh.
 
 QUY TẮC:
-  - Dấu "-" trong tên file chia tên thành 2 CỤM
-  - VD: "Hành_chính_-_Nhân_sự.xlsx" → "Hành chính" + "Nhân sự"
-  - Cụm 1 + cụm 2 cùng dòng nếu đủ chỗ
-  - Nếu không đủ → cụm 2 xuống dòng riêng, ẩn dấu "-"
+  - Dấu "-" chia tên thành 2 CỤM
+  - VD: "Hành chính - Nhân sự" → cụm 1 = "Hành chính", cụm 2 = "Nhân sự"
+  - Nếu đủ chỗ → hiển thị 1 dòng: "Hành chính - Nhân sự"
+  - Nếu không đủ → xuống dòng:
+        Hành chính -
+        Nhân sự
+  - Nếu cụm 2 vẫn quá dài → tự động thu nhỏ font để vừa 1 dòng
 
 Cách chạy:
     python scripts/convert.py
     python fix.py
-    python scripts/fix_name.py
+    python fix_name.py
 """
 import os
 import re
 import sys
 
 
-# =================================================================
-#  CONFIG
-# =================================================================
 INDEX_HTML = "index.html"
 
-# Nếu chạy từ scripts/ → chuyển về root
 if not os.path.isfile(INDEX_HTML):
     if os.path.isfile(os.path.join("..", INDEX_HTML)):
         os.chdir("..")
-        print("[fix_name.py] Phat hien chay tu scripts/ -> chuyen ve root")
+        print("[fix_name.py] Chuyen ve root")
     else:
         print("[X] Khong thay " + INDEX_HTML)
-        print("   → Chay convert.py + fix.py truoc")
         sys.exit(1)
 
 
-# =================================================================
-#  CSS PATCH
-# =================================================================
 PATCH_CSS = r"""
-
-/* ═══════════════════════════════════════════════════════════════
-   FIX_NAME.PY — Tên tab xuống dòng thông minh (theo cụm từ)
-   ═══════════════════════════════════════════════════════════════ */
 
 .ds-sub-btn .ds-sub-name {
     flex: 1 1 auto;
@@ -56,44 +44,36 @@ PATCH_CSS = r"""
     overflow-wrap: anywhere;
 }
 
-/* Cụm 1 — có thể chung dòng với cụm 2 */
 .ds-sub-btn .ds-sub-name .c1 {
     display: inline;
     white-space: normal;
-    word-break: normal;
-    overflow-wrap: anywhere;
 }
 
-/* Cụm 2 — mặc định inline, khi wrapped → block */
 .ds-sub-btn .ds-sub-name .c2 {
     display: inline;
     white-space: normal;
-    word-break: normal;
-    overflow-wrap: anywhere;
 }
 
-/* Dấu gạch ngang giữa 2 cụm */
 .ds-sub-btn .ds-sub-name .dash {
     display: inline;
     color: inherit;
     opacity: .75;
-    margin: 0 .25em;
 }
 
-/* ⭐ KHI WRAP: cụm 1 và cụm 2 mỗi cái 1 dòng riêng */
 .ds-sub-btn .ds-sub-name.wrapped .c1 {
     display: block;
-    white-space: normal;
-}
-.ds-sub-btn .ds-sub-name.wrapped .c2 {
-    display: block;
-    white-space: normal;
-}
-.ds-sub-btn .ds-sub-name.wrapped .dash {
-    display: none;
 }
 
-/* Tên không có dấu - (1 cụm duy nhất) */
+.ds-sub-btn .ds-sub-name.wrapped .c2 {
+    display: block;
+    font-size: 0.94em;
+}
+
+.ds-sub-btn .ds-sub-name.wrapped.tight .c2 {
+    font-size: 0.85em;
+    letter-spacing: -0.01em;
+}
+
 .ds-sub-btn .ds-sub-name.single {
     display: block;
     white-space: normal;
@@ -102,49 +82,40 @@ PATCH_CSS = r"""
 """
 
 
-# =================================================================
-#  JS PATCH
-# =================================================================
 PATCH_JS = r"""
-/* ═══════════════════════════════════════════════════════════════
-   FIX_NAME.PY — Xử lý tên tab: tách cụm + tự động wrap
-   ═══════════════════════════════════════════════════════════════ */
 (function() {
     'use strict';
 
-    var DEBUG = false;   // Bật true để xem log
+    var DEBUG = false;
 
-    /* ─────────────────────────────────────────────
-       Tách tên thành 2 cụm dựa vào dấu "-"
-       ───────────────────────────────────────────── */
     function splitNameByDash(name) {
         if (!name) return [name || '', ''];
-
-        // Ưu tiên dấu có khoảng trắng
-        var seps = [' - ', ' – ', ' — ', '-', '–', '—'];
-
+        var seps = [' - ', ' -', '- ', '-'];
         for (var i = 0; i < seps.length; i++) {
             var sep = seps[i];
             var idx = name.indexOf(sep);
             if (idx > 0) {
                 var l1 = name.substring(0, idx).trim();
                 var l2 = name.substring(idx + sep.length).trim();
-                if (l1 && l2) {
-                    return [l1, l2];
-                }
+                if (l1 && l2) return [l1, l2];
             }
         }
-
         return [name.trim(), ''];
     }
 
-    /* ─────────────────────────────────────────────
-       Xử lý 1 span: tách cụm + đo wrap
-       ───────────────────────────────────────────── */
+    function getLineHeightPx(el) {
+        var cs = window.getComputedStyle(el);
+        var lh = cs.lineHeight;
+        if (lh === 'normal') {
+            var fs = parseFloat(cs.fontSize) || 14;
+            return fs * 1.35;
+        }
+        return parseFloat(lh) || 20;
+    }
+
     function processNameSpan(spanEl) {
         if (!spanEl) return;
 
-        // Lấy tên gốc (chỉ lấy 1 lần)
         var raw = spanEl.getAttribute('data-raw-name') || '';
         if (!raw) {
             raw = (spanEl.textContent || '').trim();
@@ -152,24 +123,19 @@ PATCH_JS = r"""
         }
         if (!raw) return;
 
-        // Nếu đã xử lý rồi và không có gì đổi → bỏ qua
-        // (Nhưng vẫn cho phép re-measure nếu cần)
         var parts = splitNameByDash(raw);
         var c1 = parts[0];
         var c2 = parts[1];
 
-        // ─── Trường hợp: chỉ có 1 cụm ───
         if (!c2) {
             if (spanEl.__fixNameRendered === 'single') return;
             spanEl.classList.add('single');
-            spanEl.classList.remove('wrapped');
+            spanEl.classList.remove('wrapped', 'tight');
             spanEl.textContent = c1;
             spanEl.__fixNameRendered = 'single';
             return;
         }
 
-        // ─── Trường hợp: có 2 cụm ───
-        // Nếu đã render 2 cụm rồi → chỉ cần re-measure
         var needRerender = (spanEl.__fixNameRendered !== 'dual');
         if (needRerender) {
             spanEl.innerHTML = '';
@@ -177,71 +143,76 @@ PATCH_JS = r"""
             var s1 = document.createElement('span');
             s1.className = 'c1';
             s1.textContent = c1;
+
+            var d = document.createElement('span');
+            d.className = 'dash';
+            d.textContent = ' -';
+            s1.appendChild(d);
+
             spanEl.appendChild(s1);
 
             var s2 = document.createElement('span');
             s2.className = 'c2';
-
-            var d = document.createElement('span');
-            d.className = 'dash';
-            d.textContent = ' - ';
-            s2.appendChild(d);
-
-            var t2 = document.createElement('span');
-            t2.textContent = c2;
-            s2.appendChild(t2);
-
+            s2.textContent = c2;
             spanEl.appendChild(s2);
 
             spanEl.__fixNameRendered = 'dual';
         }
 
-        // ─── Đo để quyết định wrap ───
-        // Reset về trạng thái chưa wrap
-        spanEl.classList.remove('wrapped');
+        spanEl.classList.remove('wrapped', 'tight');
 
-        // Force reflow để đo chính xác
+        var c2El = spanEl.querySelector('.c2');
+        if (c2El) {
+            c2El.style.fontSize = '';
+            c2El.style.letterSpacing = '';
+        }
+
         void spanEl.offsetHeight;
 
-        // Đo: nếu chiếm >= 2 dòng → cần wrap
-        var cs = window.getComputedStyle(spanEl);
-        var lineHeightStr = cs.lineHeight;
-        var lineHeight;
-        if (lineHeightStr === 'normal') {
-            var fontSize = parseFloat(cs.fontSize) || 14;
-            lineHeight = fontSize * 1.35;
-        } else {
-            lineHeight = parseFloat(lineHeightStr) || 20;
-        }
-
+        var lineH = getLineHeightPx(spanEl);
         var scrollH = spanEl.scrollHeight;
-        var clientH = spanEl.clientHeight;
+        var isWrapped = (scrollH > lineH * 1.5);
 
-        // Nếu scrollHeight > 1.5 dòng → đã bị wrap
-        var isWrapped = (scrollH > lineHeight * 1.5);
-
-        // Hoặc nếu nội dung cao hơn client (bị overflow)
-        if (!isWrapped && scrollH > clientH + 1) {
-            isWrapped = true;
+        if (!isWrapped) {
+            if (DEBUG) console.log('[fix_name.py] SINGLE LINE:', raw);
+            return;
         }
 
-        if (isWrapped) {
-            spanEl.classList.add('wrapped');
-            if (DEBUG) {
-                console.log('[fix_name.py] WRAP:', raw,
-                            'scrollH=' + scrollH, 'lineH=' + lineHeight);
+        spanEl.classList.add('wrapped');
+        if (DEBUG) console.log('[fix_name.py] WRAP:', raw);
+
+        requestAnimationFrame(function() {
+            try {
+                var c2b = spanEl.querySelector('.c2');
+                if (!c2b) return;
+
+                var c2LineH = getLineHeightPx(c2b);
+                var c2ScrollH = c2b.scrollHeight;
+
+                if (c2ScrollH > c2LineH * 1.5) {
+                    spanEl.classList.add('tight');
+                    if (DEBUG) console.log('[fix_name.py] TIGHT:', raw);
+
+                    setTimeout(function() {
+                        var c2LineH2 = getLineHeightPx(c2b);
+                        var c2ScrollH2 = c2b.scrollHeight;
+                        if (c2ScrollH2 > c2LineH2 * 1.5) {
+                            c2b.style.fontSize = '0.8em';
+                            c2b.style.letterSpacing = '-0.02em';
+                            if (DEBUG) console.log('[fix_name.py] FORCE TIGHT:', raw);
+                        }
+                    }, 60);
+                } else {
+                    spanEl.classList.remove('tight');
+                }
+            } catch(e) {
+                if (DEBUG) console.warn('[fix_name.py] measure c2:', e);
             }
-        } else {
-            spanEl.classList.remove('wrapped');
-        }
+        });
     }
 
-    /* ─────────────────────────────────────────────
-       Process tất cả .ds-sub-name hiện có
-       ───────────────────────────────────────────── */
     function processAll() {
         var nodes = document.querySelectorAll('.ds-sub-name');
-        if (!nodes || nodes.length === 0) return;
         for (var i = 0; i < nodes.length; i++) {
             try {
                 processNameSpan(nodes[i]);
@@ -251,9 +222,6 @@ PATCH_JS = r"""
         }
     }
 
-    /* ─────────────────────────────────────────────
-       Hook vào DOM ready + MutationObserver
-       ───────────────────────────────────────────── */
     function scheduleProcess(delay) {
         setTimeout(processAll, delay || 100);
     }
@@ -268,7 +236,6 @@ PATCH_JS = r"""
         scheduleProcess(500);
     }
 
-    // Re-process khi DOM thay đổi (VD: chuyển dataset, đổi tier)
     var _timer = null;
     if (typeof MutationObserver !== 'undefined') {
         var observer = new MutationObserver(function() {
@@ -276,19 +243,14 @@ PATCH_JS = r"""
             _timer = setTimeout(processAll, 150);
         });
         if (document.body) {
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true
-            });
+            observer.observe(document.body, { childList: true, subtree: true });
         }
     }
 
-    // Re-process khi resize (đổi mobile/desktop → width thay đổi)
     var _resizeTimer = null;
     window.addEventListener('resize', function() {
         clearTimeout(_resizeTimer);
         _resizeTimer = setTimeout(function() {
-            // Reset state để đo lại
             var nodes = document.querySelectorAll('.ds-sub-name');
             for (var i = 0; i < nodes.length; i++) {
                 nodes[i].__fixNameRendered = null;
@@ -297,11 +259,9 @@ PATCH_JS = r"""
         }, 250);
     });
 
-    // Re-process khi mở dropdown Chuyên ngành
     document.addEventListener('click', function(e) {
         var target = e.target;
         if (!target) return;
-        // Nút chuyên ngành
         if (target.closest &&
             target.closest('[data-dataset-group="chuyen-nganh"]')) {
             scheduleProcess(150);
@@ -309,16 +269,11 @@ PATCH_JS = r"""
         }
     }, true);
 
-    if (DEBUG) {
-        console.log('[fix_name.py] Loaded');
-    }
+    if (DEBUG) console.log('[fix_name.py] Loaded');
 })();
 """
 
 
-# =================================================================
-#  MAIN
-# =================================================================
 def main():
     print("=" * 62)
     print("[fix_name.py] Patch ten tab -> xuong dong thong minh")
@@ -327,17 +282,12 @@ def main():
     with open(INDEX_HTML, "r", encoding="utf-8") as f:
         html = f.read()
 
-    # ─────────────────────────────────────────────
-    #  BƯỚC 1: Patch JS render nameSpan
-    #  Thêm class ds-sub-name + data-raw-name
-    # ─────────────────────────────────────────────
     print("")
     print("[BUOC 1] Patch JS render nameSpan...")
 
     if "nameSpan.className = 'ds-sub-name'" in html:
         print("   [skip] Da patch truoc do")
     else:
-        # Pattern linh hoạt: bắt cả textContent = ds.name...
         pat1 = re.compile(
             r"var\s+nameSpan\s*=\s*document\.createElement\(\s*['\"]span['\"]\s*\)\s*;"
             r"(?:(?!btn\.appendChild).)*?"
@@ -362,18 +312,13 @@ def main():
             print("   [OK] Da patch JS render nameSpan")
         else:
             print("   [!] Khong tim thay pattern 'nameSpan'")
-            print("   → Kiem tra lai ui_template.py")
 
-    # ─────────────────────────────────────────────
-    #  BƯỚC 2: Thêm CSS
-    # ─────────────────────────────────────────────
     print("")
     print("[BUOC 2] Them CSS...")
 
-    if "FIX_NAME.PY — Tên tab" in html or "FIX_NAME.PY" in html and ".ds-sub-name" in html:
+    if ".ds-sub-name.wrapped.tight" in html:
         print("   [skip] CSS da co san")
     else:
-        # Chèn trước </style> cuối cùng
         pat_style = re.compile(r"(\s*)(</style>)", re.MULTILINE)
         html, n2 = pat_style.subn(r"\1" + PATCH_CSS + r"\1\2", html, count=1)
         if n2 > 0:
@@ -381,13 +326,10 @@ def main():
         else:
             print("   [!] Khong tim thay </style>")
 
-    # ─────────────────────────────────────────────
-    #  BƯỚC 3: Thêm JS xử lý wrap
-    # ─────────────────────────────────────────────
     print("")
     print("[BUOC 3] Them JS xu ly wrap...")
 
-    if "FIX_NAME.PY — Xử lý tên tab" in html or "processNameSpan" in html:
+    if "processNameSpan" in html:
         print("   [skip] JS da co san")
     else:
         js_block = "\n<script>\n" + PATCH_JS + "\n</script>\n"
@@ -399,9 +341,6 @@ def main():
             print("   [X] Khong tim thay </body>")
             sys.exit(1)
 
-    # ─────────────────────────────────────────────
-    #  GHI FILE
-    # ─────────────────────────────────────────────
     with open(INDEX_HTML, "w", encoding="utf-8") as f:
         f.write(html)
 
@@ -411,10 +350,6 @@ def main():
     print("=" * 62)
     print("[fix_name.py] HOAN TAT!")
     print("[fix_name.py] File: " + INDEX_HTML + " (" + str(round(size_kb, 1)) + " KB)")
-    print("[fix_name.py] Ten tab se tu dong:")
-    print("   - Tach 2 cum theo dau '-'")
-    print("   - Du cho -> 1 dong: 'Hanh chinh - Nhan su'")
-    print("   - Khong du -> 2 dong: 'Hanh chinh' / 'Nhan su'")
     print("=" * 62)
 
 
