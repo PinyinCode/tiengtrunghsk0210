@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-fix_name.py — Patch tên tab xuống dòng thông minh.
+fix_name.py — Patch tên tab xuống dòng thông minh + tự thu nhỏ font.
 
 QUY TẮC:
   - Dấu "-" chia tên thành 2 CỤM
@@ -10,7 +10,7 @@ QUY TẮC:
   - Không đủ → 2 dòng:
         Tổ trưởng -
         Quản lí sản xuất
-  - Cụm 2 quá dài → tự thu nhỏ font
+  - Cụm 2 tự động thu nhỏ font để luôn vừa 1 dòng
 
 Cách chạy:
     python scripts/convert.py
@@ -41,7 +41,6 @@ PATCH_CSS = r"""
     display: block;
     line-height: 1.35;
     text-align: left;
-    overflow-wrap: anywhere;
 }
 
 .ds-sub-btn .ds-sub-name .c1 {
@@ -51,8 +50,7 @@ PATCH_CSS = r"""
 
 .ds-sub-btn .ds-sub-name .c2 {
     display: inline;
-    white-space: normal;
-    overflow-wrap: anywhere;
+    white-space: nowrap;
 }
 
 .ds-sub-btn .ds-sub-name .dash {
@@ -68,14 +66,8 @@ PATCH_CSS = r"""
 
 .ds-sub-btn .ds-sub-name.wrapped .c2 {
     display: block;
-    white-space: normal;
-    font-size: 0.94em;
-    overflow-wrap: anywhere;
-}
-
-.ds-sub-btn .ds-sub-name.wrapped.tight .c2 {
-    font-size: 0.85em;
-    letter-spacing: -0.01em;
+    white-space: nowrap;
+    font-size: 1em;
 }
 
 .ds-sub-btn .ds-sub-name.single {
@@ -134,7 +126,7 @@ PATCH_JS = r"""
         if (!c2) {
             if (spanEl.__fixNameRendered === 'single') return;
             spanEl.classList.add('single');
-            spanEl.classList.remove('wrapped', 'tight');
+            spanEl.classList.remove('wrapped');
             spanEl.textContent = c1;
             spanEl.__fixNameRendered = 'single';
             return;
@@ -163,7 +155,7 @@ PATCH_JS = r"""
             spanEl.__fixNameRendered = 'dual';
         }
 
-        spanEl.classList.remove('wrapped', 'tight');
+        spanEl.classList.remove('wrapped');
 
         var c2El = spanEl.querySelector('.c2');
         if (c2El) {
@@ -183,31 +175,67 @@ PATCH_JS = r"""
         }
 
         spanEl.classList.add('wrapped');
-        if (DEBUG) console.log('[fix_name.py] WRAP:',. raw);
+        if (DEBUG) console.log('[fix_name.py] WRAP:', raw);
 
         requestAnimationFrame(function() {
             try {
                 var c2b = spanEl.querySelector('.c2');
-                if (!c2b) return;
+                var btn = spanEl.closest('.ds-sub-btn');
+                if (!c2b || !btn) return;
 
-                var c2LineH = getLineHeightPx(c2b);
-                var c2ScrollH = c2b.scrollHeight;
+                var btnRect = btn.getBoundingClientRect();
+                var iconEl = btn.querySelector('i:first-child');
+                var iconWidth = iconEl ? iconEl.getBoundingClientRect().width : 0;
+                var padding = 24;
+                var gap = 8;
 
-                if (c2ScrollH > c2LineH * 1.5) {
-                    spanEl.classList.add('tight');
-                    if (DEBUG) console.log('[fix_name.py] TIGHT:', raw);
+                var availableWidth = btnRect.width - iconWidth - padding - gap;
+                var naturalWidth = c2b.getBoundingClientRect().width;
 
-                    setTimeout(function() {
-                        var c2LineH2 = getLineHeightPx(c2b);
-                        var c2ScrollH2 = c2b.scrollHeight;
-                        if (c2ScrollH2 > c2LineH2 * 1.5) {
-                            c2b.style.fontSize = '0.8em';
-                            c2b.styleletterSpacing = '-0.02em';
-                            if (DEBUG) console.log('[fix_name.py] FORCE TIGHT:', raw);
+                if (DEBUG) {
+                    console.log('[fix_name.py] Measure c2:', raw,
+                                'natural=' + Math.round(naturalWidth),
+                                'available=' + Math.round(availableWidth));
+                }
+
+                if (naturalWidth > availableWidth && availableWidth > 0) {
+                    var ratio = availableWidth / naturalWidth;
+
+                    if (ratio < 1) {
+                        var baseFontSize = parseFloat(
+                            window.getComputedStyle(btn).fontSize
+                        ) || 14;
+
+                        var newSize = baseFontSize * ratio * 0.95;
+                        var minSize = 9;
+
+                        if (newSize < minSize) newSize = minSize;
+
+                        c2b.style.fontSize = newSize + 'px';
+                        c2b.style.letterSpacing = '-0.02em';
+
+                        if (DEBUG) {
+                            console.log('[fix_name.py] SHRINK c2:',
+                                        baseFontSize + 'px ->',
+                                        newSize.toFixed(1) + 'px',
+                                        '(ratio=' + ratio.toFixed(2) + ')');
                         }
-                    }, 60);
-                } else {
-                    spanEl.classList.remove('tight');
+
+                        requestAnimationFrame(function() {
+                            var afterWidth = c2b.getBoundingClientRect().width;
+                            if (afterWidth > availableWidth) {
+                                var ratio2 = availableWidth / afterWidth;
+                                var newSize2 = newSize * ratio2 * 0.95;
+                                if (newSize2 < minSize) newSize2 = minSize;
+                                c2b.style.fontSize = newSize2 + 'px';
+                                c2b.style.letterSpacing = '-0.04em';
+                                if (DEBUG) {
+                                    console.log('[fix_name.py] SHRINK c2 pass2:',
+                                                newSize2.toFixed(1) + 'px');
+                                }
+                            }
+                        });
+                    }
                 }
             } catch(e) {
                 if (DEBUG) console.warn('[fix_name.py] measure c2:', e);
@@ -280,25 +308,51 @@ PATCH_JS = r"""
 
 def main():
     print("=" * 62)
-    print("[fix_name.py] Patch ten tab -> xuong dong thong minh")
+    print("[fix_name.py] Patch ten tab -> xuong dong + tu thu nho font")
     print("=" * 62)
 
     with open(INDEX_HTML, "r", encoding="utf-8") as f:
         html = f.read()
 
     print("")
-    print("[BUOC 1] Xoa patch cu (neu co)...")
+    print("[BUOC 1] Xoa CSS cu (neu co)...")
 
-    html = html.replace(
-        "nameSpan.className = 'ds-sub-name';",
-        "nameSpan.className = 'ds-sub-name';"
-    )
+    css_old_patterns = [
+        r"\.ds-sub-btn \.ds-sub-name \.c1\s*\{[^}]*\}",
+        r"\.ds-sub-btn \.ds-sub-name \.c2\s*\{[^}]*\}",
+        r"\.ds-sub-btn \.ds-sub-name \.dash\s*\{[^}]*\}",
+        r"\.ds-sub-btn \.ds-sub-name\s*\{[^}]*\}",
+        r"\.ds-sub-btn \.ds-sub-name\.wrapped \.c1\s*\{[^}]*\}",
+        r"\.ds-sub-btn \.ds-sub-name\.wrapped \.c2\s*\{[^}]*\}",
+        r"\.ds-sub-btn \.ds-sub-name\.wrapped\.tight \.c2\s*\{[^}]*\}",
+        r"\.ds-sub-btn \.ds-sub-name\.single\s*\{[^}]*\}",
+    ]
+    for pat in css_old_patterns:
+        html = re.sub(pat, "", html)
+
+    print("   [OK] Da xoa CSS cu")
 
     print("")
-    print("[BUOC 2] Patch JS render nameSpan...")
+    print("[BUOC 2] Xoa JS cu (neu co)...")
+
+    html = re.sub(
+        r"<script>\s*/\*\s*[═=]+\s*FIX_NAME[\s\S]*?</script>",
+        "",
+        html
+    )
+    html = re.sub(
+        r"<script>\s*\(function\(\)\s*\{\s*'use strict';\s*var DEBUG[\s\S]*?processNameSpan[\s\S]*?\}\)\(\);\s*</script>",
+        "",
+        html
+    )
+
+    print("   [OK] Da xoa JS cu (neu co)")
+
+    print("")
+    print("[BUOC 3] Patch JS render nameSpan...")
 
     if "nameSpan.className = 'ds-sub-name'" in html:
-        print("   [skip] Da patch truoc do (JS render)")
+        print("   [skip] Da patch truoc do")
     else:
         pat1 = re.compile(
             r"var\s+nameSpan\s*=\s*document\.createElement\(\s*['\"]span['\"]\s*\)\s*;"
@@ -326,19 +380,7 @@ def main():
             print("   [!] Khong tim thay pattern 'nameSpan'")
 
     print("")
-    print("[BUOC 3] Xoa CSS cu + them CSS moi...")
-
-    css_old_patterns = [
-        r"\.ds-sub-btn \.ds-sub-name \.c1\s*\{[^}]*\}",
-        r"\.ds-sub-btn \.ds-sub-name \.c2\s*\{[^}]*\}",
-        r"\.ds-sub-btn \.ds-sub-name \.dash\s*\{[^}]*\}",
-        r"\.ds-sub-btn \.ds-sub-name\.wrapped \.c1\s*\{[^}]*\}",
-        r"\.ds-sub-btn \.ds-sub-name\.wrapped \.c2\s*\{[^}]*\}",
-        r"\.ds-sub-btn \.ds-sub-name\.wrapped\.tight \.c2\s*\{[^}]*\}",
-        r"\.ds-sub-btn \.ds-sub-name\.single\s*\{[^}]*\}",
-    ]
-    for pat in css_old_patterns:
-        html = re.sub(pat, "", html)
+    print("[BUOC 4] Them CSS moi...")
 
     pat_style = re.compile(r"(\s*)(</style>)", re.MULTILINE)
     html, n2 = pat_style.subn(r"\1" + PATCH_CSS + r"\1\2", html, count=1)
@@ -348,18 +390,7 @@ def main():
         print("   [!] Khong tim thay </style>")
 
     print("")
-    print("[BUOC 4] Xoa JS cu + them JS moi...")
-
-    html = re.sub(
-        r"<script>\s*/\*\s*═+\s*FIX_NAME\.PY[\s\S]*?</script>",
-        "",
-        html
-    )
-    html = re.sub(
-        r"<script>\s*\(function\(\)\s*\{\s*'use strict';\s*var DEBUG[\s\S]*?\}\)\(\);\s*</script>",
-        "",
-        html
-    )
+    print("[BUOC 5] Them JS moi...")
 
     js_block = "\n<script>\n" + PATCH_JS + "\n</script>\n"
     pat_body = re.compile(r"(\s*)(</body>)", re.MULTILINE)
@@ -379,11 +410,6 @@ def main():
     print("=" * 62)
     print("[fix_name.py] HOAN TAT!")
     print("[fix_name.py] File: " + INDEX_HTML + " (" + str(round(size_kb, 1)) + " KB)")
-    print("[fix_name.py] Ten tab se hien thi:")
-    print("   - Du cho: 'To truong - Quan li san xuat' (1 dong)")
-    print("   - Khong du:")
-    print("        To truong -")
-    print("        Quan li san xuat")
     print("=" * 62)
 
 
