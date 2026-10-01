@@ -14095,40 +14095,92 @@ function initPracticeFull() {
 function pfBuildDatasetSelect() {
     var sel = $('pfDatasetSelect');
     var row = $('pfDatasetRow');
-    if (!sel || typeof DATASET_REGISTRY === 'undefined') return;
+    if (!sel) return;
 
     var canAccessAll = canAccessChuyenNganh();
     var current = (typeof CURRENT_DATASET !== 'undefined') ? CURRENT_DATASET : 'tonghop';
 
     sel.innerHTML = '';
 
-    Object.keys(DATASET_REGISTRY).forEach(function(id) {
-        var ds = DATASET_REGISTRY[id];
-        var isTonghop = (id === 'tonghop');
-        var isLocked = !isTonghop && !canAccessAll;
+    // ═══════════════════════════════════════════════════════════
+    //  BƯỚC 1: Thêm dataset từ DATASET_REGISTRY (tổng hợp + chuyên ngành)
+    // ═══════════════════════════════════════════════════════════
+    if (typeof DATASET_REGISTRY !== 'undefined' && DATASET_REGISTRY) {
+        Object.keys(DATASET_REGISTRY).forEach(function(id) {
+            var ds = DATASET_REGISTRY[id];
+            var isTonghop = (id === 'tonghop');
+            var isLocked = !isTonghop && !canAccessAll;
 
-        var opt = document.createElement('option');
-        opt.value = id;
-        if (isLocked) {
-            opt.dataset.locked = '1';
-            opt.className = 'locked-opt';
+            var opt = document.createElement('option');
+            opt.value = id;
+            if (isLocked) {
+                opt.dataset.locked = '1';
+                opt.className = 'locked-opt';
+            }
+
+            var dsName = ds.name && ds.name.normalize
+                         ? ds.name.normalize('NFC')
+                         : ds.name;
+
+            if (isTonghop) {
+                opt.textContent = (ds.count || 0) + ' câu - Tổng hợp VPCX';
+            } else {
+                opt.textContent = (isLocked ? '[Khoá] ' : '') +
+                                  dsName + ' (' + (ds.count || 0) + ' câu)';
+            }
+
+            sel.appendChild(opt);
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  BƯỚC 2: Thêm dataset từ FIXPY_DATASETS (tab "1000 Câu giao tiếp")
+    //  → KHÔNG có lock (giống tab Tổng hợp)
+    // ═══════════════════════════════════════════════════════════
+    if (window.FIXPY_DATASETS && typeof window.FIXPY_DATASETS === 'object') {
+        Object.keys(window.FIXPY_DATASETS).forEach(function(id) {
+            // Skip nếu trùng với DATASET_REGISTRY
+            if (typeof DATASET_REGISTRY !== 'undefined' && DATASET_REGISTRY[id]) return;
+
+            var ds = window.FIXPY_DATASETS[id];
+            var opt = document.createElement('option');
+            opt.value = id;
+
+            var dsName = ds.name && ds.name.normalize
+                         ? ds.name.normalize('NFC')
+                         : ds.name;
+
+            opt.textContent = dsName + ' (' + (ds.count || 0) + ' câu)';
+
+            sel.appendChild(opt);
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  BƯỚC 3: Set giá trị hiện tại
+    // ═══════════════════════════════════════════════════════════
+    var currentIsValid = false;
+    for (var i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === current) {
+            currentIsValid = true;
+            break;
         }
+    }
 
-        var dsName = ds.name && ds.name.normalize ? ds.name.normalize('NFC') : ds.name;
-        if (isTonghop) {
-            opt.textContent = (ds.count || 0) + ' câu - Tổng hợp VPCX';
-        } else {
-            opt.textContent = (isLocked ? '[Khoá] ' : '') +
-                              dsName + ' (' + (ds.count || 0) + ' câu)';
-        }
+    if (currentIsValid) {
+        sel.value = current;
+    } else {
+        // Fallback: nếu current không có trong options → về tonghop
+        sel.value = 'tonghop';
+    }
 
-        sel.appendChild(opt);
-    });
-
-    sel.value = (current !== 'tonghop' && !canAccessAll) ? 'tonghop' : current;
-
+    // ═══════════════════════════════════════════════════════════
+    //  BƯỚC 4: Đánh dấu row có locked options
+    // ═══════════════════════════════════════════════════════════
     if (row) {
-        var hasLock = !canAccessAll && Object.keys(DATASET_REGISTRY).length > 1;
+        var hasLock = !canAccessAll
+                      && typeof DATASET_REGISTRY !== 'undefined'
+                      && Object.keys(DATASET_REGISTRY).length > 1;
         row.classList.toggle('has-locked-options', hasLock);
     }
 }
