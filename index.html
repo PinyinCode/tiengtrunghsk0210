@@ -8657,7 +8657,6 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
     display: block;
     line-height: 1.35;
     text-align: left;
-    overflow-wrap: anywhere;
 }
 
 .ds-sub-btn .ds-sub-name .c1 {
@@ -8667,8 +8666,7 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
 
 .ds-sub-btn .ds-sub-name .c2 {
     display: inline;
-    white-space: normal;
-    overflow-wrap: anywhere;
+    white-space: nowrap;
 }
 
 .ds-sub-btn .ds-sub-name .dash {
@@ -8684,14 +8682,8 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
 
 .ds-sub-btn .ds-sub-name.wrapped .c2 {
     display: block;
-    white-space: normal;
-    font-size: 0.94em;
-    overflow-wrap: anywhere;
-}
-
-.ds-sub-btn .ds-sub-name.wrapped.tight .c2 {
-    font-size: 0.85em;
-    letter-spacing: -0.01em;
+    white-space: nowrap;
+    font-size: 1em;
 }
 
 .ds-sub-btn .ds-sub-name.single {
@@ -25476,7 +25468,7 @@ window.__switchRawData = function(datasetId) {
         if (!c2) {
             if (spanEl.__fixNameRendered === 'single') return;
             spanEl.classList.add('single');
-            spanEl.classList.remove('wrapped', 'tight');
+            spanEl.classList.remove('wrapped');
             spanEl.textContent = c1;
             spanEl.__fixNameRendered = 'single';
             return;
@@ -25505,7 +25497,7 @@ window.__switchRawData = function(datasetId) {
             spanEl.__fixNameRendered = 'dual';
         }
 
-        spanEl.classList.remove('wrapped', 'tight');
+        spanEl.classList.remove('wrapped');
 
         var c2El = spanEl.querySelector('.c2');
         if (c2El) {
@@ -25525,31 +25517,67 @@ window.__switchRawData = function(datasetId) {
         }
 
         spanEl.classList.add('wrapped');
-        if (DEBUG) console.log('[fix_name.py] WRAP:',. raw);
+        if (DEBUG) console.log('[fix_name.py] WRAP:', raw);
 
         requestAnimationFrame(function() {
             try {
                 var c2b = spanEl.querySelector('.c2');
-                if (!c2b) return;
+                var btn = spanEl.closest('.ds-sub-btn');
+                if (!c2b || !btn) return;
 
-                var c2LineH = getLineHeightPx(c2b);
-                var c2ScrollH = c2b.scrollHeight;
+                var btnRect = btn.getBoundingClientRect();
+                var iconEl = btn.querySelector('i:first-child');
+                var iconWidth = iconEl ? iconEl.getBoundingClientRect().width : 0;
+                var padding = 24;
+                var gap = 8;
 
-                if (c2ScrollH > c2LineH * 1.5) {
-                    spanEl.classList.add('tight');
-                    if (DEBUG) console.log('[fix_name.py] TIGHT:', raw);
+                var availableWidth = btnRect.width - iconWidth - padding - gap;
+                var naturalWidth = c2b.getBoundingClientRect().width;
 
-                    setTimeout(function() {
-                        var c2LineH2 = getLineHeightPx(c2b);
-                        var c2ScrollH2 = c2b.scrollHeight;
-                        if (c2ScrollH2 > c2LineH2 * 1.5) {
-                            c2b.style.fontSize = '0.8em';
-                            c2b.styleletterSpacing = '-0.02em';
-                            if (DEBUG) console.log('[fix_name.py] FORCE TIGHT:', raw);
+                if (DEBUG) {
+                    console.log('[fix_name.py] Measure c2:', raw,
+                                'natural=' + Math.round(naturalWidth),
+                                'available=' + Math.round(availableWidth));
+                }
+
+                if (naturalWidth > availableWidth && availableWidth > 0) {
+                    var ratio = availableWidth / naturalWidth;
+
+                    if (ratio < 1) {
+                        var baseFontSize = parseFloat(
+                            window.getComputedStyle(btn).fontSize
+                        ) || 14;
+
+                        var newSize = baseFontSize * ratio * 0.95;
+                        var minSize = 9;
+
+                        if (newSize < minSize) newSize = minSize;
+
+                        c2b.style.fontSize = newSize + 'px';
+                        c2b.style.letterSpacing = '-0.02em';
+
+                        if (DEBUG) {
+                            console.log('[fix_name.py] SHRINK c2:',
+                                        baseFontSize + 'px ->',
+                                        newSize.toFixed(1) + 'px',
+                                        '(ratio=' + ratio.toFixed(2) + ')');
                         }
-                    }, 60);
-                } else {
-                    spanEl.classList.remove('tight');
+
+                        requestAnimationFrame(function() {
+                            var afterWidth = c2b.getBoundingClientRect().width;
+                            if (afterWidth > availableWidth) {
+                                var ratio2 = availableWidth / afterWidth;
+                                var newSize2 = newSize * ratio2 * 0.95;
+                                if (newSize2 < minSize) newSize2 = minSize;
+                                c2b.style.fontSize = newSize2 + 'px';
+                                c2b.style.letterSpacing = '-0.04em';
+                                if (DEBUG) {
+                                    console.log('[fix_name.py] SHRINK c2 pass2:',
+                                                newSize2.toFixed(1) + 'px');
+                                }
+                            }
+                        });
+                    }
                 }
             } catch(e) {
                 if (DEBUG) console.warn('[fix_name.py] measure c2:', e);
