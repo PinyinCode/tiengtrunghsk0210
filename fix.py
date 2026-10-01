@@ -12,6 +12,7 @@ fix.py — Auto-scan data/ và thêm MỌI file Excel thành tab riêng.
   - TIER LOCK + ONBOARDING giống tab tổng hợp
   - Clone nút để XÓA event listener cũ của convert.py → không còn popup
   - CHỈ 1 TAB ACTIVE tại một thời điểm
+  - KHÔNG inject vào DATASET_REGISTRY → dropdown "Chuyên ngành" KHÔNG thấy
   - KHÔNG can thiệp convert.py, ui_template.py, config.json
 
 Cách chạy:
@@ -350,6 +351,7 @@ def scan_data_dir():
             "count": len(rows),
             "source": fname,
             "type": "main",
+            "group": "fixpy",  # ⭐ Đánh dấu nguồn gốc
         })
         print("   [OK] " + fname + " -> tab '" + display
               + "' (" + str(len(rows)) + " cau)")
@@ -360,8 +362,14 @@ def scan_data_dir():
 # =================================================================
 #  BUILD JS OVERRIDE
 # =================================================================
-def build_js_override(ids_js):
-    """Tra ve chuoi JS override hoan chinh - co onboarding + tier lock."""
+def build_js_override(ids_js, datasets_json):
+    """Tra ve chuoi JS override hoan chinh - co onboarding + tier lock.
+    
+    FIX: 
+      - KHÔNG inject vào DATASET_REGISTRY (tránh dropdown "Chuyên ngành" thấy)
+      - Dùng FIXPY_DATASETS riêng
+      - Patch __switchRawData để xử lý cả 2 nguồn
+    """
     L = []
     add = L.append
 
@@ -371,16 +379,92 @@ def build_js_override(ids_js):
     add("   FIX.PY OVERRIDE - Bind tab moi + TIER LOCK + ONBOARDING")
     add("   ================================================================")
     add("   Quy tac:")
-    add("     1. Clone nut de XOA event listener cu cua convert.py")
-    add("     2. Tab moi co onboarding + tier lock giong tab tonghop")
-    add("     3. applyFilter() -> getLimitedData() -> cat cau theo tier")
-    add("     4. Ho tro nut 'Doi' chu de (applyOnboardingSelection)")
+    add("     1. FIXPY_DATASETS: tách riêng, KHÔNG inject DATASET_REGISTRY")
+    add("        → dropdown 'Chuyên ngành' KHÔNG thấy tab '1000 Câu giao tiếp'")
+    add("     2. Patch __switchRawData: xử lý cả registry + FIXPY")
+    add("     3. Clone nut de XOA event listener cu cua convert.py")
+    add("     4. Tab moi co onboarding + tier lock giong tab tonghop")
     add("     5. CHI 1 TAB ACTIVE tai mot thoi diem")
     add("   ================================================================")
     add("*/")
     add("(function() {")
     add("    'use strict';")
     add("    var NEW_IDS = " + ids_js + ";")
+    add("")
+    
+    # ═══════════════════════════════════════════════════════════════
+    #  FIXPY_DATASETS: tách riêng khỏi DATASET_REGISTRY
+    # ═══════════════════════════════════════════════════════════════
+    add("    /* ------------------------------------------------------------")
+    add("       FIXPY_DATASETS: Chứa datasets của fix.py")
+    add("       KHÔNG inject vào DATASET_REGISTRY để dropdown 'Chuyên ngành'")
+    add("       không hiển thị nhầm.")
+    add("       ------------------------------------------------------------ */")
+    add("    window.FIXPY_DATASETS = " + datasets_json + ";")
+    add("")
+    add("    /* ------------------------------------------------------------")
+    add("       Patch __switchRawData - xử lý cả DATASET_REGISTRY + FIXPY_DATASETS")
+    add("       ------------------------------------------------------------ */")
+    add("    function patchSwitchRawData() {")
+    add("        if (window.__fixPySwitchPatched) return;")
+    add("        var origSwitch = window.__switchRawData;")
+    add("        if (typeof origSwitch !== 'function') {")
+    add("            setTimeout(patchSwitchRawData, 100);")
+    add("            return;")
+    add("        }")
+    add("")
+    add("        window.__switchRawData = function(datasetId) {")
+    add("            // Ưu tiên FIXPY_DATASETS trước")
+    add("            if (window.FIXPY_DATASETS && window.FIXPY_DATASETS[datasetId]) {")
+    add("                RAW_DATA = window.FIXPY_DATASETS[datasetId].data || [];")
+    add("                CURRENT_DATASET = datasetId;")
+    add("                console.log('[fix.py] switch FIXPY_DATASET:',")
+    add("                            datasetId, '->', RAW_DATA.length, 'cau');")
+    add("                return true;")
+    add("            }")
+    add("            // Fallback: gọi hàm gốc (xử lý DATASET_REGISTRY)")
+    add("            return origSwitch.apply(this, arguments);")
+    add("        };")
+    add("        window.__fixPySwitchPatched = true;")
+    add("        console.log('[fix.py] Đã patch __switchRawData');")
+    add("    }")
+    add("    patchSwitchRawData();")
+    add("")
+    add("    /* ------------------------------------------------------------")
+    add("       Patch markCurrentDatasetActive - CHỈ 1 TAB ACTIVE")
+    add("       ------------------------------------------------------------ */")
+    add("    function patchMarkActive() {")
+    add("        if (window.__fixPyMarkPatched) return;")
+    add("")
+    add("        window.markCurrentDatasetActive = function() {")
+    add("            var cur = (typeof CURRENT_DATASET !== 'undefined')")
+    add("                      ? CURRENT_DATASET : 'tonghop';")
+    add("")
+    add("            document.querySelectorAll('.ds-btn, .ds-sub-btn').forEach(function(b) {")
+    add("                b.classList.remove('active');")
+    add("            });")
+    add("")
+    add("            if (cur === 'tonghop') {")
+    add("                var tonghopBtn = document.querySelector('.ds-btn[data-dataset=\"tonghop\"]');")
+    add("                if (tonghopBtn) tonghopBtn.classList.add('active');")
+    add("                return;")
+    add("            }")
+    add("")
+    add("            // Nếu là FIXPY_DATASET (tab cấp 1)")
+    add("            if (window.FIXPY_DATASETS && window.FIXPY_DATASETS[cur]) {")
+    add("                var fxBtn = document.querySelector('.ds-btn[data-dataset=\"' + cur + '\"]');")
+    add("                if (fxBtn) fxBtn.classList.add('active');")
+    add("                return;")
+    add("            }")
+    add("")
+    add("            // Fallback: chuyên ngành thật")
+    add("            var subBtn = document.querySelector('.ds-sub-btn[data-dataset=\"' + cur + '\"]');")
+    add("            if (subBtn) subBtn.classList.add('active');")
+    add("            var cnBtn = document.querySelector('.ds-btn[data-dataset-group=\"chuyen-nganh\"]');")
+    add("            if (cnBtn && subBtn) cnBtn.classList.add('active');")
+    add("        };")
+    add("        window.__fixPyMarkPatched = true;")
+    add("    }")
     add("")
 
     # ================= PATCH A: getLimitedData =================
@@ -397,19 +481,21 @@ def build_js_override(ids_js):
     add("            var currentDs = (typeof CURRENT_DATASET !== 'undefined')")
     add("                            ? CURRENT_DATASET : 'tonghop';")
     add("")
-    add("            // Tab tonghop: goi ham goc")
+    add("            // Tab tonghop hoặc chuyên ngành → gọi hàm gốc")
     add("            if (currentDs === 'tonghop') {")
     add("                return origGet.apply(this, arguments);")
     add("            }")
+    add("            if (!window.FIXPY_DATASETS || !window.FIXPY_DATASETS[currentDs]) {")
+    add("                return origGet.apply(this, arguments);")
+    add("            }")
     add("")
-    add("            // Tab moi: ap dung override + tier")
+    add("            // Tab mới (fix.py): áp dụng override + tier")
     add("            var info = (typeof getTierInfo === 'function')")
     add("                       ? getTierInfo() : {};")
     add("            if (info.tier === 'active') {")
     add("                return RAW_DATA;")
     add("            }")
     add("")
-    add("            // Onboarding override: loc theo RAW_DATA hien tai")
     add("            var override = window.__onboardingOverride;")
     add("            if (override && Array.isArray(override) && override.length > 0")
     add("                && typeof state !== 'undefined' && state")
@@ -425,7 +511,6 @@ def build_js_override(ids_js):
     add("                }")
     add("            }")
     add("")
-    add("            // Fallback: N cau dau")
     add("            var max2 = info.maxQuestions || 60;")
     add("            return RAW_DATA.slice(0, max2);")
     add("        };")
@@ -458,19 +543,15 @@ def build_js_override(ids_js):
     add("            var sub = document.getElementById('dsSubWrap');")
     add("            if (sub) sub.style.display = 'none';")
     add("")
-    add("            // ═══ Xoa active khoi TAT CA (ds-btn + ds-sub-btn) ═══")
     add("            document.querySelectorAll('.ds-btn, .ds-sub-btn').forEach(function(b) {")
     add("                b.classList.remove('active');")
     add("            });")
     add("            this.classList.add('active');")
     add("")
-    add("            // 1. Doi RAW_DATA")
     add("            if (typeof window.__switchRawData === 'function') {")
     add("                window.__switchRawData(dsId);")
-    add("                console.log('[fix.py] __switchRawData(\"' + dsId + '\")');")
     add("            }")
     add("")
-    add("            // 2. Reset filter state")
     add("            if (typeof state !== 'undefined' && state) {")
     add("                state.search = '';")
     add("                state.hsk = '';")
@@ -487,7 +568,6 @@ def build_js_override(ids_js):
     add("                if (cb) cb.classList.remove('show');")
     add("            } catch(err) {}")
     add("")
-    add("            // 3. Ap dung onboarding override cho tab moi (neu co)")
     add("            var savedTopics = null;")
     add("            if (typeof loadOnboardingSelection === 'function') {")
     add("                try {")
@@ -498,13 +578,11 @@ def build_js_override(ids_js):
     add("                } catch(e) {}")
     add("            }")
     add("")
-    add("            // 4. Re-render (tier lock + onboarding)")
     add("            try {")
     add("                if (typeof buildFilters === 'function') buildFilters();")
     add("                if (typeof applyFilter === 'function') applyFilter();")
     add("                if (typeof updateResultCount === 'function') updateResultCount();")
     add("")
-    add("                // Ve lai banner chu de")
     add("                if (savedTopics && savedTopics.length > 0")
     add("                    && typeof applyOnboardingSelection === 'function') {")
     add("                    try {")
@@ -520,18 +598,15 @@ def build_js_override(ids_js):
     add("                    }")
     add("                }")
     add("")
-    add("                // ═══ Đảm bảo CHỈ 1 TAB ACTIVE ═══")
     add("                document.querySelectorAll('.ds-btn, .ds-sub-btn').forEach(function(b) {")
     add("                    b.classList.remove('active');")
     add("                });")
     add("                this.classList.add('active');")
     add("")
-    add("                console.log('[fix.py] applyFilter() done');")
     add("            } catch(err) {")
     add("                console.warn('[fix.py] re-render error:', err);")
     add("            }")
     add("")
-    add("            // Scroll len dau")
     add("            setTimeout(function() {")
     add("                var mainEl = document.getElementById('mainContent');")
     add("                if (mainEl) {")
@@ -540,70 +615,7 @@ def build_js_override(ids_js):
     add("                    window.scrollTo({ top: yOffset, behavior: 'smooth' });")
     add("                }")
     add("            }, 100);")
-    add("")
-    add("            // VERIFY")
-    add("            setTimeout(function() {")
-    add("                try {")
-    add("                    var info = (typeof getTierInfo === 'function')")
-    add("                               ? getTierInfo() : {};")
-    add("                    var rawLen = (typeof RAW_DATA !== 'undefined')")
-    add("                                 ? RAW_DATA.length : 0;")
-    add("                    var limLen = (typeof getLimitedData === 'function')")
-    add("                                 ? getLimitedData().length : 0;")
-    add("                    var cards = document.querySelectorAll('.card').length;")
-    add("                    var lockBtn = document.querySelector('.load-more.locked');")
-    add("                    var activeTabs = document.querySelectorAll('.ds-btn.active').length;")
-    add("                    console.log('[fix.py] VERIFY ' + dsId")
-    add("                                + ': tier=' + info.tier")
-    add("                                + ', RAW=' + rawLen")
-    add("                                + ', limited=' + limLen")
-    add("                                + ', cards=' + cards")
-    add("                                + ', lock=' + (lockBtn ? 'YES' : 'NO')")
-    add("                                + ', activeTabs=' + activeTabs);")
-    add("                } catch(err) {")
-    add("                    console.warn('[fix.py] verify error:', err);")
-    add("                }")
-    add("            }, 400);")
     add("        }, true);")
-    add("    }")
-    add("")
-
-    # ================= PATCH C: markCurrentDatasetActive (CHỈ 1 TAB ACTIVE) =================
-    add("    /* ------------------------------------------------------------")
-    add("       PATCH C: markCurrentDatasetActive - CHI 1 TAB ACTIVE")
-    add("       ------------------------------------------------------------ */")
-    add("    function patchMarkActive() {")
-    add("        if (window.__fixPyMarkPatched) return;")
-    add("")
-    add("        // Override HOAN TOAN - khong goi origMark (tranh bug active 2 tab)")
-    add("        window.markCurrentDatasetActive = function() {")
-    add("            var cur = (typeof CURRENT_DATASET !== 'undefined')")
-    add("                      ? CURRENT_DATASET : 'tonghop';")
-    add("")
-    add("            // Xoa active khoi TAT CA ds-btn va ds-sub-btn")
-    add("            document.querySelectorAll('.ds-btn, .ds-sub-btn').forEach(function(b) {")
-    add("                b.classList.remove('active');")
-    add("            });")
-    add("")
-    add("            // Chi active tab khop CURRENT_DATASET")
-    add("            if (cur === 'tonghop') {")
-    add("                var tonghopBtn = document.querySelector('.ds-btn[data-dataset=\"tonghop\"]');")
-    add("                if (tonghopBtn) tonghopBtn.classList.add('active');")
-    add("            } else {")
-    add("                // Tab moi (khong phai chuyen nganh)")
-    add("                var newBtn = document.querySelector('.ds-btn[data-dataset=\"' + cur + '\"]');")
-    add("                if (newBtn) {")
-    add("                    newBtn.classList.add('active');")
-    add("                } else {")
-    add("                    // Fallback: co the la chuyen nganh that")
-    add("                    var subBtn = document.querySelector('.ds-sub-btn[data-dataset=\"' + cur + '\"]');")
-    add("                    if (subBtn) subBtn.classList.add('active');")
-    add("                    var cnBtn = document.querySelector('.ds-btn[data-dataset-group=\"chuyen-nganh\"]');")
-    add("                    if (cnBtn && subBtn) cnBtn.classList.add('active');")
-    add("                }")
-    add("            }")
-    add("        };")
-    add("        window.__fixPyMarkPatched = true;")
     add("    }")
     add("")
 
@@ -622,12 +634,11 @@ def build_js_override(ids_js):
     add("            var currentDs = (typeof CURRENT_DATASET !== 'undefined')")
     add("                            ? CURRENT_DATASET : 'tonghop';")
     add("")
-    add("            // Tab tonghop: goi ham goc")
-    add("            if (currentDs === 'tonghop') {")
+    add("            // Chỉ override khi đang ở tab mới của fix.py")
+    add("            if (!window.FIXPY_DATASETS || !window.FIXPY_DATASETS[currentDs]) {")
     add("                return origApply.apply(this, arguments);")
     add("            }")
     add("")
-    add("            // Tab moi: tu tinh override theo RAW_DATA hien tai")
     add("            var cfg = (typeof getOnboardingConfig === 'function')")
     add("                      ? getOnboardingConfig() : null;")
     add("            if (!cfg) return;")
@@ -698,7 +709,6 @@ def build_js_override(ids_js):
     add("")
     add("            window.__onboardingOverride = final;")
     add("")
-    add("            // Reset filter + render")
     add("            if (typeof state !== 'undefined' && state) {")
     add("                state.search = '';")
     add("                state.hsk = '';")
@@ -714,7 +724,6 @@ def build_js_override(ids_js):
     add("            if (typeof applyFilter === 'function') applyFilter();")
     add("            if (typeof updateResultCount === 'function') updateResultCount();")
     add("")
-    add("            // Ve lai banner chu de")
     add("            if (typeof showOnboardingActiveBanner === 'function') {")
     add("                showOnboardingActiveBanner(topics, final.length);")
     add("            }")
@@ -737,6 +746,7 @@ def build_js_override(ids_js):
 
     # ================= INIT =================
     add("    function bindAll() {")
+    add("        patchSwitchRawData();")
     add("        patchGetLimitedData();")
     add("        patchApplyOnboarding();")
     add("        NEW_IDS.forEach(bindTab);")
@@ -749,7 +759,6 @@ def build_js_override(ids_js):
     add("        bindAll();")
     add("    }")
     add("")
-    add("    // Re-bind khi DOM thay doi")
     add("    var _timer = null;")
     add("    var observer = new MutationObserver(function() {")
     add("        clearTimeout(_timer);")
@@ -808,75 +817,75 @@ def main():
     for ds in new_datasets:
         print("   - " + ds["name"] + " (" + str(ds["count"]) + " cau)")
 
-    # PATCH 1: DATASET_REGISTRY
+    # ═══════════════════════════════════════════════════════════════
+    #  PATCH 1: BỎ - KHÔNG inject vào DATASET_REGISTRY
+    #  → Dropdown "Chuyên ngành" sẽ KHÔNG thấy tab "1000 Câu giao tiếp"
+    # ═══════════════════════════════════════════════════════════════
     print("")
-    print("[PATCH 1] Inject vao DATASET_REGISTRY...")
-    pat_registry = re.compile(r'(var\s+DATASET_REGISTRY\s*=\s*)(\{)', re.MULTILINE)
-    if not pat_registry.search(html):
-        print("[X] Khong tim thay DATASET_REGISTRY")
-        sys.exit(1)
+    print("[PATCH 1] BỎ QUA - Không inject vào DATASET_REGISTRY (fix bug dropdown)")
+    print("   → Sẽ dùng window.FIXPY_DATASETS riêng trong JS override")
 
-    inject = ""
-    for ds in new_datasets:
-        inject += '"' + ds["id"] + '":' + _escape_json_for_script(ds) + ','
-
-    html, n = pat_registry.subn(r'\1\2' + inject, html, count=1)
-    if n == 0:
-        print("[X] Khong chen duoc registry")
-        sys.exit(1)
-    print("   [OK] Da chen " + str(len(new_datasets)) + " entry")
-
-    # PATCH 2: Buttons — CHỈ DÙNG TÊN FILE, KHÔNG THÊM SỐ CÂU
+    # ═══════════════════════════════════════════════════════════════
+    #  PATCH 2: Buttons — chèn SAU nút "Tổng hợp" (cấp 1)
+    # ═══════════════════════════════════════════════════════════════
     print("")
-    print("[PATCH 2] Them button tabs...")
+    print("[PATCH 2] Them button tabs (cấp 1 - sau 'Tổng hợp')...")
     new_btns = ""
     for ds in new_datasets:
-        # ═══ Label = CHỈ tên file, KHÔNG thêm số câu ═══
         label = ds["name"]
         new_btns += (
             '\n        <button class="ds-btn ds-btn-primary" '
             'data-dataset="' + ds["id"] + '">\n'
             '            <i class="fas ' + ds["icon"] + '"></i>\n'
             '            <span>' + _js_str(label) + '</span>\n'
-            '        </button>\n    '
+            '        </button>'
         )
 
-    pat_btn = re.compile(
-        r'(\s*)(<button\s+class="[^"]*ds-btn[^"]*"\s+[^>]*data-dataset-group="chuyen-nganh")',
-        re.MULTILINE
+    # Ưu tiên 1: Chèn SAU nút "Tổng hợp"
+    pat_after_tonghop = re.compile(
+        r'(<button[^>]*class="[^"]*ds-btn[^"]*"[^>]*data-dataset="tonghop"[^>]*>.*?</button>)',
+        re.MULTILINE | re.DOTALL
     )
-    html, n = pat_btn.subn(r'\1' + new_btns + r'\2', html, count=1)
-    if n == 0:
-        print("[X] Khong tim thay nut chuyen-nganh")
-        sys.exit(1)
-    print("   [OK] Da chen " + str(len(new_datasets)) + " button")
+    html, n = pat_after_tonghop.subn(r'\1' + new_btns, html, count=1)
 
-    # PATCH 3: CSS layout
+    if n > 0:
+        print("   [OK] Da chen " + str(len(new_datasets)) + " button (sau 'Tong hop')")
+    else:
+        # Fallback: chèn trước nút "chuyen-nganh"
+        print("   [!] Khong thay nut 'tonghop' -> fallback truoc 'chuyen-nganh'")
+        pat_before_cn = re.compile(
+            r'(\s*)(<button\s+class="[^"]*ds-btn[^"]*"\s+[^>]*data-dataset-group="chuyen-nganh")',
+            re.MULTILINE
+        )
+        html, n = pat_before_cn.subn(r'\1' + new_btns + '\n        ' + r'\2', html, count=1)
+        if n == 0:
+            print("[X] Khong tim thay ca nut 'tonghop' lan 'chuyen-nganh'")
+            sys.exit(1)
+        print("   [OK] Da chen " + str(len(new_datasets)) + " button (fallback)")
+
+    # ═══════════════════════════════════════════════════════════════
+    #  PATCH 3: CSS layout cho 4 tab cấp 1
+    # ═══════════════════════════════════════════════════════════════
     print("")
-    print("[PATCH 3] CSS layout...")
+    print("[PATCH 3] CSS layout 4 tab cap 1...")
 
     css_lines = []
     css_lines.append("")
-    css_lines.append("/* ==== FIX.PY: AUTO-FIT LAYOUT CHO N TAB ==== */")
+    css_lines.append("/* ==== FIX.PY: AUTO-FIT LAYOUT CHO 4 TAB ==== */")
+    css_lines.append("/* Mobile (< 769px): luon 2 cot x 2 hang */")
     css_lines.append("@media (max-width: 768px) {")
     css_lines.append("    .ds-main-row {")
     css_lines.append("        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;")
     css_lines.append("        gap: .5rem !important;")
     css_lines.append("    }")
     css_lines.append("}")
-    css_lines.append("@media (min-width: 769px) and (max-width: 1100px) {")
+    css_lines.append("/* Desktop (>= 769px): 4 cot ngang */")
+    css_lines.append("@media (min-width: 769px) {")
     css_lines.append("    .ds-main-row {")
-    css_lines.append("        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;")
+    css_lines.append("        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;")
     css_lines.append("        gap: .55rem !important;")
     css_lines.append("    }")
     css_lines.append("}")
-    css_lines.append("@media (min-width: 1101px) {")
-    css_lines.append("    .ds-main-row {")
-    css_lines.append("        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;")
-    css_lines.append("        gap: .6rem !important;")
-    css_lines.append("    }")
-    css_lines.append("}")
-
     for ds in new_datasets:
         c = ds["color"]
         i = ds["id"]
@@ -924,11 +933,20 @@ def main():
     else:
         print("   [OK] Da override CSS")
 
-    # PATCH 4: JS binding
+    # ═══════════════════════════════════════════════════════════════
+    #  PATCH 4: JS binding (dùng FIXPY_DATASETS)
+    # ═══════════════════════════════════════════════════════════════
     print("")
-    print("[PATCH 4] JS binding (clone nut + tier lock + onboarding)...")
+    print("[PATCH 4] JS binding (FIXPY_DATASETS + clone nut + tier lock)...")
     ids_js = json.dumps([ds["id"] for ds in new_datasets])
-    js = build_js_override(ids_js)
+
+    # Build dict FIXPY_DATASETS
+    datasets_dict = {}
+    for ds in new_datasets:
+        datasets_dict[ds["id"]] = ds
+    datasets_json = _escape_json_for_script(datasets_dict)
+
+    js = build_js_override(ids_js, datasets_json)
 
     pat_body = re.compile(r'(\s*)(</body>)', re.MULTILINE)
     html, n = pat_body.subn(r'\1' + js + r'\1\2', html, count=1)
@@ -950,9 +968,9 @@ def main():
     for ds in new_datasets:
         print("   - " + ds["name"] + " (" + str(ds["count"]) + " cau)")
     print("[fix.py] Label tab: CHI dung ten file (khong them so cau)")
-    print("[fix.py] Layout: PC auto-fit - Mobile 2 cot")
-    print("[fix.py] TICH HOP: Tier lock + Onboarding giong tab tonghop")
+    print("[fix.py] Layout: PC 4 cot - Mobile 2 cot")
     print("[fix.py] CHI 1 TAB ACTIVE tai mot thoi diem")
+    print("[fix.py] Dropdown 'Chuyen nganh' KHONG hien thi tab fix.py")
     print("=" * 62)
 
 
