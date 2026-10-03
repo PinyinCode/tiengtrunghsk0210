@@ -839,6 +839,8 @@ body.practice-full-open .demo-banner,body.practice-full-open .expiry-banner{disp
 @media (max-height:550px) and (orientation:landscape){.pf-tiktok-float{bottom:calc(64px + env(safe-area-inset-bottom))}}
 @media (max-height:420px) and (orientation:landscape){.pf-tiktok-float{bottom:calc(56px + env(safe-area-inset-bottom));transform:scale(.85);transform-origin:left bottom}}
 .practice-full-modal:not(.show) .pf-tiktok-float{display:none!important}
+body.practice-full-open .pf-tiktok-float {
+    display: none !important;}
 
 /* ============================================================ */
 /* FILTERS trong Practice Full                                    */
@@ -3172,6 +3174,100 @@ body.practice-full-open .demo-banner,body.practice-full-open .expiry-banner{disp
     .fav-empty .fav-empty-desc{font-size:.78rem;}
     .pf-fav-btn{width:32px;height:32px;}
 }
+/* ═══════════════════════════════════════════════════════════ */
+/* HEADER LOGO - HỌC TIẾNG TRUNG HSK (FIX BADGE HIỂN THỊ)      */
+/* ═══════════════════════════════════════════════════════════ */
+.logo-text {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    overflow: visible;
+}
+
+.logo-text .title {
+    font-size: clamp(1.2rem, 2.2vw, 1.75rem);
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-width: 0;
+}
+
+.logo-text .title .title-text {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+/* Fallback cho trình duyệt không hỗ trợ background-clip */
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+    .logo-text .title .title-text {
+        color: #7c3aed;
+        -webkit-text-fill-color: #7c3aed;
+    }
+}
+[data-theme="dark"] .logo-text .title .title-text {
+    background: linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #c084fc 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* ⭐ BADGE HSK — Đảm bảo chữ "HSK" luôn hiển thị rõ */
+.logo-text .title .hsk-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.22em 0.65em;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #f59e0b, #ef4444);
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    font-family: inherit;
+    font-size: 0.62em;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 3px 10px rgba(239, 68, 68, 0.45);
+    animation: hskBadgePulse 2.5s ease-in-out infinite;
+    flex-shrink: 0;
+    line-height: 1;
+    transform: translateY(-2px);
+    white-space: nowrap;
+    min-width: 2.8em;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+@keyframes hskBadgePulse {
+    0%, 100% {
+        box-shadow: 0 3px 10px rgba(239, 68, 68, 0.45);
+        transform: translateY(-2px) scale(1);
+    }
+    50% {
+        box-shadow: 0 5px 18px rgba(239, 68, 68, 0.75);
+        transform: translateY(-2px) scale(1.06);
+    }
+}
+
+@media (max-width: 500px) {
+    .logo-text .title {
+        font-size: 1.1rem;
+        gap: 0.4rem;
+    }
+    .logo-text .title .hsk-badge {
+        font-size: 0.6em;
+        padding: 0.2em 0.55em;
+        min-width: 2.5em;
+    }
+}
 """
 def build_ui_html():
     return r"""
@@ -3179,7 +3275,15 @@ def build_ui_html():
 <div class="sticky-top" id="stickyTop" style="display:none">
 <div class="container">
 <header class="header"><div class="header-inner">
-<div class="logo"><div class="logo-icon"><i class="fas fa-language"></i></div><div class="logo-text"><div class="title">Học tiếng Trung</div><div class="subtitle">Văn phòng &amp; Công xưởng</div></div></div>
+<div class="logo">
+    <div class="logo-icon"><i class="fas fa-language"></i></div>
+    <div class="logo-text">
+        <div class="title">
+            <span class="title-text">Học tiếng Trung</span>
+            <span class="hsk-badge">HSK</span>
+        </div>
+    </div>
+</div>
 <div class="header-actions">
 <div class="trial-badge" id="trialBadge"><i class="fas fa-gem"></i> <span id="trialBadgeText">Trial</span></div>
 <div class="demo-badge" id="demoBadge" style="display:none"><i class="fas fa-eye"></i> Demo</div>
@@ -3994,7 +4098,7 @@ function getAllowedHskList() {
     var info = getTierInfo();
     var max = info.maxHSK;
     if (max === Infinity || max >= 6 || info.tier === 'active') {
-        return ['HSK1','HSK2','HSK3','HSK4','HSK5','HSK6'];
+        return ['HSK1','HSK2','HSK3','HSK4','HSK5','HSK6','HSK7-9'];
     }
     var list = [];
     for (var i = 1; i <= max; i++) list.push('HSK' + i);
