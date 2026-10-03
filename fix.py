@@ -1,23 +1,26 @@
 # -*- coding: utf-8 -*-
-"""
-fix.py — Auto-scan data/ và thêm MỌI file Excel thành tab riêng.
+r"""
+fix.py - Auto-scan data/ và thêm MỌI file Excel thành tab riêng.
++ TỰ ĐỘNG thêm tab TỪ VỰNG PREMIUM từ data/tu_vung_hsk.xlsx
 
 ĐẶC ĐIỂM:
   - Đọc HẾT mọi file .xlsx/.xls/.csv trong data/ (TRỪ input.xlsx)
-  - Tên tab = TÊN FILE (normalize NFC — hiển thị đúng dấu tiếng Việt)
+  - Tên tab = TÊN FILE (normalize NFC - hiển thị đúng dấu tiếng Việt)
   - Label tab = CHỈ tên file, KHÔNG thêm số câu
-  - Logic đọc Excel GIỐNG data_reader.py:
-      openpyxl, cột VỊ TRÍ: 0=STT, 1=HSK, 2=Topic, 3=Subject, 4=Vi, 5=Zh, 6=Pinyin
-      Data bắt đầu từ dòng 2, tự động chuyển số Ả Rập → Hán (cn2an)
   - TIER LOCK + ONBOARDING giống tab tổng hợp
-  - Clone nút để XÓA event listener cũ của convert.py → không còn popup
+  - Clone nút để XÓA event listener cũ - không còn popup
   - CHỈ 1 TAB ACTIVE tại một thời điểm
-  - KHÔNG inject vào DATASET_REGISTRY → dropdown "Chuyên ngành" KHÔNG thấy
-  - KHÔNG can thiệp convert.py, ui_template.py, config.json
+  - KHÔNG inject vào DATASET_REGISTRY
+
+  TỪ VỰNG PREMIUM (mới):
+  - Đọc file data/tu_vung_hsk.xlsx (11 cột A-K)
+  - Tự sinh mẹo nhớ + bộ thủ từ vocab_data/
+  - CHỈ mở cho Admin + Premium (isPermanent)
+  - Modal upgrade khi không có quyền
 
 Cách chạy:
-    python scripts/convert.py    # Tạo index.html gốc
-    python fix.py                # Patch index.html — thêm tab từ data/
+    python scripts/convert.py
+    python fix.py
 """
 import json
 import os
@@ -36,9 +39,537 @@ INDEX_HTML = "index.html"
 CONFIG_JSON = "config.json"
 DATA_DIR = "data"
 
-# File cần BỎ QUA khi quét data/ (vì đã là tab "Tổng hợp" trong convert.py)
 SKIP_FILES = {"input.xlsx", "input.xls", "input.csv"}
 
+VOCAB_FILE = os.path.join(DATA_DIR, "tu_vung_hsk.xlsx")
+VOCAB_ID = "tu-vung"
+VOCAB_LABEL = "Từ vựng HSK"
+# ═══════════════════════════════════════════════════════════════════
+#  VOCAB WARNING CSS (banner cảnh báo + gợi ý gia hạn)
+# ═══════════════════════════════════════════════════════════════════
+VOCAB_WARNING_CSS = r"""
+/* ═══ BANNER CẢNH BÁO TỪ VỰNG ═══ */
+.vocab-warning-banner {
+    display: flex; align-items: center; gap: .85rem;
+    padding: .85rem 1rem; margin-bottom: 1rem;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(251, 191, 36, .15), rgba(245, 158, 11, .08));
+    border: 1.5px solid rgba(245, 158, 11, .45);
+    animation: vocabWarnIn .4s cubic-bezier(.34, 1.56, .64, 1);
+}
+@keyframes vocabWarnIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.vocab-warning-banner.tier-trial {
+    background: linear-gradient(135deg, rgba(99, 102, 241, .12), rgba(139, 92, 246, .08));
+    border-color: rgba(99, 102, 241, .45);
+}
+.vocab-warning-banner.tier-expired {
+    background: linear-gradient(135deg, rgba(220, 38, 38, .12), rgba(251, 146, 60, .08));
+    border-color: rgba(220, 38, 38, .5);
+}
+.vocab-warning-banner.tier-active {
+    background: linear-gradient(135deg, rgba(8, 145, 178, .12), rgba(6, 182, 212, .08));
+    border-color: rgba(8, 145, 178, .45);
+}
+.vocab-warning-icon {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, .4);
+}
+.vocab-warning-banner.tier-trial .vocab-warning-icon {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, .4);
+}
+.vocab-warning-banner.tier-expired .vocab-warning-icon {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, .4);
+}
+.vocab-warning-banner.tier-active .vocab-warning-icon {
+    background: linear-gradient(135deg, #0891b2, #06b6d4);
+    box-shadow: 0 4px 12px rgba(8, 145, 178, .4);
+}
+.vocab-warning-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .15rem; }
+.vocab-warning-text strong { font-size: .92rem; font-weight: 800; color: #92400e; }
+.vocab-warning-banner.tier-trial .vocab-warning-text strong { color: #4f46e5; }
+.vocab-warning-banner.tier-expired .vocab-warning-text strong { color: #991b1b; }
+.vocab-warning-banner.tier-active .vocab-warning-text strong { color: #075985; }
+.vocab-warning-text span { font-size: .8rem; color: var(--text-2); line-height: 1.4; }
+.vocab-warning-btn {
+    padding: .55rem .9rem; border-radius: 10px; border: none;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b 50%, #ea580c);
+    color: #fff; font-weight: 800; font-size: .8rem;
+    font-family: inherit; cursor: pointer;
+    display: inline-flex; align-items: center; gap: .35rem;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, .4);
+    transition: all .2s; white-space: nowrap; flex-shrink: 0;
+}
+.vocab-warning-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(245, 158, 11, .6);
+}
+[data-theme="dark"] .vocab-warning-banner {
+    background: linear-gradient(135deg, rgba(251, 191, 36, .2), rgba(245, 158, 11, .1));
+}
+[data-theme="dark"] .vocab-warning-text strong { color: #fcd34d; }
+[data-theme="dark"] .vocab-warning-banner.tier-trial .vocab-warning-text strong { color: #c4b5fd; }
+[data-theme="dark"] .vocab-warning-banner.tier-expired .vocab-warning-text strong { color: #fca5a5; }
+[data-theme="dark"] .vocab-warning-banner.tier-active .vocab-warning-text strong { color: #67e8f9; }
+@media (max-width: 600px) {
+    .vocab-warning-banner { flex-wrap: wrap; gap: .6rem; padding: .7rem .8rem; }
+    .vocab-warning-icon { width: 34px; height: 34px; font-size: .95rem; }
+    .vocab-warning-text strong { font-size: .85rem; }
+    .vocab-warning-text span { font-size: .74rem; }
+}
+"""
+
+
+def build_vocab_js_patch():
+    """JS phân quyền + giới hạn HSK + số câu + banner cho vocab."""
+    return r"""
+/* ═══════════════════════════════════════════════════════
+   VOCAB PATCH — dùng ONBOARDING_CONFIG để phân quyền
+   ═══════════════════════════════════════════════════════ */
+(function() {
+    'use strict';
+    var VOCAB_ID = 'tu-vung';
+
+    function getVocabAccess() {
+    var cfg = (typeof ONBOARDING_CONFIG !== 'undefined' && ONBOARDING_CONFIG) || {};
+
+    // ⭐ ĐỌC TIER TỪ window.APP_TIER (chính xác nhất — do auth module set)
+    var appTier = (typeof window.APP_TIER !== 'undefined') ? window.APP_TIER : null;
+
+    // ⭐ Fallback: đọc currentUser nếu APP_TIER chưa set
+    var u = null;
+    try {
+        if (typeof window.currentUser !== 'undefined' && window.currentUser) u = window.currentUser;
+        else if (typeof currentUser !== 'undefined' && currentUser) u = currentUser;
+    } catch(e) {}
+
+    // ═══ Admin → full ═══
+    if (u && u.role === 'admin') {
+        return { allowed: true, tier: 'admin',
+            hskAllowed: [1,2,3,4,5,6,7,8,9], maxQuestions: -1,
+            label: 'Admin — Toàn bộ HSK', warning: null };
+    }
+
+    // ═══ Premium (isPermanent) → full ═══
+    if (u && u.isPermanent === true) {
+        return { allowed: true, tier: 'premium',
+            hskAllowed: [1,2,3,4,5,6,7,8,9], maxQuestions: -1,
+            label: 'Premium — Toàn bộ HSK', warning: null };
+    }
+
+    // ═══ Xác định tier ═══
+    // Ưu tiên window.APP_TIER → fallback về currentUser
+    var tier = 'demo';
+    if (appTier === 'active') tier = 'active';
+    else if (appTier === 'trial') tier = 'trial';
+    else if (appTier === 'expired') tier = 'expired';
+    else if (appTier === 'demo') tier = 'demo';
+    else if (u) {
+        if (u.isTrial === true || u.tier === 'trial') tier = 'trial';
+        else if (u.isExpiredOnly === true || u.tier === 'expired') tier = 'expired';
+        else tier = 'active';
+    }
+
+    var tierCfg = cfg[tier] || {};
+    var hskArr = tierCfg.hsk_allowed || [];
+    var maxQ = (typeof tierCfg.max_questions === 'number') ? tierCfg.max_questions : -1;
+    var maxT = (typeof tierCfg.topics_per_user === 'number') ? tierCfg.topics_per_user : -1;
+    var isUnlimited = (maxQ === -1 && maxT === -1);
+
+    var hskRange = hskArr.length
+        ? 'HSK ' + hskArr[0] + '-' + hskArr[hskArr.length - 1]
+        : 'cơ bản';
+
+    if (tier === 'expired') {
+        return { allowed: false, tier: 'expired', hskAllowed: [], maxQuestions: 0,
+            label: 'Tài khoản hết hạn',
+            warning: 'Tài khoản đã hết hạn — gia hạn để tiếp tục dùng Từ vựng HSK.' };
+    }
+
+    if (tier === 'demo') {
+        return { allowed: true, tier: 'demo', hskAllowed: hskArr, maxQuestions: maxQ,
+            label: 'Demo — ' + hskRange,
+            warning: 'Bản Demo giới hạn ' + hskRange + ' và tối đa ' +
+                     (maxQ > 0 ? maxQ + ' từ' : 'một số từ') +
+                     ' — đăng nhập để dùng đầy đủ.' };
+    }
+
+    if (tier === 'trial') {
+        if (isUnlimited) {
+            return { allowed: true, tier: 'trial',
+                hskAllowed: hskArr.length ? hskArr : [1,2,3,4,5,6,7,8,9],
+                maxQuestions: -1,
+                label: 'Trial — ' + hskRange, warning: null };
+        }
+        return { allowed: true, tier: 'trial', hskAllowed: hskArr, maxQuestions: maxQ,
+            label: 'Trial — ' + hskRange,
+            warning: 'Bản Trial giới hạn ' + hskRange + ' và ' +
+                     (maxQ > 0 ? maxQ + ' từ' : 'một số từ') +
+                     ' — nâng cấp Premium để mở toàn bộ.' };
+    }
+
+    // ═══ Active ═══
+    if (isUnlimited) {
+        return { allowed: true, tier: 'active',
+            hskAllowed: hskArr.length ? hskArr : [1,2,3,4,5,6,7,8,9],
+            maxQuestions: -1,
+            label: 'Active — ' + hskRange, warning: null };
+    }
+    return { allowed: true, tier: 'active', hskAllowed: hskArr, maxQuestions: maxQ,
+        label: 'Active — ' + hskRange,
+        warning: 'Bản Active giới hạn ' + hskRange + ' và ' +
+                 (maxQ > 0 ? maxQ + ' từ' : 'một số từ') +
+                 ' — nâng cấp Premium để mở toàn bộ.' };
+}
+    function applyVocabLimits(list, access) {
+        var result = list;
+        if (access.hskAllowed && access.hskAllowed.length &&
+            access.hskAllowed.length < 9) {
+            var allowSet = {};
+            access.hskAllowed.forEach(function(h) {
+                allowSet['HSK' + h] = true;
+                allowSet[String(h)] = true;
+            });
+            result = result.filter(function(r) {
+                var h = (r.hsk || '').toString().toUpperCase().trim();
+                if (!h) return true;
+
+                // ⭐ Check HSK7-9 trực tiếp
+                if (h === 'HSK7-9' || h === 'HSK7-9') {
+                    return allowSet['HSK7-9'] === true;
+                }
+
+                // ⭐ Extract số cho HSK1-6
+                var num = h.replace(/[^0-9]/g, '');
+                if (!num) return true;
+                return allowSet['HSK' + num] === true || allowSet[num] === true;
+            });
+        }
+        var maxQ = access.maxQuestions;
+        if (typeof maxQ === 'number' && maxQ > 0 && result.length > maxQ) {
+            result = result.slice(0, maxQ);
+        }
+        return result;
+    }
+
+    function _esc(s) {
+        return (typeof escapeHtml === 'function')
+            ? escapeHtml(s) : String(s == null ? '' : s);
+    }
+
+    function _isVocabMode() {
+        return (typeof CURRENT_DATASET !== 'undefined') && CURRENT_DATASET === VOCAB_ID;
+    }
+
+    function updateTabLockState() {
+        var btn = document.querySelector('.ds-btn[data-dataset="' + VOCAB_ID + '"]');
+        if (!btn) return;
+        var acc = getVocabAccess();
+        var oldLock = btn.querySelector('.vocab-lock-icon');
+        if (oldLock) oldLock.remove();
+        var badge = btn.querySelector('.ds-vocab-badge');
+
+        if (acc.allowed) {
+            btn.classList.remove('vocab-locked');
+            btn.classList.add('vocab-unlocked');
+            btn.title = acc.label;
+            if (badge) {
+                badge.textContent = (acc.tier === 'admin' || acc.tier === 'premium')
+                    ? 'PREMIUM' : (acc.tier === 'active' ? 'ACTIVE'
+                    : (acc.tier === 'trial' ? 'TRIAL' : 'DEMO'));
+            }
+        } else {
+            btn.classList.add('vocab-locked');
+            btn.classList.remove('vocab-unlocked');
+            btn.title = acc.label;
+            var lock = document.createElement('i');
+            lock.className = 'fas fa-lock vocab-lock-icon';
+            btn.appendChild(lock);
+        }
+    }
+
+    function injectVocabWarningBanner() {
+        if (!_isVocabMode()) return;
+        var old = document.getElementById('vocabWarningBanner');
+        if (old) old.remove();
+
+        var acc = getVocabAccess();
+        if (!acc.warning) return;
+
+        var main = document.getElementById('mainContent');
+        if (!main) return;
+
+        var limitedCount = 0, totalCount = 0;
+        try {
+            if (window.FIXPY_DATASETS && window.FIXPY_DATASETS[VOCAB_ID]) {
+                var full = window.FIXPY_DATASETS[VOCAB_ID].data || [];
+                totalCount = full.length;
+                limitedCount = applyVocabLimits(full, acc).length;
+            }
+        } catch(e) {}
+
+        var limitInfo = '';
+        if (acc.maxQuestions > 0 && limitedCount > 0 && totalCount > limitedCount) {
+            limitInfo = ' <span style="opacity:.75">(' +
+                        limitedCount + '/' + totalCount + ' từ)</span>';
+        }
+
+        var icon = acc.tier === 'expired' ? 'fa-exclamation-triangle'
+                 : acc.tier === 'trial' ? 'fa-hourglass-half'
+                 : acc.tier === 'demo' ? 'fa-user'
+                 : 'fa-info-circle';
+        var btnLabel = acc.tier === 'expired' ? 'Gia hạn ngay'
+                     : acc.tier === 'demo' ? 'Đăng nhập'
+                     : 'Nâng cấp Premium';
+        var btnFn = acc.tier === 'demo' ? 'vocabUpgradeLogin()'
+                  : 'vocabUpgradeRenew()';
+
+        var banner = document.createElement('div');
+        banner.id = 'vocabWarningBanner';
+        banner.className = 'vocab-warning-banner tier-' + acc.tier;
+        banner.innerHTML =
+            '<div class="vocab-warning-icon"><i class="fas ' + icon + '"></i></div>' +
+            '<div class="vocab-warning-text">' +
+                '<strong>' + _esc(acc.label) + limitInfo + '</strong>' +
+                '<span>' + _esc(acc.warning) + '</span>' +
+            '</div>' +
+            '<button class="vocab-warning-btn" onclick="' + btnFn + '">' +
+                '<i class="fas fa-crown"></i> ' + btnLabel +
+            '</button>';
+        main.insertBefore(banner, main.firstChild);
+    }
+
+    // ⭐ bindVocabPatch ĐÃ BỎ — vocab_premium.py tự xử lý click
+    function bindVocabPatch() {
+        return;   // no-op
+    }
+    /* ⭐ LOCK ô Chủ đề khi ở tab Từ vựng */
+    function patchSubjectLock() {
+        if (window.__vocabSubjectLockPatched) return;
+        if (typeof window.buildFilters !== 'function') {
+            setTimeout(patchSubjectLock, 200);
+            return;
+        }
+        var orig = window.buildFilters;
+        window.buildFilters = function() {
+            var result = orig.apply(this, arguments);
+
+            try {
+                var sf = document.getElementById('subjectFilter');
+                if (!sf) return result;
+
+                if (_isVocabMode()) {
+                    // Vocab mode → LOCK ô chủ đề
+                    sf.disabled = true;
+                    sf.value = '';
+                    sf.style.opacity = '0.5';
+                    sf.style.cursor = 'not-allowed';
+                    sf.title = 'Không khả dụng cho Từ vựng';
+                } else {
+                    // Tab khác → mở lại
+                    sf.disabled = false;
+                    sf.style.opacity = '';
+                    sf.style.cursor = '';
+                    sf.title = '';
+                }
+            } catch(e) {}
+
+            return result;
+        };
+        window.__vocabSubjectLockPatched = true;
+        console.log('[vocab-patch] subject lock patched');
+    }
+
+   /* ⭐ Watch đổi tab — tự động lock/unlock + thêm HSK7-9 khi vocab */
+    function watchVocabMode() {
+        var isVocab = (typeof CURRENT_DATASET !== 'undefined') && CURRENT_DATASET === VOCAB_ID;
+
+        // ⭐ SET cờ body
+        if (isVocab) {
+            document.body.setAttribute('data-vocab-mode', '1');
+        } else {
+            document.body.removeAttribute('data-vocab-mode');
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        //  ⭐ LOCK ô Chủ đề (main + full)
+        // ═══════════════════════════════════════════════════════════
+        var selects = [
+            document.getElementById('subjectFilter'),
+            document.getElementById('pfSubjectFilter')
+        ];
+
+        selects.forEach(function(sf) {
+            if (!sf) return;
+
+            if (isVocab && !sf.disabled) {
+                sf.disabled = true;
+                sf.value = '';
+                sf.style.opacity = '0.5';
+                sf.style.cursor = 'not-allowed';
+                sf.title = 'Không khả dụng cho Từ vựng';
+            } else if (!isVocab && sf.disabled) {
+                sf.disabled = false;
+                sf.style.opacity = '';
+                sf.style.cursor = '';
+                sf.title = '';
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════
+        //  ⭐ THÊM/XÓA option HSK7-9 ở ô HSK
+        // ═══════════════════════════════════════════════════════════
+        var hskSelects = [
+            document.getElementById('hskFilter'),      // main
+            document.getElementById('pfHskFilter')      // practice full
+        ];
+
+        hskSelects.forEach(function(hf) {
+            if (!hf) return;
+
+            var hsk79 = hf.querySelector('option[value="HSK7-9"]');
+            var has79 = !!hsk79;
+
+            if (isVocab && !has79) {
+                // ⭐ THÊM option HSK7-9
+                var opt = document.createElement('option');
+                opt.value = 'HSK7-9';
+                opt.textContent = 'HSK7-9';
+                hf.appendChild(opt);
+            } else if (!isVocab && has79) {
+                // ⭐ XÓA option HSK7-9 khi rời vocab
+                // Nhưng chỉ xóa nếu nó đang không được chọn
+                if (hf.value === 'HSK7-9') {
+                    hf.value = '';
+                }
+                hsk79.remove();
+            }
+        });
+    }
+    window.getVocabAccess = getVocabAccess;
+    window.vocabUpdateLockState = updateTabLockState;
+    window.vocabInjectWarning = injectVocabWarningBanner;
+
+    function patchLoop() {
+        // ⭐ Chỉ cần DOM ready + tab vocab tồn tại là đủ
+        var vocabBtn = document.querySelector('.ds-btn[data-dataset="' + VOCAB_ID + '"]');
+        if (!vocabBtn) {
+            setTimeout(patchLoop, 300);
+            return;
+        }
+
+        window.vocabUpdateLockState = updateTabLockState;
+
+        // ═══════════════════════════════════════════════════════════
+        //  ⭐ OVERRIDE buildFilters — thêm HSK7-9 khi vocab
+        // ═══════════════════════════════════════════════════════════
+        if (!window.__vocabBuildFiltersPatched && typeof window.buildFilters === 'function') {
+            window.__vocabBuildFiltersPatched = true;
+            var origBuildFilters = window.buildFilters;
+            window.buildFilters = function() {
+                var result = origBuildFilters.apply(this, arguments);
+
+                // Sau khi build xong → thêm HSK7-9 nếu vocab mode
+                if (_isVocabMode()) {
+                    var hf = document.getElementById('hskFilter');
+                    if (hf && !hf.querySelector('option[value="HSK7-9"]')) {
+                        var opt = document.createElement('option');
+                        opt.value = 'HSK7-9';
+                        opt.textContent = 'HSK7-9';
+                        hf.appendChild(opt);
+                    }
+                }
+
+                return result;
+            };
+            console.log('[vocab-patch] buildFilters patched');
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        //  ⭐ OVERRIDE pfBuildFilterOptions — thêm HSK7-9 + lock subject
+        // ═══════════════════════════════════════════════════════════
+        if (!window.__vocabPfFilterPatched && typeof window.pfBuildFilterOptions === 'function') {
+            window.__vocabPfFilterPatched = true;
+            var origPfBuild = window.pfBuildFilterOptions;
+            window.pfBuildFilterOptions = function() {
+                var result = origPfBuild.apply(this, arguments);
+
+                if (_isVocabMode()) {
+                    // Thêm HSK7-9
+                    var pfHf = document.getElementById('pfHskFilter');
+                    if (pfHf && !pfHf.querySelector('option[value="HSK7-9"]')) {
+                        var opt = document.createElement('option');
+                        opt.value = 'HSK7-9';
+                        opt.textContent = 'HSK7-9';
+                        pfHf.appendChild(opt);
+                    }
+
+                    // Lock subject
+                    var pfSubj = document.getElementById('pfSubjectFilter');
+                    if (pfSubj) {
+                        pfSubj.disabled = true;
+                        pfSubj.value = '';
+                        pfSubj.style.opacity = '0.5';
+                        pfSubj.style.cursor = 'not-allowed';
+                        pfSubj.title = 'Không khả dụng cho Từ vựng';
+                    }
+                }
+
+                return result;
+            };
+            console.log('[vocab-patch] pfBuildFilterOptions patched');
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        //  Hook click tab vocab — apply giới hạn HSK + số câu
+        // ═══════════════════════════════════════════════════════════
+        if (!vocabBtn.__vocabLimitHooked) {
+            vocabBtn.__vocabLimitHooked = true;
+            vocabBtn.addEventListener('click', function() {
+                setTimeout(function() {
+                    var acc = getVocabAccess();
+                    if (!acc.allowed) return;
+                    if (_isVocabMode() && window.FIXPY_DATASETS &&
+                        window.FIXPY_DATASETS[VOCAB_ID]) {
+                        var full = window.FIXPY_DATASETS[VOCAB_ID].data || [];
+                        var limited = applyVocabLimits(full, acc);
+                        if (limited.length !== full.length) {
+                            RAW_DATA = limited;
+                            if (typeof applyFilter === 'function') applyFilter();
+                            if (typeof updateResultCount === 'function') updateResultCount();
+                        }
+                    }
+                    updateTabLockState();
+                    injectVocabWarningBanner();
+                    watchVocabMode();
+                }, 500);
+            }, false);
+        }
+
+        updateTabLockState();
+
+       // ⭐ Refresh badge + banner mỗi 2s (fix race condition + auto-update)
+        setInterval(function() {
+            updateTabLockState();   // ⬅️ THÊM — refresh badge
+            if (_isVocabMode()) injectVocabWarningBanner();
+        }, 2000);
+
+        // ⭐ Watch mode chạy liên tục
+        watchVocabMode();
+        setInterval(watchVocabMode, 800);
+
+        console.log('[vocab-patch] ready — onboarding-based');
+    }
+    setTimeout(patchLoop, 800);
+})();
+"""
 if not os.path.isfile(CONFIG_JSON) and os.path.isfile(os.path.join("..", CONFIG_JSON)):
     os.chdir("..")
     print("[fix.py] Phat hien chay tu scripts/ -> chuyen ve root")
@@ -51,6 +582,24 @@ TAB_COLORS = [
     "#0891b2", "#dc2626", "#059669", "#d97706",
     "#7c3aed", "#db2777", "#0284c7", "#65a30d",
 ]
+
+
+# =================================================================
+#  IMPORT MODULE TỪ VỰNG PREMIUM
+# =================================================================
+try:
+    from vocab_premium import (
+        read_vocab_excel,
+        build_vocab_css,
+        build_vocab_tab_html,
+        build_vocab_modal_html,
+        build_vocab_js_override,
+    )
+    HAS_VOCAB_MODULE = True
+    print("[fix.py] OK - Da load module vocab_premium")
+except ImportError as e:
+    HAS_VOCAB_MODULE = False
+    print("[fix.py] WARN - Khong load duoc vocab_premium: " + str(e))
 
 
 # =================================================================
@@ -162,7 +711,6 @@ def _slugify(filename):
 
 
 def _display_name(filename):
-    """Lay ten file lam ten tab. KHONG bo so dau."""
     name = filename.rsplit(".", 1)[0].replace("_", " ").strip()
     name = unicodedata.normalize("NFC", name)
     if name.islower() or name.isupper():
@@ -288,7 +836,7 @@ def _read_excel_rows(filepath):
 
 
 # =================================================================
-#  SCAN data/ — BO QUA input.xlsx
+#  SCAN data/
 # =================================================================
 def scan_data_dir():
     if not os.path.isdir(DATA_DIR):
@@ -310,17 +858,21 @@ def scan_data_dir():
     datasets = []
     used_ids = set()
 
+    vocab_basename = os.path.basename(VOCAB_FILE).lower()
+
     for filepath in files:
         fname = os.path.basename(filepath)
 
-        # Bo file tam Office
         if fname.startswith("~$"):
             print("   [skip] " + fname + " - file tam")
             continue
 
-        # ═══ BO QUA input.xlsx (đã là tab Tổng hợp) ═══
         if fname.lower() in SKIP_FILES:
             print("   [skip] " + fname + " - da la tab Tong hop")
+            continue
+
+        if fname.lower() == vocab_basename:
+            print("   [skip] " + fname + " - se tao tab Tu vung Premium rieng")
             continue
 
         print("   [file] " + fname)
@@ -351,7 +903,7 @@ def scan_data_dir():
             "count": len(rows),
             "source": fname,
             "type": "main",
-            "group": "fixpy",  # ⭐ Đánh dấu nguồn gốc
+            "group": "fixpy",
         })
         print("   [OK] " + fname + " -> tab '" + display
               + "' (" + str(len(rows)) + " cau)")
@@ -363,48 +915,20 @@ def scan_data_dir():
 #  BUILD JS OVERRIDE
 # =================================================================
 def build_js_override(ids_js, datasets_json):
-    """Tra ve chuoi JS override hoan chinh - co onboarding + tier lock.
-    
-    FIX: 
-      - KHÔNG inject vào DATASET_REGISTRY (tránh dropdown "Chuyên ngành" thấy)
-      - Dùng FIXPY_DATASETS riêng
-      - Patch __switchRawData để xử lý cả 2 nguồn
-    """
     L = []
     add = L.append
 
     add("")
     add("<script>")
-    add("/* ================================================================")
-    add("   FIX.PY OVERRIDE - Bind tab moi + TIER LOCK + ONBOARDING")
-    add("   ================================================================")
-    add("   Quy tac:")
-    add("     1. FIXPY_DATASETS: tách riêng, KHÔNG inject DATASET_REGISTRY")
-    add("        → dropdown 'Chuyên ngành' KHÔNG thấy tab '1000 Câu giao tiếp'")
-    add("     2. Patch __switchRawData: xử lý cả registry + FIXPY")
-    add("     3. Clone nut de XOA event listener cu cua convert.py")
-    add("     4. Tab moi co onboarding + tier lock giong tab tonghop")
-    add("     5. CHI 1 TAB ACTIVE tai mot thoi diem")
-    add("   ================================================================")
-    add("*/")
+    add("/* FIX.PY OVERRIDE - Bind tab moi + TIER LOCK + ONBOARDING */")
     add("(function() {")
     add("    'use strict';")
     add("    var NEW_IDS = " + ids_js + ";")
     add("")
-    
-    # ═══════════════════════════════════════════════════════════════
-    #  FIXPY_DATASETS: tách riêng khỏi DATASET_REGISTRY
-    # ═══════════════════════════════════════════════════════════════
-    add("    /* ------------------------------------------------------------")
-    add("       FIXPY_DATASETS: Chứa datasets của fix.py")
-    add("       KHÔNG inject vào DATASET_REGISTRY để dropdown 'Chuyên ngành'")
-    add("       không hiển thị nhầm.")
-    add("       ------------------------------------------------------------ */")
+
     add("    window.FIXPY_DATASETS = " + datasets_json + ";")
     add("")
-    add("    /* ------------------------------------------------------------")
-    add("       Patch __switchRawData - xử lý cả DATASET_REGISTRY + FIXPY_DATASETS")
-    add("       ------------------------------------------------------------ */")
+
     add("    function patchSwitchRawData() {")
     add("        if (window.__fixPySwitchPatched) return;")
     add("        var origSwitch = window.__switchRawData;")
@@ -412,9 +936,7 @@ def build_js_override(ids_js, datasets_json):
     add("            setTimeout(patchSwitchRawData, 100);")
     add("            return;")
     add("        }")
-    add("")
     add("        window.__switchRawData = function(datasetId) {")
-    add("            // Ưu tiên FIXPY_DATASETS trước")
     add("            if (window.FIXPY_DATASETS && window.FIXPY_DATASETS[datasetId]) {")
     add("                RAW_DATA = window.FIXPY_DATASETS[datasetId].data || [];")
     add("                CURRENT_DATASET = datasetId;")
@@ -422,42 +944,31 @@ def build_js_override(ids_js, datasets_json):
     add("                            datasetId, '->', RAW_DATA.length, 'cau');")
     add("                return true;")
     add("            }")
-    add("            // Fallback: gọi hàm gốc (xử lý DATASET_REGISTRY)")
     add("            return origSwitch.apply(this, arguments);")
     add("        };")
     add("        window.__fixPySwitchPatched = true;")
-    add("        console.log('[fix.py] Đã patch __switchRawData');")
     add("    }")
     add("    patchSwitchRawData();")
     add("")
-    add("    /* ------------------------------------------------------------")
-    add("       Patch markCurrentDatasetActive - CHỈ 1 TAB ACTIVE")
-    add("       ------------------------------------------------------------ */")
+
     add("    function patchMarkActive() {")
     add("        if (window.__fixPyMarkPatched) return;")
-    add("")
     add("        window.markCurrentDatasetActive = function() {")
     add("            var cur = (typeof CURRENT_DATASET !== 'undefined')")
     add("                      ? CURRENT_DATASET : 'tonghop';")
-    add("")
     add("            document.querySelectorAll('.ds-btn, .ds-sub-btn').forEach(function(b) {")
     add("                b.classList.remove('active');")
     add("            });")
-    add("")
     add("            if (cur === 'tonghop') {")
     add("                var tonghopBtn = document.querySelector('.ds-btn[data-dataset=\"tonghop\"]');")
     add("                if (tonghopBtn) tonghopBtn.classList.add('active');")
     add("                return;")
     add("            }")
-    add("")
-    add("            // Nếu là FIXPY_DATASET (tab cấp 1)")
     add("            if (window.FIXPY_DATASETS && window.FIXPY_DATASETS[cur]) {")
     add("                var fxBtn = document.querySelector('.ds-btn[data-dataset=\"' + cur + '\"]');")
     add("                if (fxBtn) fxBtn.classList.add('active');")
     add("                return;")
     add("            }")
-    add("")
-    add("            // Fallback: chuyên ngành thật")
     add("            var subBtn = document.querySelector('.ds-sub-btn[data-dataset=\"' + cur + '\"]');")
     add("            if (subBtn) subBtn.classList.add('active');")
     add("            var cnBtn = document.querySelector('.ds-btn[data-dataset-group=\"chuyen-nganh\"]');")
@@ -467,35 +978,25 @@ def build_js_override(ids_js, datasets_json):
     add("    }")
     add("")
 
-    # ================= PATCH A: getLimitedData =================
-    add("    /* ------------------------------------------------------------")
-    add("       PATCH A: getLimitedData - ho tro onboarding cho tab moi")
-    add("       ------------------------------------------------------------ */")
     add("    function patchGetLimitedData() {")
     add("        if (window.__fixPyLimitedPatched) return;")
     add("        var origGet = window.getLimitedData")
     add("                    || (typeof getLimitedData !== 'undefined' ? getLimitedData : null);")
     add("        if (typeof origGet !== 'function') return;")
-    add("")
     add("        window.getLimitedData = function() {")
     add("            var currentDs = (typeof CURRENT_DATASET !== 'undefined')")
     add("                            ? CURRENT_DATASET : 'tonghop';")
-    add("")
-    add("            // Tab tonghop hoặc chuyên ngành → gọi hàm gốc")
     add("            if (currentDs === 'tonghop') {")
     add("                return origGet.apply(this, arguments);")
     add("            }")
     add("            if (!window.FIXPY_DATASETS || !window.FIXPY_DATASETS[currentDs]) {")
     add("                return origGet.apply(this, arguments);")
     add("            }")
-    add("")
-    add("            // Tab mới (fix.py): áp dụng override + tier")
     add("            var info = (typeof getTierInfo === 'function')")
     add("                       ? getTierInfo() : {};")
     add("            if (info.tier === 'active') {")
     add("                return RAW_DATA;")
     add("            }")
-    add("")
     add("            var override = window.__onboardingOverride;")
     add("            if (override && Array.isArray(override) && override.length > 0")
     add("                && typeof state !== 'undefined' && state")
@@ -510,48 +1011,34 @@ def build_js_override(ids_js, datasets_json):
     add("                    return filtered.slice(0, max);")
     add("                }")
     add("            }")
-    add("")
     add("            var max2 = info.maxQuestions || 60;")
     add("            return RAW_DATA.slice(0, max2);")
     add("        };")
-    add("")
     add("        window.__fixPyLimitedPatched = true;")
     add("    }")
     add("")
 
-    # ================= PATCH B: bindTab =================
-    add("    /* ------------------------------------------------------------")
-    add("       PATCH B: bindTab - CLONE nut + onboarding cho tab moi")
-    add("       ------------------------------------------------------------ */")
     add("    function bindTab(dsId) {")
     add("        var btn = document.querySelector('.ds-btn[data-dataset=\"' + dsId + '\"]');")
     add("        if (!btn) return;")
     add("        if (btn.__fixPyBound) return;")
-    add("")
-    add("        // Clone nut de xoa TAT CA event listener cu")
     add("        var cloned = btn.cloneNode(true);")
     add("        btn.parentNode.replaceChild(cloned, btn);")
     add("        cloned.__fixPyBound = true;")
-    add("")
     add("        cloned.addEventListener('click', function(e) {")
     add("            e.stopImmediatePropagation();")
     add("            e.stopPropagation();")
     add("            e.preventDefault();")
-    add("")
     add("            console.log('[fix.py] click tab ' + dsId);")
-    add("")
     add("            var sub = document.getElementById('dsSubWrap');")
     add("            if (sub) sub.style.display = 'none';")
-    add("")
     add("            document.querySelectorAll('.ds-btn, .ds-sub-btn').forEach(function(b) {")
     add("                b.classList.remove('active');")
     add("            });")
     add("            this.classList.add('active');")
-    add("")
     add("            if (typeof window.__switchRawData === 'function') {")
     add("                window.__switchRawData(dsId);")
     add("            }")
-    add("")
     add("            if (typeof state !== 'undefined' && state) {")
     add("                state.search = '';")
     add("                state.hsk = '';")
@@ -567,7 +1054,6 @@ def build_js_override(ids_js, datasets_json):
     add("                var cb = document.getElementById('clearSearchBtn');")
     add("                if (cb) cb.classList.remove('show');")
     add("            } catch(err) {}")
-    add("")
     add("            var savedTopics = null;")
     add("            if (typeof loadOnboardingSelection === 'function') {")
     add("                try {")
@@ -577,12 +1063,10 @@ def build_js_override(ids_js, datasets_json):
     add("                    }")
     add("                } catch(e) {}")
     add("            }")
-    add("")
     add("            try {")
     add("                if (typeof buildFilters === 'function') buildFilters();")
     add("                if (typeof applyFilter === 'function') applyFilter();")
     add("                if (typeof updateResultCount === 'function') updateResultCount();")
-    add("")
     add("                if (savedTopics && savedTopics.length > 0")
     add("                    && typeof applyOnboardingSelection === 'function') {")
     add("                    try {")
@@ -597,16 +1081,13 @@ def build_js_override(ids_js, datasets_json):
     add("                        console.warn('[fix.py] applyOnboarding error:', e2);")
     add("                    }")
     add("                }")
-    add("")
     add("                document.querySelectorAll('.ds-btn, .ds-sub-btn').forEach(function(b) {")
     add("                    b.classList.remove('active');")
     add("                });")
     add("                this.classList.add('active');")
-    add("")
     add("            } catch(err) {")
     add("                console.warn('[fix.py] re-render error:', err);")
     add("            }")
-    add("")
     add("            setTimeout(function() {")
     add("                var mainEl = document.getElementById('mainContent');")
     add("                if (mainEl) {")
@@ -619,33 +1100,23 @@ def build_js_override(ids_js, datasets_json):
     add("    }")
     add("")
 
-    # ================= PATCH D: applyOnboardingSelection cho tab moi =================
-    add("    /* ------------------------------------------------------------")
-    add("       PATCH D: applyOnboardingSelection - ho tro tab moi")
-    add("       ------------------------------------------------------------ */")
     add("    function patchApplyOnboarding() {")
     add("        if (window.__fixPyApplyOnbPatched) return;")
     add("        var origApply = window.applyOnboardingSelection")
     add("                      || (typeof applyOnboardingSelection !== 'undefined'")
     add("                          ? applyOnboardingSelection : null);")
     add("        if (typeof origApply !== 'function') return;")
-    add("")
     add("        window.applyOnboardingSelection = function(topics, scrollTop) {")
     add("            var currentDs = (typeof CURRENT_DATASET !== 'undefined')")
     add("                            ? CURRENT_DATASET : 'tonghop';")
-    add("")
-    add("            // Chỉ override khi đang ở tab mới của fix.py")
     add("            if (!window.FIXPY_DATASETS || !window.FIXPY_DATASETS[currentDs]) {")
     add("                return origApply.apply(this, arguments);")
     add("            }")
-    add("")
     add("            var cfg = (typeof getOnboardingConfig === 'function')")
     add("                      ? getOnboardingConfig() : null;")
     add("            if (!cfg) return;")
-    add("")
     add("            var maxQ = cfg.max_questions;")
     add("            var isUnlimitedQ = (maxQ === -1 || maxQ === Infinity);")
-    add("")
     add("            var allowedHsk;")
     add("            if (cfg.hsk_allowed && Array.isArray(cfg.hsk_allowed) && cfg.hsk_allowed.length > 0) {")
     add("                allowedHsk = cfg.hsk_allowed.map(function(n) { return 'HSK' + n; });")
@@ -654,17 +1125,14 @@ def build_js_override(ids_js, datasets_json):
     add("                             ? getAllowedHskList()")
     add("                             : ['HSK1','HSK2','HSK3','HSK4','HSK5','HSK6'];")
     add("            }")
-    add("")
     add("            var pool = RAW_DATA.filter(function(r) {")
     add("                if (allowedHsk.indexOf(r.hsk) === -1) return false;")
     add("                var s = (r.subject || '').trim();")
     add("                return topics.indexOf(s) !== -1;")
     add("            });")
-    add("")
     add("            pool.sort(function(a, b) {")
     add("                return (parseInt(a.stt) || 0) - (parseInt(b.stt) || 0);")
     add("            });")
-    add("")
     add("            var final = [];")
     add("            if (isUnlimitedQ) {")
     add("                final = pool.slice();")
@@ -676,7 +1144,6 @@ def build_js_override(ids_js, datasets_json):
     add("                var perHsk = Math.ceil(maxQ / allowedHsk.length);")
     add("                var hskCount = {};")
     add("                allowedHsk.forEach(function(h) { hskCount[h] = 0; });")
-    add("")
     add("                for (var i = 0; i < pool.length && final.length < maxQ; i++) {")
     add("                    var r = pool[i];")
     add("                    var s = (r.subject || '').trim() || '__no_subject__';")
@@ -686,7 +1153,6 @@ def build_js_override(ids_js, datasets_json):
     add("                    topicCount[s] = (topicCount[s] || 0) + 1;")
     add("                    if (r.hsk && hskCount[r.hsk] !== undefined) hskCount[r.hsk]++;")
     add("                }")
-    add("")
     add("                if (final.length < maxQ) {")
     add("                    var usedIds = {};")
     add("                    final.forEach(function(r) { usedIds[r.stt] = true; });")
@@ -702,13 +1168,10 @@ def build_js_override(ids_js, datasets_json):
     add("                }")
     add("                if (final.length > maxQ) final = final.slice(0, maxQ);")
     add("            }")
-    add("")
     add("            final.sort(function(a, b) {")
     add("                return (parseInt(a.stt) || 0) - (parseInt(b.stt) || 0);")
     add("            });")
-    add("")
     add("            window.__onboardingOverride = final;")
-    add("")
     add("            if (typeof state !== 'undefined' && state) {")
     add("                state.search = '';")
     add("                state.hsk = '';")
@@ -720,14 +1183,11 @@ def build_js_override(ids_js, datasets_json):
     add("                var cb = document.getElementById('clearSearchBtn');")
     add("                if (cb) cb.classList.remove('show');")
     add("            } catch(e) {}")
-    add("")
     add("            if (typeof applyFilter === 'function') applyFilter();")
     add("            if (typeof updateResultCount === 'function') updateResultCount();")
-    add("")
     add("            if (typeof showOnboardingActiveBanner === 'function') {")
     add("                showOnboardingActiveBanner(topics, final.length);")
     add("            }")
-    add("")
     add("            if (scrollTop) {")
     add("                setTimeout(function() {")
     add("                    var mainEl = document.getElementById('mainContent');")
@@ -739,12 +1199,10 @@ def build_js_override(ids_js, datasets_json):
     add("                }, 200);")
     add("            }")
     add("        };")
-    add("")
     add("        window.__fixPyApplyOnbPatched = true;")
     add("    }")
     add("")
 
-    # ================= INIT =================
     add("    function bindAll() {")
     add("        patchSwitchRawData();")
     add("        patchGetLimitedData();")
@@ -776,130 +1234,38 @@ def build_js_override(ids_js, datasets_json):
 
 
 # =================================================================
-#  MAIN
+#  BUILD CSS LAYOUT
 # =================================================================
-def main():
-    print("=" * 62)
-    print("[fix.py] Auto-scan data/ -> them tab rieng cho moi file")
-    print("=" * 62)
-
-    if not os.path.isfile(INDEX_HTML):
-        print("[X] Khong thay " + INDEX_HTML + ". Chay convert.py truoc.")
-        sys.exit(1)
-
-    with open(INDEX_HTML, "r", encoding="utf-8") as f:
-        html = f.read()
-
-    datasets = scan_data_dir()
-
-    if not datasets:
-        print("")
-        print("[fix.py] Khong co dataset nao. Giu nguyen index.html.")
-        return
-
-    new_datasets = []
-    for ds in datasets:
-        marker1 = '"id":"' + ds["id"] + '"'
-        marker2 = "'id': '" + ds["id"] + "'"
-        marker3 = 'data-dataset="' + ds["id"] + '"'
-        if marker1 in html or marker2 in html or marker3 in html:
-            print("   [skip] '" + ds["id"] + "' da co trong HTML")
-        else:
-            new_datasets.append(ds)
-
-    if not new_datasets:
-        print("")
-        print("[fix.py] Tat ca dataset da co - khong can patch.")
-        return
-
-    print("")
-    print("[fix.py] Se them " + str(len(new_datasets)) + " tab:")
-    for ds in new_datasets:
-        print("   - " + ds["name"] + " (" + str(ds["count"]) + " cau)")
-
-    # ═══════════════════════════════════════════════════════════════
-    #  PATCH 1: BỎ - KHÔNG inject vào DATASET_REGISTRY
-    #  → Dropdown "Chuyên ngành" sẽ KHÔNG thấy tab "1000 Câu giao tiếp"
-    # ═══════════════════════════════════════════════════════════════
-    print("")
-    print("[PATCH 1] BỎ QUA - Không inject vào DATASET_REGISTRY (fix bug dropdown)")
-    print("   → Sẽ dùng window.FIXPY_DATASETS riêng trong JS override")
-
-    # ═══════════════════════════════════════════════════════════════
-    #  PATCH 2: Buttons — chèn SAU nút "Tổng hợp" (cấp 1)
-    # ═══════════════════════════════════════════════════════════════
-    print("")
-    print("[PATCH 2] Them button tabs (cấp 1 - sau 'Tổng hợp')...")
-    new_btns = ""
-    for ds in new_datasets:
-        label = ds["name"]
-        new_btns += (
-            '\n        <button class="ds-btn ds-btn-primary" '
-            'data-dataset="' + ds["id"] + '">\n'
-            '            <i class="fas ' + ds["icon"] + '"></i>\n'
-            '            <span>' + _js_str(label) + '</span>\n'
-            '        </button>'
-        )
-
-    # Ưu tiên 1: Chèn SAU nút "Tổng hợp"
-    pat_after_tonghop = re.compile(
-        r'(<button[^>]*class="[^"]*ds-btn[^"]*"[^>]*data-dataset="tonghop"[^>]*>.*?</button>)',
-        re.MULTILINE | re.DOTALL
-    )
-    html, n = pat_after_tonghop.subn(r'\1' + new_btns, html, count=1)
-
-    if n > 0:
-        print("   [OK] Da chen " + str(len(new_datasets)) + " button (sau 'Tong hop')")
-    else:
-        # Fallback: chèn trước nút "chuyen-nganh"
-        print("   [!] Khong thay nut 'tonghop' -> fallback truoc 'chuyen-nganh'")
-        pat_before_cn = re.compile(
-            r'(\s*)(<button\s+class="[^"]*ds-btn[^"]*"\s+[^>]*data-dataset-group="chuyen-nganh")',
-            re.MULTILINE
-        )
-        html, n = pat_before_cn.subn(r'\1' + new_btns + '\n        ' + r'\2', html, count=1)
-        if n == 0:
-            print("[X] Khong tim thay ca nut 'tonghop' lan 'chuyen-nganh'")
-            sys.exit(1)
-        print("   [OK] Da chen " + str(len(new_datasets)) + " button (fallback)")
-
-    # ═══════════════════════════════════════════════════════════════
-    #  PATCH 3: CSS layout cho 4 tab cấp 1
-    # ═══════════════════════════════════════════════════════════════
-    print("")
-    print("[PATCH 3] CSS layout 4 tab cap 1...")
-
+def build_layout_css(new_datasets, add_vocab):
     css_lines = []
     css_lines.append("")
-    css_lines.append("/* ==== FIX.PY: AUTO-FIT LAYOUT CHO 4 TAB ==== */")
-    css_lines.append("/* Mobile (< 769px): luon 2 cot x 2 hang */")
+    css_lines.append("/* FIX.PY: AUTO-FIT LAYOUT */")
     css_lines.append("@media (max-width: 768px) {")
     css_lines.append("    .ds-main-row {")
-    css_lines.append("        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;")
+    css_lines.append("        grid-template-columns: repeat(2, minmax(0, 1fr) ) !important;")
     css_lines.append("        gap: .5rem !important;")
     css_lines.append("    }")
     css_lines.append("}")
-    css_lines.append("/* Desktop (>= 769px): 4 cot ngang */")
-  # ═══════════════════════════════════════════════════════════
-    #  FIX LAYOUT TAB CON "CHỌN NGÀNH" - GRID ĐỀU, KÍCH THƯỚC BẰNG NHAU
-    # ═══════════════════════════════════════════════════════════
+    css_lines.append("@media (min-width: 769px) {")
+    css_lines.append("    .ds-main-row {")
+    css_lines.append("        grid-template-columns: repeat(4, minmax(0, 1fr) ) !important;")
+    css_lines.append("        gap: .55rem !important;")
+    css_lines.append("    }")
+    css_lines.append("}")
+
     css_lines.append("")
-    css_lines.append("/* ==== FIX.PY: GRID ĐỀU CHO TAB CON CHUYÊN NGÀNH ==== */")
+    css_lines.append("/* GRID DEU CHO TAB CON CHUYEN NGANH */")
     css_lines.append(".ds-sub-grid {")
     css_lines.append("    display: grid !important;")
-    css_lines.append("    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;")
+    css_lines.append("    grid-template-columns: repeat(2, minmax(0, 1fr) ) !important;")
     css_lines.append("    gap: .55rem !important;")
     css_lines.append("    align-items: stretch !important;")
     css_lines.append("}")
     css_lines.append("@media (min-width: 600px) {")
-    css_lines.append("    .ds-sub-grid {")
-    css_lines.append("        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;")
-    css_lines.append("    }")
+    css_lines.append("    .ds-sub-grid { grid-template-columns: repeat(3, minmax(0, 1fr) ) !important; }")
     css_lines.append("}")
     css_lines.append("@media (min-width: 900px) {")
-    css_lines.append("    .ds-sub-grid {")
-    css_lines.append("        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;")
-    css_lines.append("    }")
+    css_lines.append("    .ds-sub-grid { grid-template-columns: repeat(4, minmax(0, 1fr) ) !important; }")
     css_lines.append("}")
     css_lines.append(".ds-sub-btn {")
     css_lines.append("    width: 100% !important;")
@@ -917,56 +1283,26 @@ def main():
     css_lines.append("    line-height: 1.25 !important;")
     css_lines.append("    text-align: left !important;")
     css_lines.append("}")
-    css_lines.append(".ds-sub-btn i:first-child {")
-    css_lines.append("    flex-shrink: 0 !important;")
-    css_lines.append("    font-size: clamp(.8rem, 1.6vw, .95rem) !important;")
-    css_lines.append("}")
     css_lines.append(".ds-sub-btn span {")
     css_lines.append("    flex: 1 1 auto !important;")
     css_lines.append("    min-width: 0 !important;")
-    css_lines.append("    white-space: normal !important;")
-    css_lines.append("    overflow-wrap: anywhere !important;")
-    css_lines.append("    word-break: break-word !important;")
     css_lines.append("    display: -webkit-box !important;")
     css_lines.append("    -webkit-line-clamp: 2 !important;")
     css_lines.append("    -webkit-box-orient: vertical !important;")
     css_lines.append("    overflow: hidden !important;")
-    css_lines.append("    text-overflow: ellipsis !important;")
     css_lines.append("}")
-    # Mobile nhỏ: text nhỏ hơn nữa để không tràn
-    css_lines.append("@media (max-width: 400px) {")
-    css_lines.append("    .ds-sub-btn {")
-    css_lines.append("        font-size: .68rem !important;")
-    css_lines.append("        padding: .5rem .55rem !important;")
-    css_lines.append("        gap: .35rem !important;")
-    css_lines.append("    }")
-    css_lines.append("    .ds-sub-btn i:first-child {")
-    css_lines.append("        font-size: .78rem !important;")
-    css_lines.append("    }")
-    css_lines.append("}")
-    css_lines.append("@media (min-width: 769px) {")
-    css_lines.append("    .ds-main-row {")
-    css_lines.append("        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;")
-    css_lines.append("        gap: .55rem !important;")
-    css_lines.append("    }")
-    css_lines.append("}")
-    # ═══════════════════════════════════════════════════════════
-    #  FORCE STYLE GIỐNG TAB "TỔNG HỢP" CHO TẤT CẢ TAB FIX.PY
-    #  → Đồng bộ màu, không dùng TAB_COLORS riêng
-    # ═══════════════════════════════════════════════════════════
+
     for ds in new_datasets:
         i = ds["id"]
         sel = '.ds-btn[data-dataset="' + i + '"]'
         css_lines.append("")
-        css_lines.append("/* Force style giống tab Tổng hợp cho tab " + i + " */")
+        css_lines.append("/* Style cho tab " + i + " */")
         css_lines.append(sel + " {")
         css_lines.append("    background: var(--surface) !important;")
         css_lines.append("    border-color: var(--border) !important;")
         css_lines.append("    color: var(--text) !important;")
         css_lines.append("}")
-        css_lines.append(sel + " i:first-child {")
-        css_lines.append("    color: var(--primary) !important;")
-        css_lines.append("}")
+        css_lines.append(sel + " i:first-child { color: var(--primary) !important; }")
         css_lines.append(sel + ":hover {")
         css_lines.append("    border-color: var(--primary) !important;")
         css_lines.append("    background: var(--primary-light) !important;")
@@ -977,9 +1313,7 @@ def main():
         css_lines.append("    border-color: transparent !important;")
         css_lines.append("    box-shadow: 0 4px 12px rgba(124, 58, 237, .35) !important;")
         css_lines.append("}")
-        css_lines.append(sel + ".active i:first-child {")
-        css_lines.append("    color: #fff !important;")
-        css_lines.append("}")
+        css_lines.append(sel + ".active i:first-child { color: #fff !important; }")
         css_lines.append('[data-theme="dark"] ' + sel + " {")
         css_lines.append("    background: var(--surface) !important;")
         css_lines.append("    border-color: var(--border) !important;")
@@ -989,53 +1323,210 @@ def main():
         css_lines.append("    border-color: transparent !important;")
         css_lines.append("}")
 
-    css = "\n".join(css_lines) + "\n"
+    # ⭐ VOCAB CSS + WARNING BANNER CSS
+    if add_vocab:
+        css_lines.append("")
+        css_lines.append("/* VOCAB PREMIUM CSS */")
+        css_lines.append(build_vocab_css(VOCAB_ID))
+        css_lines.append(VOCAB_WARNING_CSS)   # ⭐ THÊM DÒNG NÀY
+
+    return "\n".join(css_lines) + "\n"
+
+# =================================================================
+#  MAIN
+# =================================================================
+def main():
+    print("=" * 62)
+    print("[fix.py] Auto-scan data/ -> them tab rieng cho moi file")
+    print("=" * 62)
+
+    if not os.path.isfile(INDEX_HTML):
+        print("[X] Khong thay " + INDEX_HTML + ". Chay convert.py truoc.")
+        sys.exit(1)
+
+    with open(INDEX_HTML, "r", encoding="utf-8") as f:
+        html = f.read()
+
+    # ═══ SCAN tab thường ═══
+    datasets = scan_data_dir()
+
+    # ═══ ĐỌC FILE TỪ VỰNG PREMIUM ═══
+    vocab_data = []
+    vocab_real_path = None
+    if HAS_VOCAB_MODULE:
+        print("")
+        print("[VOCAB] Kiem tra file tu vung: " + VOCAB_FILE)
+        vocab_real_path = _find_file_safe(VOCAB_FILE)
+        if vocab_real_path:
+            print("[VOCAB] Tim thay: " + os.path.basename(vocab_real_path))
+            vocab_data = read_vocab_excel(vocab_real_path)
+            if not vocab_data:
+                print("[VOCAB] [!] File rong hoac loi")
+        else:
+            print("[VOCAB] Khong co file tu vung - bo qua")
+
+    # ═══ KIỂM TRA CÓ GÌ MỚI ═══
+    all_new = []
+    for ds in datasets:
+        marker = 'data-dataset="' + ds["id"] + '"'
+        if marker not in html:
+            all_new.append(ds)
+        else:
+            print("   [skip] '" + ds["id"] + "' da co trong HTML")
+
+    vocab_exists_in_html = 'data-dataset="' + VOCAB_ID + '"' in html
+    add_vocab = bool(vocab_data) and not vocab_exists_in_html
+
+    if not all_new and not add_vocab:
+        print("")
+        print("[fix.py] Tat ca da co - khong can patch.")
+        return
+
+    print("")
+    print("[fix.py] Se them:")
+    for ds in all_new:
+        print("   - [tab] " + ds["name"] + " (" + str(ds["count"]) + " cau)")
+    if add_vocab:
+        print("   - [PREMIUM] " + VOCAB_LABEL + " (" + str(len(vocab_data)) + " tu)")
+
+    # ═══════════════════════════════════════════════════════════
+    #  PATCH 2: BUTTONS
+    # ═══════════════════════════════════════════════════════════
+    print("")
+    print("[PATCH 2] Them button tabs...")
+    new_btns = ""
+    for ds in all_new:
+        label = ds["name"]
+        new_btns += (
+            '\n        <button class="ds-btn ds-btn-primary" '
+            'data-dataset="' + ds["id"] + '">\n'
+            '            <i class="fas ' + ds["icon"] + '"></i>\n'
+            '            <span>' + _js_str(label) + '</span>\n'
+            '        </button>'
+        )
+
+    if add_vocab:
+        new_btns += build_vocab_tab_html(VOCAB_ID, VOCAB_LABEL)
+
+    pat_after_tonghop = re.compile(
+        r'(<button[^>]*class="[^"]*ds-btn[^"]*"[^>]*data-dataset="tonghop"[^>]*>.*?</button>)',
+        re.MULTILINE | re.DOTALL
+    )
+    html, n = pat_after_tonghop.subn(
+        lambda m: m.group(1) + new_btns,
+        html, count=1
+    )
+
+    if n > 0:
+        print("   [OK] Da chen button (sau 'Tong hop')")
+    else:
+        print("   [!] Khong thay nut 'tonghop' -> fallback truoc 'chuyen-nganh'")
+        pat_before_cn = re.compile(
+            r'(\s*)(<button\s+class="[^"]*ds-btn[^"]*"\s+[^>]*data-dataset-group="chuyen-nganh")',
+            re.MULTILINE
+        )
+        html, n = pat_before_cn.subn(
+            lambda m: m.group(1) + new_btns + '\n        ' + m.group(2),
+            html, count=1
+        )
+        if n == 0:
+            print("[X] Khong tim thay ca nut 'tonghop' lan 'chuyen-nganh'")
+            sys.exit(1)
+        print("   [OK] Da chen button (fallback)")
+
+    # ═══════════════════════════════════════════════════════════
+    #  PATCH 3: CSS
+    # ═══════════════════════════════════════════════════════════
+    print("")
+    print("[PATCH 3] CSS layout...")
+
+    css = build_layout_css(all_new, add_vocab)
 
     pat_style = re.compile(r'(\s*)(</style>)', re.MULTILINE)
-    html, n = pat_style.subn(r'\1' + css + r'\1\2', html, count=1)
+    html, n = pat_style.subn(
+        lambda m: m.group(1) + css + m.group(1) + m.group(2),
+        html, count=1
+    )
     if n == 0:
-        print("   [!] Khong tim thay </style> - bo qua CSS")
+        print("   [!] Khong tim thay </style>")
     else:
-        print("   [OK] Da override CSS")
+        print("   [OK] Da inject CSS")
 
-    # ═══════════════════════════════════════════════════════════════
-    #  PATCH 4: JS binding (dùng FIXPY_DATASETS)
-    # ═══════════════════════════════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════
+    #  PATCH 4: JS
+    # ═══════════════════════════════════════════════════════════
     print("")
-    print("[PATCH 4] JS binding (FIXPY_DATASETS + clone nut + tier lock)...")
-    ids_js = json.dumps([ds["id"] for ds in new_datasets])
+    print("[PATCH 4] JS binding...")
 
-    # Build dict FIXPY_DATASETS
+    ids_js = json.dumps([ds["id"] for ds in all_new])
+
     datasets_dict = {}
-    for ds in new_datasets:
+    for ds in all_new:
         datasets_dict[ds["id"]] = ds
+
+    if add_vocab:
+        datasets_dict[VOCAB_ID] = {
+            "id": VOCAB_ID,
+            "name": VOCAB_LABEL,
+            "icon": "fa-book",
+            "color": "#f59e0b",
+            "data": vocab_data,
+            "count": len(vocab_data),
+            "source": os.path.basename(vocab_real_path),
+            "type": "premium",
+            "group": "fixpy",
+        }
+
     datasets_json = _escape_json_for_script(datasets_dict)
 
+    # ═══ Module fix.py chính (đã có <script> bên trong) ═══
     js = build_js_override(ids_js, datasets_json)
 
+    # ═══ Module vocab_premium (JS thuần - PHẢI wrap <script> riêng) ═══
+    # ═══ Module vocab_premium (JS thuần - PHẢI wrap <script> riêng) ═══
+    if add_vocab:
+        js += '\n<script>\n'
+        js += build_vocab_js_override(VOCAB_ID)
+        js += '\n' + build_vocab_js_patch()   # ⭐ THÊM DÒNG NÀY
+        js += '\n</script>\n'
+
+    # ═══ Modal HTML cho vocab (chèn trước JS) ═══
+    modal_html = ""
+    if add_vocab:
+        modal_html = build_vocab_modal_html()
+
+    # ═══ Inject vào HTML trước </body> ═══
     pat_body = re.compile(r'(\s*)(</body>)', re.MULTILINE)
-    html, n = pat_body.subn(r'\1' + js + r'\1\2', html, count=1)
+    html, n = pat_body.subn(
+        lambda m: m.group(1) + modal_html + '\n' + js + m.group(1) + m.group(2),
+        html, count=1
+    )
     if n == 0:
         print("[X] Khong tim thay </body>")
         sys.exit(1)
-    print("   [OK] Da inject JS")
-
-    # GHI FILE
+    print("   [OK] Da inject JS + modal")
+    # ═══ GHI FILE ═══
     with open(INDEX_HTML, "w", encoding="utf-8") as f:
         f.write(html)
 
     size_kb = os.path.getsize(INDEX_HTML) / 1024
+
     print("")
     print("=" * 62)
     print("[fix.py] HOAN TAT! Da patch " + INDEX_HTML)
     print("[fix.py] Kich thuoc: " + str(round(size_kb, 1)) + " KB")
-    print("[fix.py] Da them " + str(len(new_datasets)) + " tab:")
-    for ds in new_datasets:
-        print("   - " + ds["name"] + " (" + str(ds["count"]) + " cau)")
-    print("[fix.py] Label tab: CHI dung ten file (khong them so cau)")
+
+    if all_new:
+        print("[fix.py] Tab thuong da them:")
+        for ds in all_new:
+            print("   - " + ds["name"] + " (" + str(ds["count"]) + " cau)")
+
+    if add_vocab:
+        print("[fix.py] Tab Tu vung PREMIUM: " + str(len(vocab_data)) + " tu")
+        print("[fix.py]    (chi Admin + Premium moi mo duoc)")
+
     print("[fix.py] Layout: PC 4 cot - Mobile 2 cot")
     print("[fix.py] CHI 1 TAB ACTIVE tai mot thoi diem")
-    print("[fix.py] Dropdown 'Chuyen nganh' KHONG hien thi tab fix.py")
     print("=" * 62)
 
 
