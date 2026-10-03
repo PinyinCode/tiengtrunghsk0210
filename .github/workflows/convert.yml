@@ -1,35 +1,35 @@
-name: Convert Excel to HTML
+name: Demo Mnemonics (OpenRouter)
 
 on:
+  workflow_dispatch:
+    inputs:
+      demo_limit:
+        description: 'Số từ test'
+        required: false
+        default: '20'
+      model:
+        description: 'Model AI'
+        required: false
+        default: 'qwen/qwen3.8-27b:free'
+
   push:
     paths:
-      - 'data/**'
-      - 'scripts/data/**'
-      - 'scripts/**/*.py'
-      - 'scripts/config.json'
-      - 'fix.py'
-      - 'fix_name.py'
-      - 'requirements.txt'
-      - '.github/workflows/convert.yml'
-  workflow_dispatch:
+      - 'scripts/demo_mnemonics.py'
+      - '.github/workflows/demo-mnemonics.yml'
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages-${{ github.ref }}
-  cancel-in-progress: false
 
 jobs:
-  convert:
+  demo:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -39,142 +39,48 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install openpyxl cn2an pypinyin jieba pandas
+          pip install openai openpyxl
 
-      - name: Verify dependencies
+      - name: List data folder (debug)
         run: |
-          python -c "import openpyxl; print('openpyxl OK')"
-          python -c "import cn2an; print('cn2an OK')"
-          python -c "import pypinyin; print('pypinyin OK')"
-          python -c "import jieba; print('jieba OK')"
-          python -c "import pandas; print('pandas OK')"
+          echo "=== data/ folder ==="
+          ls -la data/
 
-      - name: List files
+      - name: Run demo mnemonics
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          QWEN_MODEL: ${{ github.event.inputs.model || 'qwen/qwen3.8-27b:free' }}
+          DEMO_LIMIT: ${{ github.event.inputs.demo_limit || '20' }}
+          DELAY_BETWEEN: '2.0'
         run: |
-          echo "Root:"
-          ls -la
-          echo "data/:"
-          ls -la data/ || true
-          echo "scripts/:"
-          ls -la scripts/
-          echo "scripts/data/:"
-          ls -la scripts/data/ || true
+          python scripts/demo_mnemonics.py
 
-      - name: Pre-flight check
-        run: python scripts/check.py
-
-      - name: Run convert.py
-        run: python scripts/convert.py
-
-      - name: Verify index.html after convert
+      - name: Show result
+        if: always()
         run: |
-          if [ ! -f index.html ]; then
-            echo "ERROR: index.html not found"
-            exit 1
-          fi
+          echo "=== File output ==="
+          ls -la data/mnemonics_demo.json || echo "Chưa có output"
+          echo ""
+          echo "=== Số mẹo đã sinh ==="
+          python -c "import json; d=json.load(open('data/mnemonics_demo.json')); print(len(d), 'mẹo')" || echo "Chưa có file hoặc lỗi"
 
-          SIZE=$(stat -c%s index.html)
-          echo "index.html size: $SIZE bytes"
-
-          if [ "$SIZE" -lt 500000 ]; then
-            echo "ERROR: index.html too small"
-            exit 1
-          fi
-
-          for EL in RAW_DATA DATASET_REGISTRY FIREBASE_CONFIG CURRENT_DATASET; do
-            if grep -q "$EL" index.html; then
-              echo "OK: $EL"
-            else
-              echo "ERROR: missing $EL"
-              exit 1
-            fi
-          done
-
-          OPEN_COUNT=$(grep -o "<script" index.html | wc -l)
-          CLOSE_COUNT=$(grep -o "</script>" index.html | wc -l)
-          echo "script tags: open=$OPEN_COUNT close=$CLOSE_COUNT"
-          if [ "$OPEN_COUNT" -ne "$CLOSE_COUNT" ]; then
-            echo "ERROR: script tags mismatch"
-            exit 1
-          fi
-
-      - name: Run fix.py
-        run: |
-          if [ -f fix.py ]; then
-            python fix.py
-          else
-            echo "No fix.py, skipping"
-          fi
-
-      - name: Run fix_name.py
-        run: |
-          if [ -f fix_name.py ]; then
-            python fix_name.py
-          elif [ -f scripts/fix_name.py ]; then
-            python scripts/fix_name.py
-          else
-            echo "No fix_name.py, skipping"
-          fi
-
-      - name: Verify final output
-        run: |
-          if grep -q '"tonghop"' index.html; then
-            echo "OK: tonghop dataset"
-          else
-            echo "ERROR: missing tonghop"
-            exit 1
-          fi
-
-          if grep -q 'FIX_NAME.PY' index.html; then
-            echo "OK: fix_name patch applied"
-          else
-            echo "WARN: fix_name patch not found"
-          fi
-
-          if grep -q 'ds-sub-name' index.html; then
-            echo "OK: ds-sub-name class"
-          else
-            echo "WARN: ds-sub-name class not found"
-          fi
-
-      - name: Commit and push
+      - name: Commit result
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add index.html
-          if git diff --quiet && git diff --staged --quiet; then
-            echo "No changes to commit"
+
+          if [ -f "data/mnemonics_demo.json" ]; then
+            git add data/mnemonics_demo.json
+
+            if git diff --quiet && git diff --staged --quiet; then
+              echo "✅ Không có thay đổi để commit"
+            else
+              COUNT=$(python -c "import json; print(len(json.load(open('data/mnemonics_demo.json'))))" 2>/dev/null || echo "0")
+              git commit -m "🤖 Demo mnemonics ($COUNT từ) [skip ci]"
+              git pull --rebase origin main || true
+              git push || echo "⚠️  Push failed"
+            fi
           else
-            git commit -m "Auto convert Excel to HTML [skip ci]"
-            git pull --rebase origin ${{ github.ref_name }} || true
-            git push origin HEAD:${{ github.ref_name }}
+            echo "⚠️  Không có file output để commit"
           fi
-
-      - name: Prepare Pages artifact
-        run: |
-          mkdir -p _site
-          cp index.html _site/
-          if [ -d "assets" ]; then cp -r assets _site/; fi
-          if [ -d "static" ]; then cp -r static _site/; fi
-          if [ -f "404.html" ]; then cp 404.html _site/; fi
-          echo "Artifact contents:"
-          ls -la _site/
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: '_site'
-
-  deploy:
-    needs: convert
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
