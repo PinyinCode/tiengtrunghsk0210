@@ -1733,30 +1733,19 @@ def build_vocab_js_override(vocab_id="tu-vung"):
     var _navStack = [];
     var _navBackBtn = null;
     function canAccessVocab() {
-    // Đọc tier từ ONBOARDING_CONFIG (nếu có)
-    var cfg = (typeof ONBOARDING_CONFIG !== 'undefined' && ONBOARDING_CONFIG) || {};
-    
-    // Admin → OK
+    // ═══ Admin → OK ═══
     if (typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'admin') {
         return true;
     }
-    // Premium → OK
+    // ═══ Premium (isPermanent) → OK ═══
     if (typeof currentUser !== 'undefined' && currentUser && currentUser.isPermanent === true) {
         return true;
     }
-    
-    // Xác định tier
-    var tier = 'demo';
-    if (typeof currentUser !== 'undefined' && currentUser) {
-        if (currentUser.isTrial || currentUser.tier === 'trial') tier = 'trial';
-        else if (currentUser.isExpiredOnly || currentUser.tier === 'expired') tier = 'expired';
-        else tier = 'active';
-    }
-    
-    // Expired → KHÓA
-    if (tier === 'expired') return false;
-    
-    // Demo / Trial / Active → MỞ (giới hạn HSK + số câu do patch lo)
+
+    // ═══════════════════════════════════════════════════════════════
+    // ⭐ MỞ cho MỌI tier (demo, trial, active, expired)
+    // ⭐ Expired → dùng thông số onboarding.demo (30 câu, HSK1-3)
+    // ═══════════════════════════════════════════════════════════════
     return true;
 }
 
@@ -2413,8 +2402,37 @@ def build_vocab_js_override(vocab_id="tu-vung"):
                 return false;
             }
 
-            console.log('[vocab] switch to tu-vung');
+            /* ═══════════════════════════════════════════════════════════
+               ⭐ USER EXPIRED: Hiện modal 1 LẦN/session
+               - Bấm "Để sau" hoặc "Gia hạn" → vẫn cho mở
+               - Giới hạn dùng onboarding.demo: 30 câu, HSK1-3, 5 chủ đề
+               ═══════════════════════════════════════════════════════════ */
+            var userTier = 'demo';
+            if (typeof currentUser !== 'undefined' && currentUser) {
+                if (currentUser.isExpiredOnly || currentUser.tier === 'expired') {
+                    userTier = 'expired';
+                } else if (currentUser.isTrial || currentUser.tier === 'trial') {
+                    userTier = 'trial';
+                } else {
+                    userTier = 'active';
+                }
+            }
 
+            if (userTier === 'expired') {
+                var expiredShownKey = 'vocab_expired_shown_'
+                    + (currentUser && currentUser.email ? currentUser.email : 'guest');
+                var alreadyShown = false;
+                try { alreadyShown = sessionStorage.getItem(expiredShownKey) === '1'; } catch(err) {}
+
+                if (!alreadyShown) {
+                    try { sessionStorage.setItem(expiredShownKey, '1'); } catch(err) {}
+                    console.log('[vocab] expired - hiện modal 1 lần, sau đó vẫn mở');
+                    openUpgradeModal();
+                    /* ⭐ KHÔNG return — vẫn cho phép mở Từ vựng */
+                }
+            }
+
+            console.log('[vocab] switch to tu-vung (tier=' + userTier + ')');
             // ═══════════════════════════════════════════════════════
             //  ⭐ BƯỚC 1: CLEAR TẤT CẢ STATE CỦA CÁC TAB KHÁC
             // ═══════════════════════════════════════════════════════
