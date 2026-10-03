@@ -1639,12 +1639,14 @@ function stopRTDBPresence() {
 /* ============ AUTH STATE ============ */
 async function handleAuthChange(user) {
     if (!user) {
-        // Logout → hủy watcher + presence
+        /* ═══ Logout → hủy watcher + presence ═══ */
         if (userWatcher) { try { userWatcher(); } catch(e) {} userWatcher = null; }
         stopRTDBPresence();
-        currentUser = null; isDemo = true;
+        currentUser = null;
+        isDemo = true;
         publishTierState();
-        applyUserUI(); enterDemoMode();
+        applyUserUI();
+        enterDemoMode();
         return;
     }
 
@@ -1714,23 +1716,49 @@ async function handleAuthChange(user) {
             trialMaxQuestions: data.trialMaxQuestions || TRIAL_MAX_QUESTIONS,
             trialMaxHSK: data.trialMaxHSK || TRIAL_MAX_HSK,
             isSubAdmin: data.isSubAdmin || false,
-            permissions: data.permissions || null
+            permissions: data.permissions || null,
+            currentPackage: data.currentPackage || null,
+            currentPackageDays: data.currentPackageDays || 0
         };
 
         currentUser = userData;
 
+        /* ═══════════════════════════════════════════════════════════
+           ⭐ CHECK EXPIRED — Đặc biệt chú ý trial
+           - Nếu trial hết hạn → KHÔNG cho login lại, force tier expired
+           - Nếu active hết hạn → vẫn giữ currentUser (KHÔNG set isDemo = true)
+           ═══════════════════════════════════════════════════════════ */
         var isExpiredUser = false;
-        if (currentUser.role !== 'admin' && currentUser.expiresAt && !currentUser.isPermanent) {
-            var expDate = getExpiryDate(currentUser.expiresAt);
-            if (expDate && !isNaN(expDate.getTime())) {
-                isExpiredUser = expDate.getTime() < Date.now();
+
+        if (currentUser.role !== 'admin' && !currentUser.isPermanent) {
+            if (currentUser.expiresAt) {
+                var expDate = getExpiryDate(currentUser.expiresAt);
+                if (expDate && !isNaN(expDate.getTime())) {
+                    isExpiredUser = expDate.getTime() < Date.now();
+
+                    /* ⭐ Trial hết hạn → update Firestore để không reset */
+                    if (isExpiredUser && (currentUser.isTrial || currentUser.tier === 'trial')) {
+                        console.log('⚠️ Trial user expired → chuyển sang tier expired');
+                        try {
+                            db.collection('allowed_users').doc(email).update({
+                                tier: 'expired',
+                                isTrial: false,
+                                expiredAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                        } catch(e) {
+                            console.warn('Update expired trial error:', e);
+                        }
+                    }
+                }
             }
         }
 
         if (isExpiredUser) {
-            isDemo = true;
+            /* ⭐ QUAN TRỌNG: KHÔNG set isDemo = true — vẫn giữ currentUser */
+            isDemo = false;
             currentUser.isExpiredOnly = true;
             currentUser.tier = 'expired';
+            currentUser.isTrial = false;
         } else {
             isDemo = false;
             currentUser.isExpiredOnly = false;
@@ -1738,7 +1766,8 @@ async function handleAuthChange(user) {
 
         try {
             localStorage.setItem(cacheKey, JSON.stringify({
-                data: currentUser, expires: Date.now() + 12 * 60 * 60 * 1000
+                data: currentUser,
+                expires: Date.now() + 12 * 60 * 60 * 1000
             }));
         } catch(e) {}
 
@@ -1751,10 +1780,10 @@ async function handleAuthChange(user) {
         startRTDBPresence();
     } catch(e) {
         console.error('Auth check error:', e);
-        isDemo = true; enterDemoMode();
+        isDemo = true;
+        enterDemoMode();
     }
 }
-
 /* ═══════════════════════════════════════════════════════════════
    🔄 REALTIME WATCHER
    ═══════════════════════════════════════════════════════════════ */
@@ -2119,9 +2148,13 @@ function applyUserUI() {
 
     renderExpiryBanner();
 
+    /* ⭐ Update nút gia hạn trong dropdown */
     var renewBtn = $('dropdownRenewBtn');
     if (renewBtn) {
-        var showRenew = currentUser && currentUser.role !== 'admin' && !currentUser.isPermanent;
+        var showRenew = currentUser
+                        && currentUser.role !== 'admin'
+                        && !currentUser.isPermanent
+                        && currentUser.tier !== 'trial';
         renewBtn.style.display = showRenew ? 'flex' : 'none';
         if (showRenew) {
             var rDaysLeft = getDaysRemaining(currentUser);
@@ -2138,22 +2171,48 @@ function applyUserUI() {
 
     var foreverBtn = $('dropdownForeverBtn');
     if (foreverBtn) {
-        var showForever = currentUser && currentUser.role !== 'admin' && !currentUser.isPermanent;
+        var showForever = currentUser
+                          && currentUser.role !== 'admin'
+                          && !currentUser.isPermanent;
         foreverBtn.style.display = showForever ? 'flex' : 'none';
     }
 
-    var isGuest = isDemo && !currentUser;
-    if (isGuest) {
+    /* ═══════════════════════════════════════════════════════════════
+       ⭐ PHÂN BIỆT: Guest / Expired / Active
+       - Guest: Chưa login (chưa từng hoặc đã logout)
+       - Expired: Đã login nhưng hết hạn
+       - Active: Đang hoạt động
+       ═══════════════════════════════════════════════════════════════ */
+    var hasFirebaseUser = false;
+    try {
+        hasFirebaseUser = !!(auth && auth.currentUser);
+    } catch(e) {}
+
+    var isRealGuest = !currentUser && !hasFirebaseUser;
+    var isExpiredUser = currentUser && currentUser.isExpiredOnly === true;
+
+    if (isRealGuest) {
+        /* ═══════════════════════════════════════════════════════════
+           ⭐ GUEST — Chưa login
+           ═══════════════════════════════════════════════════════════ */
         if (demoBadge) demoBadge.style.display = 'flex';
         if (headerLoginBtn) headerLoginBtn.style.display = 'flex';
         if (userMenu) userMenu.style.display = 'none';
         if ($('demoBanner')) $('demoBanner').style.display = 'flex';
         if ($('userDetails')) $('userDetails').style.display = 'none';
-    } else {
+
+    } else if (isExpiredUser) {
+        /* ═══════════════════════════════════════════════════════════
+           ⭐ EXPIRED — Đã login nhưng hết hạn
+           - Hiện avatar + dropdown (KHÔNG hiện nút login)
+           - Banner đỏ + nút "Gia hạn"
+           ═══════════════════════════════════════════════════════════ */
         if (demoBadge) demoBadge.style.display = 'none';
         if (headerLoginBtn) headerLoginBtn.style.display = 'none';
         if (userMenu) userMenu.style.display = 'block';
-        if ($('demoBanner')) $('demoBanner').style.display = 'none';
+        if ($('demoBanner')) $('demoBanner').style.display = 'flex';
+
+        /* ⭐ User info */
         if ($('userName')) $('userName').textContent = currentUser.name;
         if ($('userEmail')) $('userEmail').textContent = currentUser.email;
         if ($('userRole')) {
@@ -2167,37 +2226,240 @@ function applyUserUI() {
             $('userRole').textContent = roleText;
             $('userRole').className = roleCls;
         }
-        if ($('openAdminBtn')) $('openAdminBtn').style.display = currentUser.role === 'admin' ? 'flex' : 'none';
+
+        /* ⭐ Avatar với màu đỏ (báo hiệu expired) */
         var avatar = $('userAvatar');
         if (avatar) {
-            if (currentUser.photo) avatar.src = currentUser.photo;
-            else {
+            if (currentUser.photo) {
+                avatar.src = currentUser.photo;
+            } else {
                 avatar.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(
                     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' +
-                    '<rect fill="#7c3aed" width="100" height="100"/>' +
-                    '<text x="50" y="65" font-size="45" fill="#fff" text-anchor="middle" font-family="sans-serif" font-weight="bold">' +
-                    (currentUser.name || '?').charAt(0).toUpperCase() + '</text></svg>'
+                    '<rect fill="#dc2626" width="100" height="100"/>' +
+                    '<text x="50" y="65" font-size="45" fill="#fff" text-anchor="middle" ' +
+                    'font-family="sans-serif" font-weight="bold">' +
+                    (currentUser.name || '?').charAt(0).toUpperCase() +
+                    '</text></svg>'
                 );
             }
         }
-        updateUserDetails();
 
+        /* ⭐ User details — hiện "Đã hết hạn" */
+        if ($('userDetails')) $('userDetails').style.display = 'flex';
+
+        var expiryValue = $('expiryValue');
+        var expirySub = $('expirySub');
+        var expiryIcon = $('expiryIcon');
+        var expiryIconWrap = $('expiryIconWrap');
+        var progressWrap = $('expiryProgressWrap');
+
+        if (expiryValue) {
+            expiryValue.textContent = 'Đã hết hạn';
+            expiryValue.className = 'detail-value expired';
+        }
+
+        if (expirySub && currentUser.expiresAt) {
+            var d = getExpiryDate(currentUser.expiresAt);
+            if (d && !isNaN(d.getTime())) {
+                var daysAgo = Math.floor((Date.now() - d.getTime()) / (24 * 60 * 60 * 1000));
+                expirySub.innerHTML = 'Hết hạn: <b>' + d.toLocaleDateString('vi-VN') + '</b><br>' +
+                    'Đã hết hạn ' + daysAgo + ' ngày trước';
+            }
+        }
+
+        if (expiryIcon) expiryIcon.className = 'fas fa-calendar-times';
+        if (expiryIconWrap) expiryIconWrap.className = 'detail-icon expired';
+        if (progressWrap) progressWrap.style.display = 'none';
+
+        /* ⭐ Hiện nút "Gia hạn" trong dropdown */
+        if (renewBtn) renewBtn.style.display = 'flex';
+        if (foreverBtn) foreverBtn.style.display = 'flex';
+
+        /* ⭐ Ẩn admin button */
+        if ($('openAdminBtn')) {
+            $('openAdminBtn').style.display = currentUser.role === 'admin' ? 'flex' : 'none';
+        }
+
+        applyUserDropdownState();
+
+    } else {
+        /* ═══════════════════════════════════════════════════════════
+           ⭐ ACTIVE — Đang hoạt động bình thường
+           ═══════════════════════════════════════════════════════════ */
+        if (demoBadge) demoBadge.style.display = 'none';
+        if (headerLoginBtn) headerLoginBtn.style.display = 'none';
+        if (userMenu) userMenu.style.display = 'block';
+        if ($('demoBanner')) $('demoBanner').style.display = 'none';
+
+        if ($('userName')) $('userName').textContent = currentUser.name;
+        if ($('userEmail')) $('userEmail').textContent = currentUser.email;
+        if ($('userRole')) {
+            var roleText2 = currentUser.role;
+            var roleCls2 = 'role';
+            if (currentUser.role === 'admin') {
+                if (isSuperAdmin()) { roleText2 = 'super admin'; roleCls2 += ' admin'; }
+                else if (isSubAdmin()) { roleText2 = 'sub admin'; roleCls2 += ' subadmin'; }
+                else { roleText2 = 'admin'; roleCls2 += ' admin'; }
+            }
+            $('userRole').textContent = roleText2;
+            $('userRole').className = roleCls2;
+        }
+
+        if ($('openAdminBtn')) {
+            $('openAdminBtn').style.display = currentUser.role === 'admin' ? 'flex' : 'none';
+        }
+
+        /* ⭐ Avatar bình thường (màu tím) */
+        var avatar2 = $('userAvatar');
+        if (avatar2) {
+            if (currentUser.photo) {
+                avatar2.src = currentUser.photo;
+            } else {
+                avatar2.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+                    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' +
+                    '<rect fill="#7c3aed" width="100" height="100"/>' +
+                    '<text x="50" y="65" font-size="45" fill="#fff" text-anchor="middle" ' +
+                    'font-family="sans-serif" font-weight="bold">' +
+                    (currentUser.name || '?').charAt(0).toUpperCase() +
+                    '</text></svg>'
+                );
+            }
+        }
+
+        updateUserDetails();
         applyUserDropdownState();
     }
 
+    /* ═══ Update chip HSK/Subject với tier limited ═══ */
     var hskChip = $('hskChip');
     var subjectChip = $('subjectChip');
     if (hskChip && subjectChip) {
-        var limited = isDemo || (currentUser && currentUser.tier === 'expired');
-        if (limited) { hskChip.classList.add('demo-limited'); subjectChip.classList.add('demo-limited'); }
-        else { hskChip.classList.remove('demo-limited'); subjectChip.classList.remove('demo-limited'); }
+        var limited = isDemo || isExpiredUser || (currentUser && currentUser.tier === 'expired');
+        if (limited) {
+            hskChip.classList.add('demo-limited');
+            subjectChip.classList.add('demo-limited');
+        } else {
+            hskChip.classList.remove('demo-limited');
+            subjectChip.classList.remove('demo-limited');
+        }
     }
+
     if (typeof updateDemoRemaining === 'function') updateDemoRemaining();
+
     var toggleFocusBtn = $('toggleFocusBtn');
-    if (toggleFocusBtn) toggleFocusBtn.style.display = isDemo ? 'none' : 'flex';
-    if (isDemo) document.body.classList.remove('hide-floating');
+    if (toggleFocusBtn) {
+        toggleFocusBtn.style.display = (isDemo || isExpiredUser) ? 'none' : 'flex';
+    }
+
+    if (isDemo || isExpiredUser) {
+        document.body.classList.remove('hide-floating');
+    }
 
     if (typeof window.favUpdateLockState === 'function') window.favUpdateLockState();
+
+    /* ⭐ Update banner theo tier (demo / expired) */
+    if (typeof updateDemoBannerByTier === 'function') {
+        updateDemoBannerByTier();
+    }
+}
+/* ═══════════════════════════════════════════════════════════════
+   🎯 UPDATE BANNER THEO TIER
+   - Guest (chưa login) → banner vàng + nút "Đăng nhập"
+   - Expired → banner đỏ + nút "Gia hạn"
+   ═══════════════════════════════════════════════════════════════ */
+function updateDemoBannerByTier() {
+    var banner = $('demoBanner');
+    if (!banner) return;
+
+    var btn = $('demoBannerBtn');
+    var btnText = $('demoBannerBtnText');
+    var titleEl = $('demoBannerTitle');
+    var descEl = $('demoBannerDesc');
+    var iconEl = banner.querySelector('.demo-banner-icon');
+
+    var hasFirebaseUser = false;
+    try {
+        hasFirebaseUser = !!(auth && auth.currentUser);
+    } catch(e) {}
+
+    var isRealGuest = !currentUser && !hasFirebaseUser;
+    var isExpiredUser = currentUser && currentUser.isExpiredOnly === true;
+
+    /* ═══ KHÔNG PHẢI GUEST / EXPIRED → ẨN BANNER ═══ */
+    if (!isRealGuest && !isExpiredUser) {
+        banner.style.display = 'none';
+        return;
+    }
+
+    banner.style.display = 'flex';
+
+    if (isExpiredUser) {
+        /* ═══════════════════════════════════════════════════════════
+           ⭐ EXPIRED → Nút "Gia hạn"
+           ═══════════════════════════════════════════════════════════ */
+        var expDateStr = '';
+        if (currentUser.expiresAt) {
+            var d = getExpiryDate(currentUser.expiresAt);
+            if (d && !isNaN(d.getTime())) {
+                expDateStr = d.toLocaleDateString('vi-VN');
+            }
+        }
+
+        if (titleEl) titleEl.innerHTML = '⚠️ Tài khoản đã hết hạn';
+        if (descEl) {
+            descEl.innerHTML = 'Tài khoản của bạn đã hết hạn' +
+                (expDateStr ? ' vào <b>' + expDateStr + '</b>' : '') +
+                '.<br>' +
+                'Bạn đang xem chế độ giới hạn.<br>' +
+                '<b style="color:#dc2626">Gia hạn ngay để mở khóa toàn bộ!</b>';
+        }
+        if (btnText) btnText.textContent = 'Gia hạn ngay';
+        if (btn) {
+            var icon = btn.querySelector('i');
+            if (icon) icon.className = 'fas fa-gem';
+            /* ⭐ Set onclick MỚI */
+            btn.onclick = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (typeof openRenewalModal === 'function') {
+                    openRenewalModal();
+                }
+            };
+        }
+        if (iconEl) iconEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+        banner.style.background = 'linear-gradient(135deg, #fecaca, #fca5a5)';
+        banner.style.borderColor = '#dc2626';
+
+    } else {
+        /* ═══════════════════════════════════════════════════════════
+           ⭐ GUEST → Nút "Đăng nhập"
+           ═══════════════════════════════════════════════════════════ */
+        var remaining = (typeof getDemoRemaining === 'function') ? getDemoRemaining() : 100;
+
+        if (titleEl) titleEl.innerHTML = 'Đăng nhập miễn phí để mở khóa toàn bộ';
+        if (descEl) {
+            descEl.innerHTML = 'Đăng nhập bằng <b>Gmail</b> để xem <b>toàn bộ kho câu</b>, ' +
+                'không giới hạn nghe và luyện viết.<br>' +
+                'Nghe + Luyện viết còn lại hôm nay: ' +
+                '<b id="demoRemainingText" style="color:#16a34a">' + remaining + '</b> lượt.';
+        }
+        if (btnText) btnText.textContent = 'Đăng nhập bằng Gmail';
+        if (btn) {
+            var icon2 = btn.querySelector('i');
+            if (icon2) icon2.className = 'fas fa-sign-in-alt';
+            /* ⭐ Set onclick về showLoginModal */
+            btn.onclick = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (typeof showLoginModal === 'function') {
+                    showLoginModal();
+                }
+            };
+        }
+        if (iconEl) iconEl.innerHTML = '<i class="fas fa-gift"></i>';
+        banner.style.background = '';
+        banner.style.borderColor = '';
+    }
 }
 function updateUserDetails() {
     var detailsEl = $('userDetails');
