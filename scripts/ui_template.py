@@ -5424,45 +5424,66 @@ function updateDemoBanner() {
     var info = getTierInfo();
     var banner = $('demoBanner');
     if (!banner) return;
-    if (info.tier !== 'demo' && info.tier !== 'expired') return;
+
+    /* ═══════════════════════════════════════════════════════════════
+       ⭐ FIX: CHỈ HIỆN BANNER DEMO KHI USER CHƯA LOGIN (tier === 'demo')
+       - tier 'demo'    → hiện banner vàng + nút "Đăng nhập"
+       - tier 'expired' → ẩn (đã có banner Expiry riêng màu đỏ)
+       - tier 'trial'   → ẩn
+       - tier 'active'  → ẩn
+       ═══════════════════════════════════════════════════════════════ */
+    if (info.tier !== 'demo') {
+        banner.style.display = 'none';
+        return;
+    }
+
     var titleEl = $('demoBannerTitle');
     var descEl  = $('demoBannerDesc');
     var btnEl   = $('demoBannerBtn');
     var btnText = $('demoBannerBtnText');
     var iconEl  = banner.querySelector('.demo-banner-icon');
 
-    if (info.tier === 'expired') {
-        if (titleEl) titleEl.innerHTML = 'Tài khoản đã hết hạn';
-        if (descEl) {
-            descEl.innerHTML = 'Bạn đang xem chế độ giới hạn (' +
-                info.maxQuestions + ' câu đầu, HSK1-' + info.maxHSK + ', ' +
-                DEMO_DAILY_LIMIT + ' lượt/ngày).<br>Gia hạn để mở khóa toàn bộ ' +
-                (typeof RAW_DATA !== 'undefined' ? RAW_DATA.length : '') + ' câu!';
-        }
-        if (btnEl) {
-            btnEl.onclick = function() {
-                if (typeof openRenewalModal === 'function') openRenewalModal();
-            };
-            btnEl.setAttribute('onclick', '');
-        }
-        if (btnText) btnText.textContent = 'Gia hạn ngay';
-        if (iconEl) iconEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
-        banner.style.background = 'linear-gradient(135deg, #fecaca, #fca5a5)';
-        banner.style.borderColor = '#dc2626';
-    } else {
-        if (titleEl) titleEl.innerHTML = 'Đăng nhập miễn phí để mở khóa toàn bộ';
-        if (descEl) {
-            descEl.innerHTML = 'Đăng nhập bằng <b>Gmail</b> để xem <b>toàn bộ kho câu</b>, ' +
-                'không giới hạn nghe và luyện viết.<br>' +
-                'Nghe + Luyện viết còn lại hôm nay: ' +
-                '<b id="demoRemainingText" style="color:#16a34a">' + getDemoRemaining() + '</b> lượt.';
-        }
-        if (btnText) btnText.textContent = 'Đăng nhập bằng Gmail';
-        if (iconEl) iconEl.innerHTML = '<i class="fas fa-gift"></i>';
-        banner.style.background = '';
-        banner.style.borderColor = '';
+    /* ⭐ Hiện banner */
+    banner.style.display = 'flex';
+
+    /* ═══════════════════════════════════════════════════════════════
+       ⭐ DEMO (chưa login) → Nút "Đăng nhập bằng Gmail"
+       ═══════════════════════════════════════════════════════════════ */
+    if (titleEl) titleEl.innerHTML = 'Đăng nhập miễn phí để mở khóa toàn bộ';
+
+    if (descEl) {
+        descEl.innerHTML = 'Đăng nhập bằng <b>Gmail</b> để xem <b>toàn bộ kho câu</b>, ' +
+            'không giới hạn nghe và luyện viết.<br>' +
+            'Nghe + Luyện viết còn lại hôm nay: ' +
+            '<b id="demoRemainingText" style="color:#16a34a">' + getDemoRemaining() + '</b> lượt.';
     }
+
+    /* ⭐ XÓA HOÀN TOÀN attribute onclick cũ + gán property mới */
+    if (btnEl) {
+        btnEl.removeAttribute('onclick');
+        btnEl.onclick = function(e) {
+            if (e) { e.preventDefault(); e.stopPropagation(); }
+            if (typeof showLoginModal === 'function') {
+                showLoginModal();
+            }
+        };
+    }
+
+    if (btnText) btnText.textContent = 'Đăng nhập bằng Gmail';
+
+    /* ⭐ Đổi icon trong nút thành icon đăng nhập */
+    var btnIcon = btnEl ? btnEl.querySelector('i') : null;
+    if (btnIcon) btnIcon.className = 'fas fa-sign-in-alt';
+
+    /* ⭐ Icon tròn bên trái */
+    if (iconEl) iconEl.innerHTML = '<i class="fas fa-gift"></i>';
+
+    /* ⭐ Reset màu về mặc định (vàng) */
+    banner.style.background = '';
+    banner.style.borderColor = '';
 }
+
+    
 
 /* ============================================================ */
 /* SCROLL / FAB / THEME / DISPLAY                                */
