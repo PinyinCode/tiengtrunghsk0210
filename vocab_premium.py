@@ -2003,10 +2003,10 @@ def build_vocab_js_override(vocab_id="tu-vung"):
 
     if (can) {
         btn.classList.remove('vocab-locked');
-        btn.title = 'Tu vung HSK - da mo khoa';
+        btn.title = 'Từ vựng HSK - đã mở khóa';
     } else {
         btn.classList.add('vocab-locked');
-        btn.title = 'Tu vung HSK - het han';
+        btn.title = 'Từ vựng HSK - cần gia hạn để mở';
         var lock = document.createElement('i');
         lock.className = 'fas fa-lock vocab-lock-icon';
         btn.appendChild(lock);
@@ -2014,72 +2014,72 @@ def build_vocab_js_override(vocab_id="tu-vung"):
 }
 
     function openUpgradeModal() {
-        var modal = document.getElementById('vocabUpgradeModal');
-        if (!modal) return;
-        var titleEl = document.getElementById('vocabUpgradeTitle');
-        var subEl = document.getElementById('vocabUpgradeSubtitle');
-        var actionsEl = document.getElementById('vocabUpgradeActions');
+    var modal = document.getElementById('vocabUpgradeModal');
+    if (!modal) return;
+    var titleEl = document.getElementById('vocabUpgradeTitle');
+    var subEl = document.getElementById('vocabUpgradeSubtitle');
+    var actionsEl = document.getElementById('vocabUpgradeActions');
 
-        var tier = 'demo';
-        if (typeof currentUser !== 'undefined' && currentUser) {
-            if (currentUser.isTrial || currentUser.tier === 'trial') tier = 'trial';
-            else if (currentUser.isExpiredOnly || currentUser.tier === 'expired') tier = 'expired';
-            else tier = 'active';
-        }
-
-        if (tier === 'demo') {
-            if (titleEl) titleEl.textContent = 'Dang nhap de mua Premium';
-            if (subEl) subEl.textContent = 'Goi Premium 1 trieu - Mo khoa Tu vung HSK vinh vien';
-            if (actionsEl) {
-                actionsEl.innerHTML =
-                    '<button class="vocab-upgrade-btn primary" onclick="vocabUpgradeLogin()">' +
-                        '<i class="fas fa-sign-in-alt"></i> Dang nhap' +
-                    '</button>' +
-                    '<button class="vocab-upgrade-btn secondary" onclick="vocabUpgradeClose()">' +
-                        'De sau' +
-                    '</button>';
-            }
-        } else if (tier === 'trial') {
-            if (titleEl) titleEl.textContent = 'Nang cap len Premium';
-            if (subEl) subEl.textContent = 'So huu Tu vung HSK vinh vien voi goi Premium';
-            if (actionsEl) {
-                actionsEl.innerHTML =
-                    '<button class="vocab-upgrade-btn primary" onclick="vocabUpgradeRenew()">' +
-                        '<i class="fas fa-crown"></i> Mua Premium 1 trieu' +
-                    '</button>' +
-                    '<button class="vocab-upgrade-btn secondary" onclick="vocabUpgradeClose()">' +
-                        'De sau' +
-                    '</button>';
-            }
-        } else if (tier === 'expired') {
-            if (titleEl) titleEl.textContent = 'Tai khoan da het han';
-            if (subEl) subEl.textContent = 'Mua goi Premium 1 trieu de so huu vinh vien';
-            if (actionsEl) {
-                actionsEl.innerHTML =
-                    '<button class="vocab-upgrade-btn primary" onclick="vocabUpgradeRenew()">' +
-                        '<i class="fas fa-crown"></i> Mua Premium 1 trieu' +
-                    '</button>' +
-                    '<button class="vocab-upgrade-btn secondary" onclick="vocabUpgradeClose()">' +
-                        'De sau' +
-                    '</button>';
-            }
-        } else {
-            if (titleEl) titleEl.textContent = 'Nang cap len Premium';
-            if (subEl) subEl.textContent = 'Chi goi Premium moi mo duoc Tu vung HSK';
-            if (actionsEl) {
-                actionsEl.innerHTML =
-                    '<button class="vocab-upgrade-btn primary" onclick="vocabUpgradeRenew()">' +
-                        '<i class="fas fa-crown"></i> Nang cap Premium 1 trieu' +
-                    '</button>' +
-                    '<button class="vocab-upgrade-btn secondary" onclick="vocabUpgradeClose()">' +
-                        'De sau' +
-                    '</button>';
-            }
-        }
-
-        modal.classList.add('show');
-        document.body.style.overflow = 'hidden';
+    var tier = 'demo';
+    if (typeof currentUser !== 'undefined' && currentUser) {
+        if (currentUser.isTrial || currentUser.tier === 'trial') tier = 'trial';
+        else if (currentUser.isExpiredOnly || currentUser.tier === 'expired') tier = 'expired';
+        else tier = 'active';
     }
+
+    if (tier === 'demo') {
+        if (titleEl) titleEl.textContent = 'Đăng nhập để sử dụng Từ vựng HSK';
+        if (subEl) subEl.textContent = 'Đăng nhập để mở khóa toàn bộ từ vựng HSK 1-9';
+        if (actionsEl) {
+            actionsEl.innerHTML =
+                '<button class="vocab-upgrade-btn primary" onclick="vocabUpgradeLogin()">' +
+                    '<i class="fas fa-sign-in-alt"></i> Đăng nhập' +
+                '</button>' +
+                '<button class="vocab-upgrade-btn secondary" onclick="vocabUpgradeClose()">' +
+                    'Để sau' +
+                '</button>';
+        }
+    } else if (tier === 'trial') {
+        if (titleEl) titleEl.textContent = 'Nâng cấp để sử dụng đầy đủ';
+        if (subEl) subEl.textContent = 'Gia hạn để mở khóa toàn bộ từ vựng HSK 1-9';
+        if (actionsEl) {
+            actionsEl.innerHTML =
+                '<button class="vocab-upgrade-btn primary" onclick="vocabUpgradeRenew()">' +
+                    '<i class="fas fa-sync-alt"></i> Gia hạn ngay' +
+                '</button>' +
+                '<button class="vocab-upgrade-btn secondary" onclick="vocabUpgradeClose()">' +
+                    'Để sau' +
+                '</button>';
+        }
+    } else if (tier === 'expired') {
+        if (titleEl) titleEl.textContent = 'Tài khoản đã hết hạn';
+        if (subEl) subEl.textContent = 'Gia hạn để tiếp tục sử dụng Từ vựng HSK và toàn bộ tính năng';
+        if (actionsEl) {
+            actionsEl.innerHTML =
+                '<button class="vocab-upgrade-btn primary" onclick="vocabUpgradeRenew()">' +
+                    '<i class="fas fa-sync-alt"></i> Gia hạn ngay' +
+                '</button>' +
+                '<button class="vocab-upgrade-btn secondary" onclick="vocabUpgradeClose()">' +
+                    'Để sau' +
+                '</button>';
+        }
+    } else {
+        if (titleEl) titleEl.textContent = 'Mở khóa Từ vựng HSK';
+        if (subEl) subEl.textContent = 'Nâng cấp để sử dụng đầy đủ tính năng';
+        if (actionsEl) {
+            actionsEl.innerHTML =
+                '<button class="vocab-upgrade-btn primary" onclick="vocabUpgradeRenew()">' +
+                    '<i class="fas fa-gem"></i> Nâng cấp' +
+                '</button>' +
+                '<button class="vocab-upgrade-btn secondary" onclick="vocabUpgradeClose()">' +
+                    'Để sau' +
+                '</button>';
+        }
+    }
+
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
 
     function closeUpgradeModal() {
         var modal = document.getElementById('vocabUpgradeModal');
@@ -2093,14 +2093,12 @@ def build_vocab_js_override(vocab_id="tu-vung"):
         if (typeof showLoginModal === 'function') showLoginModal();
     };
     window.vocabUpgradeRenew = function() {
-        closeUpgradeModal();
-        if (typeof openRenewalModal === 'function') {
-            openRenewalModal();
-            setTimeout(function() {
-                if (typeof selectPackage === 'function') selectPackage('forever');
-            }, 300);
-        }
-    };
+    closeUpgradeModal();
+    if (typeof openRenewalModal === 'function') {
+        openRenewalModal();
+        /* ⭐ KHÔNG auto-select gói 'forever' — để user tự chọn gói phù hợp */
+    }
+};
 
     document.addEventListener('click', function(e) {
         var modal = document.getElementById('vocabUpgradeModal');
