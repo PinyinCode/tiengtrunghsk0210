@@ -8701,7 +8701,7 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
 
 
 /* ═══════════════════════════════════════════════════════════ */
-/* FIX.PY: DATASET BUTTONS — 2 HÀNG GỌN (ICON | TITLE + SUB)   */
+/* FIX.PY: DATASET BUTTONS — 2 HÀNG + ICON WATERMARK CHÌM      */
 /* ═══════════════════════════════════════════════════════════ */
 
 .ds-main-row {
@@ -8721,8 +8721,8 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
 .ds-btn {
     display: flex !important;
     align-items: center !important;
-    gap: .65rem !important;
-    padding: .65rem .8rem !important;
+    gap: 0 !important;
+    padding: .65rem .85rem !important;
     min-height: 60px !important;
     height: 100% !important;
     border: 1.5px solid var(--border) !important;
@@ -8734,7 +8734,7 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
     cursor: pointer !important;
     transition: all .2s ease !important;
     position: relative !important;
-    overflow: visible !important;
+    overflow: hidden !important;
 }
 .ds-btn:hover {
     border-color: var(--primary) !important;
@@ -8743,31 +8743,48 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
     box-shadow: 0 6px 16px -6px rgba(15,23,42,.15) !important;
 }
 
-/* ── Icon ── */
-.ds-btn .ds-btn-icon {
-    flex-shrink: 0 !important;
-    width: 36px !important;
-    height: 36px !important;
-    border-radius: 10px !important;
+/* ICON — WATERMARK CHÌM Ở GÓC PHẢI */
+.ds-btn .ds-btn-icon,
+.ds-btn > i.ds-btn-icon {
+    position: absolute !important;
+    right: .5rem !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: 52px !important;
+    height: 52px !important;
+    border-radius: 0 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    font-size: 1.05rem !important;
-    background: linear-gradient(135deg, rgba(99,102,241,.14), rgba(139,92,246,.08)) !important;
-    color: var(--primary) !important;
-    transition: all .2s !important;
+    font-size: 2.6rem !important;
+    background: none !important;
+    background-color: transparent !important;
+    color: currentColor !important;
+    opacity: .08 !important;
+    pointer-events: none !important;
+    z-index: 0 !important;
+    transition: opacity .2s !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+.ds-btn:hover .ds-btn-icon,
+.ds-btn:hover > i.ds-btn-icon {
+    opacity: .15 !important;
 }
 
-/* ── Khối text 2 hàng ── */
+/* KHỐI TEXT — FULL WIDTH */
 .ds-btn .ds-btn-text {
+    position: relative !important;
+    z-index: 1 !important;
     flex: 1 1 auto !important;
     min-width: 0 !important;
     display: flex !important;
     flex-direction: column !important;
     gap: .12rem !important;
+    padding-right: 2.6rem !important;
 }
 .ds-btn .ds-btn-title {
-    font-size: clamp(.78rem, 1vw, .9rem) !important;
+    font-size: clamp(.82rem, 1.05vw, .95rem) !important;
     font-weight: 700 !important;
     color: var(--text) !important;
     line-height: 1.2 !important;
@@ -8783,7 +8800,7 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
     margin-right: .15rem !important;
 }
 .ds-btn .ds-btn-sub {
-    font-size: clamp(.62rem, .78vw, .72rem) !important;
+    font-size: clamp(.65rem, .82vw, .75rem) !important;
     font-weight: 600 !important;
     color: var(--text-3) !important;
     line-height: 1.25 !important;
@@ -8801,9 +8818,11 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
     box-shadow: 0 6px 18px -4px rgba(124,58,237,.45) !important;
     transform: translateY(-2px) !important;
 }
-.ds-btn.active .ds-btn-icon {
-    background: rgba(255,255,255,.2) !important;
+.ds-btn.active .ds-btn-icon,
+.ds-btn.active > i.ds-btn-icon {
+    opacity: .18 !important;
     color: #fff !important;
+    background: none !important;
 }
 .ds-btn.active .ds-btn-title,
 .ds-btn.active .ds-btn-title b { color: #fff !important; }
@@ -8822,11 +8841,16 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
     color: var(--text-3) !important;
     transition: transform .25s !important;
     pointer-events: none !important;
+    z-index: 2 !important;
+}
+.ds-btn[data-dataset-group="chuyen-nganh"] .ds-btn-text {
+    padding-right: 1.8rem !important;
 }
 .ds-btn[data-dataset-group="chuyen-nganh"].active .ds-arrow {
     transform: translateY(-50%) rotate(180deg) !important;
     color: #fff !important;
 }
+
 .ds-new-badge {
     position: absolute !important;
     top: -7px !important;
@@ -8853,9 +8877,11 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
     background: linear-gradient(135deg, #fffbeb, #fef3c7) !important;
     border-color: rgba(245,158,11,.5) !important;
 }
-.ds-btn[data-dataset="tu-vung"] .ds-btn-icon {
-    background: linear-gradient(135deg, rgba(245,158,11,.3), rgba(217,119,6,.15)) !important;
+.ds-btn[data-dataset="tu-vung"] .ds-btn-icon,
+.ds-btn[data-dataset="tu-vung"] > i.ds-btn-icon {
     color: #d97706 !important;
+    opacity: .12 !important;
+    background: none !important;
 }
 .ds-btn[data-dataset="tu-vung"] .ds-btn-title,
 .ds-btn[data-dataset="tu-vung"] .ds-btn-title b { color: #92400e !important; }
@@ -8871,9 +8897,10 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
 .ds-btn[data-dataset="tu-vung"].active .ds-btn-title,
 .ds-btn[data-dataset="tu-vung"].active .ds-btn-title b { color: #fff !important; }
 .ds-btn[data-dataset="tu-vung"].active .ds-btn-sub { color: rgba(255,255,255,.85) !important; }
-.ds-btn[data-dataset="tu-vung"].active .ds-btn-icon {
-    background: rgba(255,255,255,.22) !important;
+.ds-btn[data-dataset="tu-vung"].active .ds-btn-icon,
+.ds-btn[data-dataset="tu-vung"].active > i.ds-btn-icon {
     color: #fff !important;
+    opacity: .25 !important;
 }
 
 /* ═══ YÊU THÍCH ═══ */
@@ -8881,9 +8908,11 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
     background: linear-gradient(135deg, #fef2f2, #fee2e2) !important;
     border-color: rgba(239,68,68,.35) !important;
 }
-.ds-btn[data-dataset-group="favorites"] .ds-btn-icon {
-    background: linear-gradient(135deg, rgba(239,68,68,.2), rgba(220,38,38,.1)) !important;
+.ds-btn[data-dataset-group="favorites"] .ds-btn-icon,
+.ds-btn[data-dataset-group="favorites"] > i.ds-btn-icon {
     color: #ef4444 !important;
+    opacity: .12 !important;
+    background: none !important;
 }
 .ds-btn[data-dataset-group="favorites"] .ds-btn-title,
 .ds-btn[data-dataset-group="favorites"] .ds-btn-title b { color: #991b1b !important; }
@@ -8895,11 +8924,13 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
 .ds-btn[data-dataset-group="favorites"].active .ds-btn-title,
 .ds-btn[data-dataset-group="favorites"].active .ds-btn-title b,
 .ds-btn[data-dataset-group="favorites"].active .ds-btn-sub { color: #fff !important; }
+.ds-btn[data-dataset-group="favorites"].active .ds-btn-icon,
+.ds-btn[data-dataset-group="favorites"].active > i.ds-btn-icon {
+    color: #fff !important;
+    opacity: .25 !important;
+}
 
 /* ═══ DARK MODE ═══ */
-[data-theme="dark"] .ds-btn .ds-btn-icon {
-    background: linear-gradient(135deg, rgba(99,102,241,.28), rgba(139,92,246,.18)) !important;
-}
 [data-theme="dark"] .ds-btn[data-dataset="tu-vung"] {
     background: linear-gradient(135deg, rgba(245,158,11,.18), rgba(217,119,6,.12)) !important;
     border-color: rgba(245,158,11,.45) !important;
@@ -8920,16 +8951,19 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
     .ds-btn {
         min-height: 56px !important;
         padding: .55rem .7rem !important;
-        gap: .5rem !important;
     }
-    .ds-btn .ds-btn-icon {
-        width: 32px !important;
-        height: 32px !important;
-        font-size: .92rem !important;
-        border-radius: 9px !important;
+    .ds-btn .ds-btn-icon,
+    .ds-btn > i.ds-btn-icon {
+        width: 44px !important;
+        height: 44px !important;
+        font-size: 2.2rem !important;
+        right: .35rem !important;
     }
-    .ds-btn .ds-btn-title { font-size: .76rem !important; }
-    .ds-btn .ds-btn-sub   { font-size: .6rem !important; }
+    .ds-btn .ds-btn-text {
+        padding-right: 2.2rem !important;
+    }
+    .ds-btn .ds-btn-title { font-size: .78rem !important; }
+    .ds-btn .ds-btn-sub   { font-size: .62rem !important; }
 }
 
 
