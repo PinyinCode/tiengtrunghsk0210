@@ -43,7 +43,7 @@ SKIP_FILES = {"input.xlsx", "input.xls", "input.csv"}
 
 VOCAB_FILE = os.path.join(DATA_DIR, "tu_vung_hsk.xlsx")
 VOCAB_ID = "tu-vung"
-VOCAB_LABEL = "Từ vựng HSK"
+VOCAB_LABEL = "11000+ Từ vựng HSK"
 # ═══════════════════════════════════════════════════════════════════
 #  VOCAB WARNING CSS (banner cảnh báo + gợi ý gia hạn)
 # ═══════════════════════════════════════════════════════════════════
