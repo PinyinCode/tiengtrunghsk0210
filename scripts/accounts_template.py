@@ -2358,7 +2358,7 @@ function applyUserUI() {
         updateDemoBannerByTier();
     }
 }
-   ═══════════════════════════════════════════════════════════════ */
+
 function updateDemoBannerByTier() {
     var banner = $('demoBanner');
     if (!banner) return;
