@@ -16854,9 +16854,6 @@ function applyUserUI() {
 
     /* ═══════════════════════════════════════════════════════════════
        ⭐ PHÂN BIỆT: Guest / Expired / Active
-       - Guest: Chưa login (chưa từng hoặc đã logout)
-       - Expired: Đã login nhưng hết hạn
-       - Active: Đang hoạt động
        ═══════════════════════════════════════════════════════════════ */
     var hasFirebaseUser = false;
     try {
@@ -16879,13 +16876,12 @@ function applyUserUI() {
     } else if (isExpiredUser) {
         /* ═══════════════════════════════════════════════════════════
            ⭐ EXPIRED — Đã login nhưng hết hạn
-           - Hiện avatar + dropdown (KHÔNG hiện nút login)
-           - Banner đỏ + nút "Gia hạn"
+           ⭐ FIX: ẨN #demoBanner — chỉ hiện #expiryBanner (đỏ full-width)
            ═══════════════════════════════════════════════════════════ */
         if (demoBadge) demoBadge.style.display = 'none';
         if (headerLoginBtn) headerLoginBtn.style.display = 'none';
         if (userMenu) userMenu.style.display = 'block';
-        if ($('demoBanner')) $('demoBanner').style.display = 'flex';
+        if ($('demoBanner')) $('demoBanner').style.display = 'none';   // ⬅️ ĐÃ SỬA: flex → none
 
         /* ⭐ User info */
         if ($('userName')) $('userName').textContent = currentUser.name;
@@ -17037,10 +17033,6 @@ function applyUserUI() {
         updateDemoBannerByTier();
     }
 }
-/* ═══════════════════════════════════════════════════════════════
-   🎯 UPDATE BANNER THEO TIER
-   - Guest (chưa login) → banner vàng + nút "Đăng nhập"
-   - Expired → banner đỏ + nút "Gia hạn"
    ═══════════════════════════════════════════════════════════════ */
 function updateDemoBannerByTier() {
     var banner = $('demoBanner');
@@ -17060,81 +17052,46 @@ function updateDemoBannerByTier() {
     var isRealGuest = !currentUser && !hasFirebaseUser;
     var isExpiredUser = currentUser && currentUser.isExpiredOnly === true;
 
-    /* ═══ KHÔNG PHẢI GUEST / EXPIRED → ẨN BANNER ═══ */
-    if (!isRealGuest && !isExpiredUser) {
+    // ⭐ FIX: XÓA BANNER "Tài khoản đã hết hạn 28/9/2026"
+    // Banner #demoBanner CHỈ hiện cho GUEST chưa login.
+    // Khi expired → ẩn hoàn toàn, chỉ dùng #expiryBanner.
+    if (isExpiredUser) {
         banner.style.display = 'none';
         return;
     }
 
+    if (!isRealGuest) {
+        banner.style.display = 'none';
+        return;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       ⭐ GUEST → Nút "Đăng nhập bằng Gmail"
+       ═══════════════════════════════════════════════════════════════ */
     banner.style.display = 'flex';
 
-    if (isExpiredUser) {
-        /* ═══════════════════════════════════════════════════════════
-           ⭐ EXPIRED → Nút "Gia hạn"
-           ═══════════════════════════════════════════════════════════ */
-        var expDateStr = '';
-        if (currentUser.expiresAt) {
-            var d = getExpiryDate(currentUser.expiresAt);
-            if (d && !isNaN(d.getTime())) {
-                expDateStr = d.toLocaleDateString('vi-VN');
-            }
-        }
+    var remaining = (typeof getDemoRemaining === 'function') ? getDemoRemaining() : 100;
 
-        if (titleEl) titleEl.innerHTML = '⚠️ Tài khoản đã hết hạn';
-        if (descEl) {
-            descEl.innerHTML = 'Tài khoản của bạn đã hết hạn' +
-                (expDateStr ? ' vào <b>' + expDateStr + '</b>' : '') +
-                '.<br>' +
-                'Bạn đang xem chế độ giới hạn.<br>' +
-                '<b style="color:#dc2626">Gia hạn ngay để mở khóa toàn bộ!</b>';
-        }
-        if (btnText) btnText.textContent = 'Gia hạn ngay';
-        if (btn) {
-            var icon = btn.querySelector('i');
-            if (icon) icon.className = 'fas fa-gem';
-            /* ⭐ Set onclick MỚI */
-            btn.onclick = function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                if (typeof openRenewalModal === 'function') {
-                    openRenewalModal();
-                }
-            };
-        }
-        if (iconEl) iconEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
-        banner.style.background = 'linear-gradient(135deg, #fecaca, #fca5a5)';
-        banner.style.borderColor = '#dc2626';
-
-    } else {
-        /* ═══════════════════════════════════════════════════════════
-           ⭐ GUEST → Nút "Đăng nhập"
-           ═══════════════════════════════════════════════════════════ */
-        var remaining = (typeof getDemoRemaining === 'function') ? getDemoRemaining() : 100;
-
-        if (titleEl) titleEl.innerHTML = 'Đăng nhập miễn phí để mở khóa toàn bộ';
-        if (descEl) {
-            descEl.innerHTML = 'Đăng nhập bằng <b>Gmail</b> để xem <b>toàn bộ kho câu</b>, ' +
-                'không giới hạn nghe và luyện viết.<br>' +
-                'Nghe + Luyện viết còn lại hôm nay: ' +
-                '<b id="demoRemainingText" style="color:#16a34a">' + remaining + '</b> lượt.';
-        }
-        if (btnText) btnText.textContent = 'Đăng nhập bằng Gmail';
-        if (btn) {
-            var icon2 = btn.querySelector('i');
-            if (icon2) icon2.className = 'fas fa-sign-in-alt';
-            /* ⭐ Set onclick về showLoginModal */
-            btn.onclick = function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                if (typeof showLoginModal === 'function') {
-                    showLoginModal();
-                }
-            };
-        }
-        if (iconEl) iconEl.innerHTML = '<i class="fas fa-gift"></i>';
-        banner.style.background = '';
-        banner.style.borderColor = '';
+    if (titleEl) titleEl.innerHTML = 'Đăng nhập miễn phí để mở khóa toàn bộ';
+    if (descEl) {
+        descEl.innerHTML = 'Đăng nhập bằng <b>Gmail</b> để xem <b>toàn bộ kho câu</b>, ' +
+            'không giới hạn nghe và luyện viết.<br>' +
+            'Nghe + Luyện viết còn lại hôm nay: ' +
+            '<b id="demoRemainingText" style="color:#16a34a">' + remaining + '</b> lượt.';
     }
+    if (btnText) btnText.textContent = 'Đăng nhập bằng Gmail';
+    if (btn) {
+        var icon = btn.querySelector('i');
+        if (icon) icon.className = 'fas fa-sign-in-alt';
+        btn.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof showLoginModal === 'function') showLoginModal();
+        };
+    }
+    if (iconEl) iconEl.innerHTML = '<i class="fas fa-gift"></i>';
+    banner.style.background = '';
+    banner.style.borderColor = '';
 }
 function updateUserDetails() {
     var detailsEl = $('userDetails');
