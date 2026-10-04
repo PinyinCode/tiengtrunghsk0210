@@ -28158,9 +28158,10 @@ window.gradeWithAPI = gradeWithAPI;
 })();
 
 (function() {
-    var _origCheckFullAnswer = window.checkFullAnswer;
-    var _pfGradeToken = 0;
-    var _pfDebounceTimer = null;
+    var _origCheckFullAnswer (' = window.checkFullAnswer;
+    +
+ var _pfGradeToken = 0;
+                                        var _pfDebounceTimer = null;
 
     window.checkFullAnswer = function() {
         clearTimeout(_pfDebounceTimer);
@@ -28196,8 +28197,7 @@ window.gradeWithAPI = gradeWithAPI;
         if (userLen < answerLen) {
             var isPrefixCorrect = cleanAnswer.substring(0, userLen) === cleanUser;
             if (isPrefixCorrect) {
-                statusEl.innerHTML = '<span class="ai-reason">Đang gõ... (' +
-                                     userLen + '/' + answerLen + ')</span>';
+                statusEl.innerHTML = '<span class="ai-reason">Đang gõ... userLen + '/' + answerLen + ')</span>';
                 statusEl.className = 'practice-full-status';
                 return;
             }
@@ -28354,6 +28354,61 @@ async function fetchMnemonic(char) {
     }
 }
 
+/* ═══════════════════════════════════════════════════════════ */
+/* TRA NGHĨA từ FIXPY_DATASETS                                 */
+/* ═══════════════════════════════════════════════════════════ */
+function _lookupMeaning(char) {
+    if (!char) return { meaning: '', pinyin: '' };
+
+    try {
+        if (!window.FIXPY_DATASETS) return { meaning: '', pinyin: '' };
+
+        var vocabList = null;
+        var keys = Object.keys(window.FIXPY_DATASETS);
+
+        /* Tìm dataset vocab (>= 1000 chữ) */
+        for (var i = 0; i < keys.length; i++) {
+            var ds = window.FIXPY_DATASETS[keys[i]];
+            if (ds && ds.data && Array.isArray(ds.data) && ds.data.length >= 1000) {
+                vocabList = ds.data;
+                break;
+            }
+        }
+
+        /* Fallback: dataset đầu tiên */
+        if (!vocabList && keys.length > 0) {
+            var ds0 = window.FIXPY_DATASETS[keys[0]];
+            if (ds0 && ds0.data) vocabList = ds0.data;
+        }
+
+        if (!vocabList) return { meaning: '', pinyin: '' };
+
+        /* Tìm chữ khớp chính xác */
+        for (var j = 0; j < vocabList.length; j++) {
+            if (vocabList[j].zh === char) {
+                return {
+                    meaning: vocabList[j].vi || '',
+                    pinyin: vocabList[j].pinyin || ''
+                };
+            }
+        }
+
+        /* Fallback: tìm chữ chứa */
+        for (var k = 0; k < vocabList.length; k++) {
+            if (vocabList[k].zh && vocabList[k].zh.indexOf(char) !== -1) {
+                return {
+                    meaning: vocabList[k].vi || '',
+                    pinyin: vocabList[k].pinyin || ''
+                };
+            }
+        }
+    } catch(e) {
+        console.warn('[Mnemonic] Lookup error:', e);
+    }
+
+    return { meaning: '', pinyin: '' };
+}
+
 window.showMnemonic = async function(evt, btn) {
     if (evt) {
         evt.stopPropagation();
@@ -28420,12 +28475,20 @@ function renderMnemonicModal(modal, data) {
     var mnemonic = data.mnemonic || '';
     var similar = data.similar || null;
 
+    /* ⭐ TRA NGHĨA từ FIXPY_DATASETS */
+    var lookup = _lookupMeaning(ch);
+    var meaning = lookup.meaning || '';
+    if (!py) py = lookup.pinyin || '';
+
     var html = '<div class="mnemonic-box">';
 
     /* ═══ HEADER ═══ */
     html += '<div class="mnemonic-header">';
     html += '<span class="mnemonic-char">' + escapeHtml(ch) + '</span>';
     if (py) html += '<span class="mnemonic-pinyin">' + escapeHtml(py) + '</span>';
+    if (meaning) {
+        html += '<span class="mnemonic-meaning">' + escapeHtml(meaning) + '</span>';
+    }
     if (rad && rad.zh) {
         html += '<span class="mnemonic-radical-tag">' +
                 '<span>' + escapeHtml(rad.zh) + '</span>' +
@@ -28481,10 +28544,15 @@ function renderMnemonicModal(modal, data) {
         html += '<div class="mnemonic-section-title">🔍 Dễ nhầm</div>';
         html += '<div class="mnemonic-similar-cards">';
         similar.list.forEach(function(item) {
+            /* ⭐ Tra nghĩa + pinyin cho chữ dễ nhầm */
+            var simLookup = _lookupMeaning(item.char);
+            var simPinyin = item.pinyin || simLookup.pinyin || '';
+            var simMeaning = item.meaning || simLookup.meaning || '';
+
             html += '<div class="mnemonic-sim-card">';
             html += '<span class="mnemonic-sim-char">' + escapeHtml(item.char || '') + '</span>';
-            html += '<span class="mnemonic-sim-py">' + escapeHtml(item.pinyin || '') + '</span>';
-            html += '<span class="mnemonic-sim-vi">' + escapeHtml(item.meaning || '') + '</span>';
+            if (simPinyin) html += '<span class="mnemonic-sim-py">' + escapeHtml(simPinyin) + '</span>';
+            if (simMeaning) html += '<span class="mnemonic-sim-vi">' + escapeHtml(simMeaning) + '</span>';
             html += '</div>';
         });
         html += '</div>';
