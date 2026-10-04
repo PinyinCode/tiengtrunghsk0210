@@ -8700,32 +8700,251 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
 }
 
 
-/* FIX.PY: AUTO-FIT LAYOUT */
-@media (max-width: 768px) {
-    .ds-main-row {
-        grid-template-columns: repeat(2, minmax(0, 1fr) ) !important;
+/* ═══════════════════════════════════════════════════════════ */
+/* FIX.PY: DATASET BUTTONS — 2 HÀNG GỌN (ICON | TITLE + SUB)   */
+/* ═══════════════════════════════════════════════════════════ */
+
+.ds-main-row {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: .55rem !important;
+    align-items: stretch !important;
+}
+@media (max-width: 1100px) {
+    .ds-main-row { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 420px) {
+    .ds-main-row { grid-template-columns: 1fr !important; }
+}
+
+/* ── Nút cơ bản ── */
+.ds-btn {
+    display: flex !important;
+    align-items: center !important;
+    gap: .65rem !important;
+    padding: .65rem .8rem !important;
+    min-height: 60px !important;
+    height: 100% !important;
+    border: 1.5px solid var(--border) !important;
+    border-radius: 12px !important;
+    background: var(--surface) !important;
+    color: var(--text) !important;
+    font-family: inherit !important;
+    text-align: left !important;
+    cursor: pointer !important;
+    transition: all .2s ease !important;
+    position: relative !important;
+    overflow: visible !important;
+}
+.ds-btn:hover {
+    border-color: var(--primary) !important;
+    background: var(--surface-2) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 16px -6px rgba(15,23,42,.15) !important;
+}
+
+/* ── Icon ── */
+.ds-btn .ds-btn-icon {
+    flex-shrink: 0 !important;
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.05rem !important;
+    background: linear-gradient(135deg, rgba(99,102,241,.14), rgba(139,92,246,.08)) !important;
+    color: var(--primary) !important;
+    transition: all .2s !important;
+}
+
+/* ── Khối text 2 hàng ── */
+.ds-btn .ds-btn-text {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: .12rem !important;
+}
+.ds-btn .ds-btn-title {
+    font-size: clamp(.78rem, 1vw, .9rem) !important;
+    font-weight: 700 !important;
+    color: var(--text) !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    letter-spacing: -.01em !important;
+    display: block !important;
+}
+.ds-btn .ds-btn-title b {
+    font-weight: 900 !important;
+    color: var(--text) !important;
+    margin-right: .15rem !important;
+}
+.ds-btn .ds-btn-sub {
+    font-size: clamp(.62rem, .78vw, .72rem) !important;
+    font-weight: 600 !important;
+    color: var(--text-3) !important;
+    line-height: 1.25 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: block !important;
+    font-style: normal !important;
+}
+
+/* ── Active ── */
+.ds-btn.active {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+    border-color: transparent !important;
+    box-shadow: 0 6px 18px -4px rgba(124,58,237,.45) !important;
+    transform: translateY(-2px) !important;
+}
+.ds-btn.active .ds-btn-icon {
+    background: rgba(255,255,255,.2) !important;
+    color: #fff !important;
+}
+.ds-btn.active .ds-btn-title,
+.ds-btn.active .ds-btn-title b { color: #fff !important; }
+.ds-btn.active .ds-btn-sub { color: rgba(255,255,255,.82) !important; }
+
+/* ═══ CHUYÊN NGÀNH ═══ */
+.ds-btn[data-dataset-group="chuyen-nganh"] {
+    padding-right: 2.2rem !important;
+}
+.ds-btn[data-dataset-group="chuyen-nganh"] .ds-arrow {
+    position: absolute !important;
+    right: .75rem !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    font-size: .7rem !important;
+    color: var(--text-3) !important;
+    transition: transform .25s !important;
+    pointer-events: none !important;
+}
+.ds-btn[data-dataset-group="chuyen-nganh"].active .ds-arrow {
+    transform: translateY(-50%) rotate(180deg) !important;
+    color: #fff !important;
+}
+.ds-new-badge {
+    position: absolute !important;
+    top: -7px !important;
+    right: -7px !important;
+    padding: .15rem .5rem !important;
+    border-radius: 50px !important;
+    background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+    color: #fff !important;
+    font-size: .56rem !important;
+    font-weight: 900 !important;
+    letter-spacing: .5px !important;
+    box-shadow: 0 2px 8px rgba(220,38,38,.5), 0 0 0 2px var(--surface) !important;
+    animation: dsNewPulse 1.6s ease-in-out infinite !important;
+    z-index: 10 !important;
+    pointer-events: none !important;
+}
+@keyframes dsNewPulse {
+    0%,100% { transform: scale(1); }
+    50%     { transform: scale(1.1); }
+}
+
+/* ═══ TỪ VỰNG PREMIUM ═══ */
+.ds-btn[data-dataset="tu-vung"] {
+    background: linear-gradient(135deg, #fffbeb, #fef3c7) !important;
+    border-color: rgba(245,158,11,.5) !important;
+}
+.ds-btn[data-dataset="tu-vung"] .ds-btn-icon {
+    background: linear-gradient(135deg, rgba(245,158,11,.3), rgba(217,119,6,.15)) !important;
+    color: #d97706 !important;
+}
+.ds-btn[data-dataset="tu-vung"] .ds-btn-title,
+.ds-btn[data-dataset="tu-vung"] .ds-btn-title b { color: #92400e !important; }
+.ds-btn[data-dataset="tu-vung"] .ds-btn-sub { color: #b45309 !important; }
+.ds-btn[data-dataset="tu-vung"]:hover {
+    border-color: #f59e0b !important;
+    background: linear-gradient(135deg, #fef3c7, #fde68a) !important;
+}
+.ds-btn[data-dataset="tu-vung"].active {
+    background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+    border-color: transparent !important;
+}
+.ds-btn[data-dataset="tu-vung"].active .ds-btn-title,
+.ds-btn[data-dataset="tu-vung"].active .ds-btn-title b { color: #fff !important; }
+.ds-btn[data-dataset="tu-vung"].active .ds-btn-sub { color: rgba(255,255,255,.85) !important; }
+.ds-btn[data-dataset="tu-vung"].active .ds-btn-icon {
+    background: rgba(255,255,255,.22) !important;
+    color: #fff !important;
+}
+
+/* ═══ YÊU THÍCH ═══ */
+.ds-btn[data-dataset-group="favorites"] {
+    background: linear-gradient(135deg, #fef2f2, #fee2e2) !important;
+    border-color: rgba(239,68,68,.35) !important;
+}
+.ds-btn[data-dataset-group="favorites"] .ds-btn-icon {
+    background: linear-gradient(135deg, rgba(239,68,68,.2), rgba(220,38,38,.1)) !important;
+    color: #ef4444 !important;
+}
+.ds-btn[data-dataset-group="favorites"] .ds-btn-title,
+.ds-btn[data-dataset-group="favorites"] .ds-btn-title b { color: #991b1b !important; }
+.ds-btn[data-dataset-group="favorites"] .ds-btn-sub { color: #b91c1c !important; }
+.ds-btn[data-dataset-group="favorites"].active {
+    background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+    border-color: transparent !important;
+}
+.ds-btn[data-dataset-group="favorites"].active .ds-btn-title,
+.ds-btn[data-dataset-group="favorites"].active .ds-btn-title b,
+.ds-btn[data-dataset-group="favorites"].active .ds-btn-sub { color: #fff !important; }
+
+/* ═══ DARK MODE ═══ */
+[data-theme="dark"] .ds-btn .ds-btn-icon {
+    background: linear-gradient(135deg, rgba(99,102,241,.28), rgba(139,92,246,.18)) !important;
+}
+[data-theme="dark"] .ds-btn[data-dataset="tu-vung"] {
+    background: linear-gradient(135deg, rgba(245,158,11,.18), rgba(217,119,6,.12)) !important;
+    border-color: rgba(245,158,11,.45) !important;
+}
+[data-theme="dark"] .ds-btn[data-dataset="tu-vung"] .ds-btn-title,
+[data-theme="dark"] .ds-btn[data-dataset="tu-vung"] .ds-btn-title b { color: #fcd34d !important; }
+[data-theme="dark"] .ds-btn[data-dataset="tu-vung"] .ds-btn-sub { color: #fbbf24 !important; }
+[data-theme="dark"] .ds-btn[data-dataset-group="favorites"] {
+    background: linear-gradient(135deg, rgba(239,68,68,.18), rgba(220,38,38,.1)) !important;
+    border-color: rgba(239,68,68,.4) !important;
+}
+[data-theme="dark"] .ds-btn[data-dataset-group="favorites"] .ds-btn-title,
+[data-theme="dark"] .ds-btn[data-dataset-group="favorites"] .ds-btn-title b { color: #fca5a5 !important; }
+[data-theme="dark"] .ds-btn[data-dataset-group="favorites"] .ds-btn-sub { color: #f87171 !important; }
+
+/* ═══ MOBILE ═══ */
+@media (max-width: 500px) {
+    .ds-btn {
+        min-height: 56px !important;
+        padding: .55rem .7rem !important;
         gap: .5rem !important;
     }
-}
-@media (min-width: 769px) {
-    .ds-main-row {
-        grid-template-columns: repeat(4, minmax(0, 1fr) ) !important;
-        gap: .55rem !important;
+    .ds-btn .ds-btn-icon {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: .92rem !important;
+        border-radius: 9px !important;
     }
+    .ds-btn .ds-btn-title { font-size: .76rem !important; }
+    .ds-btn .ds-btn-sub   { font-size: .6rem !important; }
 }
+
 
 /* GRID DEU CHO TAB CON CHUYEN NGANH */
 .ds-sub-grid {
     display: grid !important;
-    grid-template-columns: repeat(2, minmax(0, 1fr) ) !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: .55rem !important;
     align-items: stretch !important;
 }
 @media (min-width: 600px) {
-    .ds-sub-grid { grid-template-columns: repeat(3, minmax(0, 1fr) ) !important; }
+    .ds-sub-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
 }
 @media (min-width: 900px) {
-    .ds-sub-grid { grid-template-columns: repeat(4, minmax(0, 1fr) ) !important; }
+    .ds-sub-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
 }
 .ds-sub-btn {
     width: 100% !important;
@@ -8753,30 +8972,11 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
 }
 
 /* Style cho tab 1000-cau-giao-tiep */
-.ds-btn[data-dataset="1000-cau-giao-tiep"] {
-    background: var(--surface) !important;
-    border-color: var(--border) !important;
-    color: var(--text) !important;
-}
-.ds-btn[data-dataset="1000-cau-giao-tiep"] i:first-child { color: var(--primary) !important; }
-.ds-btn[data-dataset="1000-cau-giao-tiep"]:hover {
-    border-color: var(--primary) !important;
-    background: var(--primary-light) !important;
-}
 .ds-btn[data-dataset="1000-cau-giao-tiep"].active {
     background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
     color: #fff !important;
     border-color: transparent !important;
     box-shadow: 0 4px 12px rgba(124, 58, 237, .35) !important;
-}
-.ds-btn[data-dataset="1000-cau-giao-tiep"].active i:first-child { color: #fff !important; }
-[data-theme="dark"] .ds-btn[data-dataset="1000-cau-giao-tiep"] {
-    background: var(--surface) !important;
-    border-color: var(--border) !important;
-}
-[data-theme="dark"] .ds-btn[data-dataset="1000-cau-giao-tiep"].active {
-    background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
-    border-color: transparent !important;
 }
 
 /* VOCAB PREMIUM CSS */
@@ -10225,13 +10425,20 @@ body[data-vocab-mode="1"] .mobile-view {
         <span>Bộ dữ liệu</span>
     </div>
     <div class="ds-main-row">
-        <button class="ds-btn ds-btn-primary active" data-dataset="tonghop">
-            <i class="fas fa-book-open"></i>
-            <span id="dsTonghopLabel">1700+ Câu phản xạ<br>Văn phòng - Công xưởng</span>
+        <button class="ds-btn ds-btn-primary active" data-dataset="tonghop" >
+            <i class="fas fa-book-open ds-btn-icon"></i>
+            <span class="ds-btn-text">
+                <span class="ds-btn-title"><b>1750+</b> Câu phản xạ</span>
+                <span class="ds-btn-sub">Văn phòng · Công xưởng</span>
+            </span>
+            
         </button>
         <button class="ds-btn ds-btn-primary" data-dataset="1000-cau-giao-tiep">
-            <i class="fas fa-comments"></i>
-            <span>1000+ Câu giao tiếp</span>
+            <i class="fas fa-comments ds-btn-icon"></i>
+            <span class="ds-btn-text">
+                <span class="ds-btn-title"><b>1000+</b> Câu giao tiếp</span>
+                <span class="ds-btn-sub">Câu giao tiếp</span>
+            </span>
         </button>
         <button class="ds-btn ds-btn-primary" data-dataset="tu-vung" id="dsTuVungBtn">
             <i class="fas fa-book"></i>
@@ -10239,16 +10446,21 @@ body[data-vocab-mode="1"] .mobile-view {
             <span class="ds-vocab-badge" id="dsVocabBadge">PREMIUM</span>
         </button>
         <button class="ds-btn ds-btn-primary" data-dataset-group="chuyen-nganh" id="dsChuyenNganhBtn">
-            <i class="fas fa-industry"></i>
-            <span>Chuyên ngành</span>
+            <i class="fas fa-industry ds-btn-icon"></i>
+            <span class="ds-btn-text">
+                <span class="ds-btn-title"><b>Chuyên ngành</b></span>
+                <span class="ds-btn-sub">Theo lĩnh vực</span>
+            </span>
             <i class="fas fa-chevron-down ds-arrow"></i>
             <span class="ds-new-badge" id="dsNewBadge">NEW</span>
         </button>
-        <button class="ds-btn ds-btn-primary" data-dataset-group="favorites" id="dsFavBtn">
-            <i class="far fa-heart"></i>
-            <span>Yêu thích</span>
-            <span class="ds-fav-badge" id="favTabBadge" data-count="0"></span>
-            <i class="fas fa-lock ds-fav-lock" id="favTabLock" style="display:none;"></i>
+        <button class="ds-btn ds-btn-primary" data-dataset-group="favorites" >
+            <i class="fas fa-heart ds-btn-icon"></i>
+            <span class="ds-btn-text">
+                <span class="ds-btn-title"><b>Yêu thích</b></span>
+                <span class="ds-btn-sub">Câu đã lưu</span>
+            </span>
+            
         </button>
     </div>
     <div class="ds-sub-wrap" id="dsSubWrap" style="display:none">
@@ -29315,32 +29527,26 @@ window.vocabShowCharInfo = function(btn, evt) {
     function getVocabAccess() {
     var cfg = (typeof ONBOARDING_CONFIG !== 'undefined' && ONBOARDING_CONFIG) || {};
 
-    // ⭐ ĐỌC TIER TỪ window.APP_TIER (chính xác nhất — do auth module set)
     var appTier = (typeof window.APP_TIER !== 'undefined') ? window.APP_TIER : null;
 
-    // ⭐ Fallback: đọc currentUser nếu APP_TIER chưa set
     var u = null;
     try {
         if (typeof window.currentUser !== 'undefined' && window.currentUser) u = window.currentUser;
         else if (typeof currentUser !== 'undefined' && currentUser) u = currentUser;
     } catch(e) {}
 
-    // ═══ Admin → full ═══
     if (u && u.role === 'admin') {
         return { allowed: true, tier: 'admin',
             hskAllowed: [1,2,3,4,5,6,7,8,9], maxQuestions: -1,
             label: 'Admin — Toàn bộ HSK', warning: null };
     }
 
-    // ═══ Premium (isPermanent) → full ═══
     if (u && u.isPermanent === true) {
         return { allowed: true, tier: 'premium',
             hskAllowed: [1,2,3,4,5,6,7,8,9], maxQuestions: -1,
             label: 'Premium — Toàn bộ HSK', warning: null };
     }
 
-    // ═══ Xác định tier ═══
-    // Ưu tiên window.APP_TIER → fallback về currentUser
     var tier = 'demo';
     if (appTier === 'active') tier = 'active';
     else if (appTier === 'trial') tier = 'trial';
@@ -29390,7 +29596,6 @@ window.vocabShowCharInfo = function(btn, evt) {
                      ' — nâng cấp Premium để mở toàn bộ.' };
     }
 
-    // ═══ Active ═══
     if (isUnlimited) {
         return { allowed: true, tier: 'active',
             hskAllowed: hskArr.length ? hskArr : [1,2,3,4,5,6,7,8,9],
@@ -29416,12 +29621,10 @@ window.vocabShowCharInfo = function(btn, evt) {
                 var h = (r.hsk || '').toString().toUpperCase().trim();
                 if (!h) return true;
 
-                // ⭐ Check HSK7-9 trực tiếp
-                if (h === 'HSK7-9' || h === 'HSK7-9') {
+                if (h === 'HSK7-9') {
                     return allowSet['HSK7-9'] === true;
                 }
 
-                // ⭐ Extract số cho HSK1-6
                 var num = h.replace(/[^0-9]/g, '');
                 if (!num) return true;
                 return allowSet['HSK' + num] === true || allowSet[num] === true;
@@ -29525,11 +29728,6 @@ window.vocabShowCharInfo = function(btn, evt) {
         main.insertBefore(banner, main.firstChild);
     }
 
-    // ⭐ bindVocabPatch ĐÃ BỎ — vocab_premium.py tự xử lý click
-    function bindVocabPatch() {
-        return;   // no-op
-    }
-    /* ⭐ LOCK ô Chủ đề khi ở tab Từ vựng */
     function patchSubjectLock() {
         if (window.__vocabSubjectLockPatched) return;
         if (typeof window.buildFilters !== 'function') {
@@ -29545,14 +29743,12 @@ window.vocabShowCharInfo = function(btn, evt) {
                 if (!sf) return result;
 
                 if (_isVocabMode()) {
-                    // Vocab mode → LOCK ô chủ đề
                     sf.disabled = true;
                     sf.value = '';
                     sf.style.opacity = '0.5';
                     sf.style.cursor = 'not-allowed';
                     sf.title = 'Không khả dụng cho Từ vựng';
                 } else {
-                    // Tab khác → mở lại
                     sf.disabled = false;
                     sf.style.opacity = '';
                     sf.style.cursor = '';
@@ -29566,20 +29762,15 @@ window.vocabShowCharInfo = function(btn, evt) {
         console.log('[vocab-patch] subject lock patched');
     }
 
-   /* ⭐ Watch đổi tab — tự động lock/unlock + thêm HSK7-9 khi vocab */
     function watchVocabMode() {
         var isVocab = (typeof CURRENT_DATASET !== 'undefined') && CURRENT_DATASET === VOCAB_ID;
 
-        // ⭐ SET cờ body
         if (isVocab) {
             document.body.setAttribute('data-vocab-mode', '1');
         } else {
             document.body.removeAttribute('data-vocab-mode');
         }
 
-        // ═══════════════════════════════════════════════════════════
-        //  ⭐ LOCK ô Chủ đề (main + full)
-        // ═══════════════════════════════════════════════════════════
         var selects = [
             document.getElementById('subjectFilter'),
             document.getElementById('pfSubjectFilter')
@@ -29602,12 +29793,9 @@ window.vocabShowCharInfo = function(btn, evt) {
             }
         });
 
-        // ═══════════════════════════════════════════════════════════
-        //  ⭐ THÊM/XÓA option HSK7-9 ở ô HSK
-        // ═══════════════════════════════════════════════════════════
         var hskSelects = [
-            document.getElementById('hskFilter'),      // main
-            document.getElementById('pfHskFilter')      // practice full
+            document.getElementById('hskFilter'),
+            document.getElementById('pfHskFilter')
         ];
 
         hskSelects.forEach(function(hf) {
@@ -29617,14 +29805,11 @@ window.vocabShowCharInfo = function(btn, evt) {
             var has79 = !!hsk79;
 
             if (isVocab && !has79) {
-                // ⭐ THÊM option HSK7-9
                 var opt = document.createElement('option');
                 opt.value = 'HSK7-9';
                 opt.textContent = 'HSK7-9';
                 hf.appendChild(opt);
             } else if (!isVocab && has79) {
-                // ⭐ XÓA option HSK7-9 khi rời vocab
-                // Nhưng chỉ xóa nếu nó đang không được chọn
                 if (hf.value === 'HSK7-9') {
                     hf.value = '';
                 }
@@ -29637,7 +29822,6 @@ window.vocabShowCharInfo = function(btn, evt) {
     window.vocabInjectWarning = injectVocabWarningBanner;
 
     function patchLoop() {
-        // ⭐ Chỉ cần DOM ready + tab vocab tồn tại là đủ
         var vocabBtn = document.querySelector('.ds-btn[data-dataset="' + VOCAB_ID + '"]');
         if (!vocabBtn) {
             setTimeout(patchLoop, 300);
@@ -29646,16 +29830,12 @@ window.vocabShowCharInfo = function(btn, evt) {
 
         window.vocabUpdateLockState = updateTabLockState;
 
-        // ═══════════════════════════════════════════════════════════
-        //  ⭐ OVERRIDE buildFilters — thêm HSK7-9 khi vocab
-        // ═══════════════════════════════════════════════════════════
         if (!window.__vocabBuildFiltersPatched && typeof window.buildFilters === 'function') {
             window.__vocabBuildFiltersPatched = true;
             var origBuildFilters = window.buildFilters;
             window.buildFilters = function() {
                 var result = origBuildFilters.apply(this, arguments);
 
-                // Sau khi build xong → thêm HSK7-9 nếu vocab mode
                 if (_isVocabMode()) {
                     var hf = document.getElementById('hskFilter');
                     if (hf && !hf.querySelector('option[value="HSK7-9"]')) {
@@ -29671,9 +29851,6 @@ window.vocabShowCharInfo = function(btn, evt) {
             console.log('[vocab-patch] buildFilters patched');
         }
 
-        // ═══════════════════════════════════════════════════════════
-        //  ⭐ OVERRIDE pfBuildFilterOptions — thêm HSK7-9 + lock subject
-        // ═══════════════════════════════════════════════════════════
         if (!window.__vocabPfFilterPatched && typeof window.pfBuildFilterOptions === 'function') {
             window.__vocabPfFilterPatched = true;
             var origPfBuild = window.pfBuildFilterOptions;
@@ -29681,7 +29858,6 @@ window.vocabShowCharInfo = function(btn, evt) {
                 var result = origPfBuild.apply(this, arguments);
 
                 if (_isVocabMode()) {
-                    // Thêm HSK7-9
                     var pfHf = document.getElementById('pfHskFilter');
                     if (pfHf && !pfHf.querySelector('option[value="HSK7-9"]')) {
                         var opt = document.createElement('option');
@@ -29690,7 +29866,6 @@ window.vocabShowCharInfo = function(btn, evt) {
                         pfHf.appendChild(opt);
                     }
 
-                    // Lock subject
                     var pfSubj = document.getElementById('pfSubjectFilter');
                     if (pfSubj) {
                         pfSubj.disabled = true;
@@ -29706,9 +29881,6 @@ window.vocabShowCharInfo = function(btn, evt) {
             console.log('[vocab-patch] pfBuildFilterOptions patched');
         }
 
-        // ═══════════════════════════════════════════════════════════
-        //  Hook click tab vocab — apply giới hạn HSK + số câu
-        // ═══════════════════════════════════════════════════════════
         if (!vocabBtn.__vocabLimitHooked) {
             vocabBtn.__vocabLimitHooked = true;
             vocabBtn.addEventListener('click', function() {
@@ -29734,13 +29906,11 @@ window.vocabShowCharInfo = function(btn, evt) {
 
         updateTabLockState();
 
-       // ⭐ Refresh badge + banner mỗi 2s (fix race condition + auto-update)
         setInterval(function() {
-            updateTabLockState();   // ⬅️ THÊM — refresh badge
+            updateTabLockState();
             if (_isVocabMode()) injectVocabWarningBanner();
         }, 2000);
 
-        // ⭐ Watch mode chạy liên tục
         watchVocabMode();
         setInterval(watchVocabMode, 800);
 
