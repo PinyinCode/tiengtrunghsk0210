@@ -960,13 +960,23 @@ function _formatGradingErrors(errors) {
     if (!errors || !errors.length) return '';
     return errors.map(function(e) {
         if (!e) return '';
-        if (e.type === 'wrong')   return '"' + (e.user || '') + '" thành "' + (e.correct || '') + '"';
-        if (e.type === 'missing') return 'Thiếu "' + (e.correct || '') + '"';
-        if (e.type === 'extra')   return 'Thừa "' + (e.user || '') + '"';
+        if (e.type === 'wrong') {
+            var uPinyin = e.user_pinyin ? ' (' + e.user_pinyin + ')' : '';
+            var cPinyin = e.correct_pinyin ? ' (' + e.correct_pinyin + ')' : '';
+            return '"' + (e.user || '') + uPinyin + '" → "' +
+                   (e.correct || '') + cPinyin + '"';
+        }
+        if (e.type === 'missing') {
+            var cp = e.correct_pinyin ? ' (' + e.correct_pinyin + ')' : '';
+            return 'Thiếu "' + (e.correct || '') + cp + '"';
+        }
+        if (e.type === 'extra') {
+            var up = e.user_pinyin ? ' (' + e.user_pinyin + ')' : '';
+            return 'Thừa "' + (e.user || '') + up + '"';
+        }
         return '';
     }).filter(Boolean).join(' · ');
 }
-
 async function gradeWithAPI(userAnswer, correctAnswer) {
     try {
         var controller = new AbortController();
