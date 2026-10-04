@@ -385,6 +385,14 @@ var _GRADING_FALLBACK_MESSAGES = {
 
 var _VIETNAMESE_DIACRITICS_REGEX = /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i;
 
+/* Regex xoá khoảng trắng + dấu câu cả CJK lẫn Latin */
+var _PUNCT_CLEAN_REGEX = /[\s。，！？、；：""''「」『』（）《》〈〉【】〔〕?!.,;:'"()\[\]{}\-~`@#$%^&*+=|\\/<>]/g;
+
+function _cleanForCompare(str) {
+    if (!str) return '';
+    return String(str).replace(_PUNCT_CLEAN_REGEX, '');
+}
+
 function _normalizeGradingMessage(result) {
     if (!result) return 'Sai';
     var serverMsg = (result.message || '').trim();
@@ -472,8 +480,10 @@ window.gradeWithAPI = gradeWithAPI;
             document.querySelectorAll('[data-check-stt="' + stt0 + '"]').forEach(function(c) { c.innerHTML = ''; });
             return;
         }
-        var cleanUser = val.replace(/\s+/g, '');
-        var cleanAnswer = (answer || '').replace(/\s+/g, '');
+
+        /* So sánh prefix — bỏ dấu câu + khoảng trắng */
+        var cleanUser = _cleanForCompare(val);
+        var cleanAnswer = _cleanForCompare(answer);
         var answerLen = cleanAnswer.length;
         var userLen = cleanUser.length;
         if (answerLen > 0 && userLen < answerLen) {
@@ -487,6 +497,7 @@ window.gradeWithAPI = gradeWithAPI;
                 return;
             }
         }
+
         var stt = input.dataset.stt;
         var cells = document.querySelectorAll('[data-check-stt="' + stt + '"]');
         cells.forEach(function(c) { c.innerHTML = '<span class="ai-reason">Đang chấm...</span>'; });
@@ -546,8 +557,9 @@ window.gradeWithAPI = gradeWithAPI;
         var answer = (typeof pfCurrentAnswer !== 'undefined') ? pfCurrentAnswer : '';
         if (!answer) return;
 
-        var cleanUser = val.replace(/\s+/g, '');
-        var cleanAnswer = answer.replace(/\s+/g, '');
+        /* So sánh prefix — bỏ dấu câu + khoảng trắng */
+        var cleanUser = _cleanForCompare(val);
+        var cleanAnswer = _cleanForCompare(answer);
         var answerLen = cleanAnswer.length;
         var userLen = cleanUser.length;
 
