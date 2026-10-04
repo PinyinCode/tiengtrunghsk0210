@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 r"""
-patch_buttons.py - Cover CSS nút dataset trong index.html.
+patch_buttons.py - Cover CSS nút dataset — TẤT CẢ CÙNG MÀU TÍM.
+                    - Tất cả nút đều TRẮNG khi thường, TÍM khi active
                     - Parse số có chữ K/M (1K+, 1.5K+...)
                     - Giữ HTML gốc cho chuyen-nganh + favorites
-                    - CSS icon match cả khi thiếu class ds-btn-icon
 
 Cách dùng:
     python patch_buttons.py
@@ -33,16 +33,16 @@ BUTTON_CONFIG = {
 DEFAULT_CONFIG = {
     "icon": "fa-comments",
     "title_template": "<b>{count}</b> {name}",
-    "sub_template": "Câu giao tiếp",
+    "sub_template": "Hội thoại thực tế",
 }
 
 
 # =================================================================
-#  CSS — CHÈN VÀO INDEX.HTML
+#  CSS — TẤT CẢ NÚT CÙNG MÀU TÍM
 # =================================================================
 BUTTONS_CSS = r"""
 /* ═══════════════════════════════════════════════════════════ */
-/* PATCH_BUTTONS: DATASET BUTTONS — 2 HÀNG GỌN                 */
+/* PATCH_BUTTONS: DATASET BUTTONS — TẤT CẢ CÙNG MÀU TÍM        */
 /* ═══════════════════════════════════════════════════════════ */
 
 .ds-main-row {
@@ -58,8 +58,8 @@ BUTTONS_CSS = r"""
     .ds-main-row { grid-template-columns: 1fr; }
 }
 
-/* ── Nút cơ bản ── */
-.ds-btn {
+/* ── Nút cơ bản — TẤT CẢ NÚT DÙNG CHUNG ── */
+.ds-main-row > .ds-btn {
     display: flex;
     align-items: center;
     gap: .65rem;
@@ -79,17 +79,17 @@ BUTTONS_CSS = r"""
     pointer-events: auto;
     z-index: 1;
 }
-.ds-btn:hover {
+.ds-main-row > .ds-btn:hover {
     border-color: var(--primary);
     background: var(--surface-2);
     transform: translateY(-2px);
     box-shadow: 0 6px 16px -6px rgba(15,23,42,.15);
 }
 
-/* ── Icon (match cả khi KHÔNG có .ds-btn-icon) ── */
-.ds-btn > i:first-child,
-.ds-btn > i.fas,
-.ds-btn .ds-btn-icon {
+/* ── Icon khối — TẤT CẢ NÚT ── */
+.ds-main-row > .ds-btn > i:first-child,
+.ds-main-row > .ds-btn > i.fas,
+.ds-main-row > .ds-btn .ds-btn-icon {
     flex-shrink: 0;
     width: 36px;
     height: 36px;
@@ -104,8 +104,8 @@ BUTTONS_CSS = r"""
     pointer-events: none;
 }
 
-/* ── Khối text 2 hàng ── */
-.ds-btn .ds-btn-text {
+/* ── Khối text 2 hàng — TẤT CẢ NÚT ── */
+.ds-main-row > .ds-btn .ds-btn-text {
     flex: 1;
     min-width: 0;
     display: flex;
@@ -115,7 +115,7 @@ BUTTONS_CSS = r"""
     z-index: 2;
     position: relative;
 }
-.ds-btn .ds-btn-title {
+.ds-main-row > .ds-btn .ds-btn-title {
     font-size: clamp(.78rem, 1vw, .9rem);
     font-weight: 700;
     color: var(--text);
@@ -125,12 +125,12 @@ BUTTONS_CSS = r"""
     text-overflow: ellipsis;
     letter-spacing: -.01em;
 }
-.ds-btn .ds-btn-title b {
+.ds-main-row > .ds-btn .ds-btn-title b {
     font-weight: 900;
     color: var(--text);
     margin-right: .15rem;
 }
-.ds-btn .ds-btn-sub {
+.ds-main-row > .ds-btn .ds-btn-sub {
     font-size: clamp(.62rem, .78vw, .72rem);
     font-weight: 600;
     color: var(--text-3);
@@ -140,28 +140,28 @@ BUTTONS_CSS = r"""
     text-overflow: ellipsis;
 }
 
-/* ── Active ── */
-.ds-btn.active {
+/* ── Active — TẤT CẢ NÚT CÙNG MÀU TÍM ── */
+.ds-main-row > .ds-btn.active {
     background: linear-gradient(135deg, #4f46e5, #7c3aed);
     border-color: transparent;
     box-shadow: 0 6px 18px -4px rgba(124,58,237,.45);
     transform: translateY(-2px);
 }
-.ds-btn.active .ds-btn-icon,
-.ds-btn.active > i:first-child,
-.ds-btn.active > i.fas {
+.ds-main-row > .ds-btn.active > i:first-child,
+.ds-main-row > .ds-btn.active > i.fas,
+.ds-main-row > .ds-btn.active .ds-btn-icon {
     background: rgba(255,255,255,.2);
     color: #fff;
 }
-.ds-btn.active .ds-btn-title,
-.ds-btn.active .ds-btn-title b { color: #fff; }
-.ds-btn.active .ds-btn-sub { color: rgba(255,255,255,.82); }
+.ds-main-row > .ds-btn.active .ds-btn-title,
+.ds-main-row > .ds-btn.active .ds-btn-title b { color: #fff; }
+.ds-main-row > .ds-btn.active .ds-btn-sub { color: rgba(255,255,255,.82); }
 
-/* ═══ CHUYÊN NGÀNH ═══ */
-.ds-btn[data-dataset-group="chuyen-nganh"] {
+/* ═══ CHUYÊN NGÀNH — arrow ═══ */
+.ds-main-row > .ds-btn[data-dataset-group="chuyen-nganh"] {
     padding-right: 2.2rem;
 }
-.ds-btn[data-dataset-group="chuyen-nganh"] .ds-arrow {
+.ds-main-row > .ds-btn[data-dataset-group="chuyen-nganh"] .ds-arrow {
     position: absolute;
     right: .75rem;
     top: 50%;
@@ -172,13 +172,13 @@ BUTTONS_CSS = r"""
     pointer-events: none;
     z-index: 5;
 }
-.ds-btn[data-dataset-group="chuyen-nganh"].active .ds-arrow {
+.ds-main-row > .ds-btn[data-dataset-group="chuyen-nganh"].active .ds-arrow {
     transform: translateY(-50%) rotate(180deg);
     color: #fff;
 }
 
 /* ⭐ Badge NEW */
-.ds-btn[data-dataset-group="chuyen-nganh"] .ds-new-badge {
+.ds-main-row > .ds-btn[data-dataset-group="chuyen-nganh"] .ds-new-badge {
     position: absolute;
     top: -8px;
     right: -8px;
@@ -200,33 +200,13 @@ BUTTONS_CSS = r"""
     50%     { transform: scale(1.1); }
 }
 
-/* ═══ TỪ VỰNG PREMIUM ═══ */
-.ds-btn[data-dataset="tu-vung"] {
-    background: linear-gradient(135deg, #fffbeb, #fef3c7);
-    border-color: rgba(245,158,11,.5);
-}
-.ds-btn[data-dataset="tu-vung"] .ds-btn-title,
-.ds-btn[data-dataset="tu-vung"] .ds-btn-title b { color: #92400e; }
-.ds-btn[data-dataset="tu-vung"] .ds-btn-sub { color: #b45309; }
-.ds-btn[data-dataset="tu-vung"]:hover {
-    border-color: #f59e0b;
-    background: linear-gradient(135deg, #fef3c7, #fde68a);
-}
-.ds-btn[data-dataset="tu-vung"].active {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
-    border-color: transparent;
-}
-.ds-btn[data-dataset="tu-vung"].active .ds-btn-title,
-.ds-btn[data-dataset="tu-vung"].active .ds-btn-title b { color: #fff; }
-.ds-btn[data-dataset="tu-vung"].active .ds-btn-sub { color: rgba(255,255,255,.85); }
-
-/* ⭐ Ẩn icon vương miện — MỌI LOẠI ICON */
-.ds-btn[data-dataset="tu-vung"] > i,
-.ds-btn[data-dataset="tu-vung"] > i.fas,
-.ds-btn[data-dataset="tu-vung"] > i[class*="fa-"],
-.ds-btn[data-dataset="tu-vung"] .ds-btn-icon,
-.ds-btn[data-dataset="tu-vung"] .vocab-icon,
-.ds-btn[data-dataset="tu-vung"] .vocab-crown {
+/* ⭐ NÚT TỪ VỰNG — Ẩn icon vương miện (MỌI LOẠI) */
+.ds-main-row > .ds-btn[data-dataset="tu-vung"] > i,
+.ds-main-row > .ds-btn[data-dataset="tu-vung"] > i.fas,
+.ds-main-row > .ds-btn[data-dataset="tu-vung"] > i[class*="fa-"],
+.ds-main-row > .ds-btn[data-dataset="tu-vung"] .ds-btn-icon,
+.ds-main-row > .ds-btn[data-dataset="tu-vung"] .vocab-icon,
+.ds-main-row > .ds-btn[data-dataset="tu-vung"] .vocab-crown {
     display: none !important;
     visibility: hidden !important;
     width: 0 !important;
@@ -236,9 +216,9 @@ BUTTONS_CSS = r"""
     padding: 0 !important;
 }
 
-/* ⭐ Badge PREMIUM */
-.ds-btn[data-dataset="tu-vung"] .ds-vocab-badge,
-.ds-btn[data-dataset="tu-vung"] [class*="vocab-badge"] {
+/* ⭐ Badge PREMIUM — vẫn TÍM nổi bật */
+.ds-main-row > .ds-btn[data-dataset="tu-vung"] .ds-vocab-badge,
+.ds-main-row > .ds-btn[data-dataset="tu-vung"] [class*="vocab-badge"] {
     position: absolute;
     top: -8px;
     right: -8px;
@@ -256,61 +236,38 @@ BUTTONS_CSS = r"""
     z-index: 100;
 }
 
-/* ═══ YÊU THÍCH ═══ */
-.ds-btn[data-dataset-group="favorites"] {
-    background: linear-gradient(135deg, #fef2f2, #fee2e2);
-    border-color: rgba(239,68,68,.35);
-    pointer-events: auto;
-    cursor: pointer;
-    z-index: 10;
+/* ═══ DARK MODE — TẤT CẢ NÚT ── */
+[data-theme="dark"] .ds-main-row > .ds-btn {
+    background: var(--surface);
+    border-color: var(--border);
 }
-.ds-btn[data-dataset-group="favorites"] .ds-btn-title,
-.ds-btn[data-dataset-group="favorites"] .ds-btn-title b { color: #991b1b; }
-.ds-btn[data-dataset-group="favorites"] .ds-btn-sub { color: #b91c1c; }
-.ds-btn[data-dataset-group="favorites"].active {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    border-color: transparent;
-}
-.ds-btn[data-dataset-group="favorites"].active .ds-btn-title,
-.ds-btn[data-dataset-group="favorites"].active .ds-btn-title b,
-.ds-btn[data-dataset-group="favorites"].active .ds-btn-sub { color: #fff; }
-
-/* ═══ DARK MODE ═══ */
-[data-theme="dark"] .ds-btn .ds-btn-icon,
-[data-theme="dark"] .ds-btn > i:first-child {
+[data-theme="dark"] .ds-main-row > .ds-btn > i:first-child,
+[data-theme="dark"] .ds-main-row > .ds-btn > i.fas,
+[data-theme="dark"] .ds-main-row > .ds-btn .ds-btn-icon {
     background: linear-gradient(135deg, rgba(99,102,241,.28), rgba(139,92,246,.18));
 }
-[data-theme="dark"] .ds-btn[data-dataset="tu-vung"] {
-    background: linear-gradient(135deg, rgba(245,158,11,.18), rgba(217,119,6,.12));
-    border-color: rgba(245,158,11,.45);
+[data-theme="dark"] .ds-main-row > .ds-btn.active {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    border-color: transparent;
 }
-[data-theme="dark"] .ds-btn[data-dataset="tu-vung"] .ds-btn-title,
-[data-theme="dark"] .ds-btn[data-dataset="tu-vung"] .ds-btn-title b { color: #fcd34d; }
-[data-theme="dark"] .ds-btn[data-dataset="tu-vung"] .ds-btn-sub { color: #fbbf24; }
-[data-theme="dark"] .ds-btn[data-dataset-group="favorites"] {
-    background: linear-gradient(135deg, rgba(239,68,68,.18), rgba(220,38,38,.1));
-    border-color: rgba(239,68,68,.4);
-}
-[data-theme="dark"] .ds-btn[data-dataset-group="favorites"] .ds-btn-title,
-[data-theme="dark"] .ds-btn[data-dataset-group="favorites"] .ds-btn-title b { color: #fca5a5; }
-[data-theme="dark"] .ds-btn[data-dataset-group="favorites"] .ds-btn-sub { color: #f87171; }
 
-/* ═══ MOBILE ═══ */
+/* ═══ MOBILE — TẤT CẢ NÚT ── */
 @media (max-width: 500px) {
-    .ds-btn {
+    .ds-main-row > .ds-btn {
         min-height: 56px;
         padding: .55rem .7rem;
         gap: .5rem;
     }
-    .ds-btn .ds-btn-icon,
-    .ds-btn > i:first-child {
+    .ds-main-row > .ds-btn > i:first-child,
+    .ds-main-row > .ds-btn > i.fas,
+    .ds-main-row > .ds-btn .ds-btn-icon {
         width: 32px;
         height: 32px;
         font-size: .92rem;
         border-radius: 9px;
     }
-    .ds-btn .ds-btn-title { font-size: .76rem; }
-    .ds-btn .ds-btn-sub   { font-size: .6rem; }
+    .ds-main-row > .ds-btn .ds-btn-title { font-size: .76rem; }
+    .ds-main-row > .ds-btn .ds-btn-sub   { font-size: .6rem; }
 }
 
 /* ═══════════════════════════════════════════════════════════ */
@@ -318,46 +275,42 @@ BUTTONS_CSS = r"""
 /* ═══════════════════════════════════════════════════════════ */
 
 /* ── Nút CHUYÊN NGÀNH ── */
-.ds-btn[data-dataset-group="chuyen-nganh"] {
+.ds-main-row > .ds-btn[data-dataset-group="chuyen-nganh"] {
     pointer-events: auto !important;
     cursor: pointer !important;
     z-index: 10 !important;
 }
-.ds-btn[data-dataset-group="chuyen-nganh"] > .ds-btn-text,
-.ds-btn[data-dataset-group="chuyen-nganh"] > span:not(.ds-new-badge) {
+.ds-main-row > .ds-btn[data-dataset-group="chuyen-nganh"] > .ds-btn-text,
+.ds-main-row > .ds-btn[data-dataset-group="chuyen-nganh"] > span:not(.ds-new-badge) {
     pointer-events: auto !important;
     z-index: 20 !important;
     position: relative !important;
 }
-.ds-btn[data-dataset-group="chuyen-nganh"] > i,
-.ds-btn[data-dataset-group="chuyen-nganh"] > i.fas,
-.ds-btn[data-dataset-group="chuyen-nganh"] > i.ds-btn-icon,
-.ds-btn[data-dataset-group="chuyen-nganh"] > i.ds-arrow,
-.ds-btn[data-dataset-group="chuyen-nganh"] > .ds-new-badge,
-.ds-btn[data-dataset-group="chuyen-nganh"]::before,
-.ds-btn[data-dataset-group="chuyen-nganh"]::after {
+.ds-main-row > .ds-btn[data-dataset-group="chuyen-nganh"] > i,
+.ds-main-row > .ds-btn[data-dataset-group="chuyen-nganh"] > i.fas,
+.ds-main-row > .ds-btn[data-dataset-group="chuyen-nganh"] > i.ds-btn-icon,
+.ds-main-row > .ds-btn[data-dataset-group="chuyen-nganh"] > i.ds-arrow,
+.ds-main-row > .ds-btn[data-dataset-group="chuyen-nganh"] > .ds-new-badge {
     pointer-events: none !important;
 }
 
 /* ── Nút YÊU THÍCH ── */
-.ds-btn[data-dataset-group="favorites"] {
+.ds-main-row > .ds-btn[data-dataset-group="favorites"] {
     pointer-events: auto !important;
     cursor: pointer !important;
     z-index: 10 !important;
 }
-.ds-btn[data-dataset-group="favorites"] > .ds-btn-text,
-.ds-btn[data-dataset-group="favorites"] > span:not(.ds-fav-badge):not(.ds-fav-lock) {
+.ds-main-row > .ds-btn[data-dataset-group="favorites"] > .ds-btn-text,
+.ds-main-row > .ds-btn[data-dataset-group="favorites"] > span:not(.ds-fav-badge):not(.ds-fav-lock) {
     pointer-events: auto !important;
     z-index: 20 !important;
     position: relative !important;
 }
-.ds-btn[data-dataset-group="favorites"] > i,
-.ds-btn[data-dataset-group="favorites"] > i.fas,
-.ds-btn[data-dataset-group="favorites"] > i.ds-btn-icon,
-.ds-btn[data-dataset-group="favorites"] > .ds-fav-badge,
-.ds-btn[data-dataset-group="favorites"] > .ds-fav-lock,
-.ds-btn[data-dataset-group="favorites"]::before,
-.ds-btn[data-dataset-group="favorites"]::after {
+.ds-main-row > .ds-btn[data-dataset-group="favorites"] > i,
+.ds-main-row > .ds-btn[data-dataset-group="favorites"] > i.fas,
+.ds-main-row > .ds-btn[data-dataset-group="favorites"] > i.ds-btn-icon,
+.ds-main-row > .ds-btn[data-dataset-group="favorites"] > .ds-fav-badge,
+.ds-main-row > .ds-btn[data-dataset-group="favorites"] > .ds-fav-lock {
     pointer-events: none !important;
 }
 """
@@ -447,7 +400,7 @@ def patch_css(html):
     if n == 0:
         print("   [!] Khong tim thay </style>")
     else:
-        print("   [OK CSS] Da chen CSS 2 hang gon + fix click")
+        print("   [OK CSS] Da chen CSS tat ca nut cung mau tim")
     return html
 
 
@@ -484,11 +437,7 @@ def patch_button_tu_vung(html):
 
 
 def patch_other_buttons(html):
-    """
-    Patch các nút data-dataset khác (giao tiếp...).
-    ⭐ Parse số có chữ K/M — VD: "1K+", "1.5K+", "10M+".
-    ⭐ SKIP chuyen-nganh + favorites để giữ event listener.
-    """
+    """Patch nút giao tiếp + nút khác. SKIP chuyen-nganh + favorites."""
     pat_all = re.compile(
         r'<button[^>]*class="[^"]*ds-btn[^"]*"[^>]*data-dataset="([^"]+)"[^>]*>(.*?)</button>',
         re.MULTILINE | re.DOTALL
@@ -505,7 +454,7 @@ def patch_other_buttons(html):
         text = re.sub(r'<[^>]+>', ' ', inner)
         text = re.sub(r'\s+', ' ', text).strip()
 
-        # ⭐ Regex hỗ trợ "1K+", "1.5K+", "1000+", "10M+", "500"
+        # ⭐ Regex hỗ trợ "1K+", "1.5K+", "1000+", "10M+"
         m = re.match(r'^([\d\.]+[KkMm]?\+?)\s+(.+)$', text)
         if m:
             count = m.group(1)
@@ -555,7 +504,7 @@ def patch_other_buttons(html):
 # =================================================================
 def patch_all_buttons(index_path="index.html"):
     print("=" * 62)
-    print("[patch_buttons] Cover CSS nut — GIU HTML chuyen-nganh + favorites")
+    print("[patch_buttons] TAT CA NUT CUNG MAU TIM")
     print("=" * 62)
 
     if not os.path.isfile(index_path):
