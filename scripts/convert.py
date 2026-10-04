@@ -413,6 +413,13 @@ function _formatGradingErrors(errors) {
     var PINYIN = function(py) {
         return py ? '<span class="err-pinyin">' + escapeHtml(py) + '</span>' : '';
     };
+    var INFO = function(ch) {
+        if (!ch) return '';
+        return '<button class="err-info-btn" type="button" ' +
+               'data-char="' + escapeHtml(ch) + '" ' +
+               'onclick="showMnemonic(event, this)" ' +
+               'title="Xem mẹo nhớ">i</button>';
+    };
     var ARROW = '<span class="err-arrow">→</span>';
 
     return errors.map(function(e, idx) {
@@ -426,14 +433,18 @@ function _formatGradingErrors(errors) {
 
         if (e.type === 'wrong') {
             inner = HANZI(e.user || '', targetIdx) + PINYIN(e.user_pinyin) +
+                    INFO(e.user) +
                     ARROW +
-                    HANZI(e.correct || '', targetIdx) + PINYIN(e.correct_pinyin);
+                    HANZI(e.correct || '', targetIdx) + PINYIN(e.correct_pinyin) +
+                    INFO(e.correct);
         } else if (e.type === 'missing') {
             inner = '<span class="err-label">Thiếu</span> ' +
-                    HANZI(e.correct || '', targetIdx) + PINYIN(e.correct_pinyin);
+                    HANZI(e.correct || '', targetIdx) + PINYIN(e.correct_pinyin) +
+                    INFO(e.correct);
         } else if (e.type === 'extra') {
             inner = '<span class="err-label">Thừa</span> ' +
-                    HANZI(e.user || '', targetIdx) + PINYIN(e.user_pinyin);
+                    HANZI(e.user || '', targetIdx) + PINYIN(e.user_pinyin) +
+                    INFO(e.user);
         } else {
             return '';
         }
@@ -441,7 +452,6 @@ function _formatGradingErrors(errors) {
         return '<span class="err-item">' + inner + '</span>';
     }).filter(Boolean).join('');
 }
-
 async function gradeWithAPI(userAnswer, correctAnswer) {
     try {
         var controller = new AbortController();
@@ -663,6 +673,231 @@ window.gradeWithAPI = gradeWithAPI;
 
     console.log('[Grading] fixCharAt override OK');
 })();
+/* ═══════════════════════════════════════════════════════════ */
+/* SHOW MNEMONIC — Gọi Server 2 (vocab-api)                    */
+/* ═══════════════════════════════════════════════════════════ */
+var VOCAB_API_URL = 'https://chinese-vocab-api.onrender.com';
+var _mnemonicCache = {};
+
+function _loadMnemonicCache() {
+    try {
+        var cached = localStorage.getItem('mnemonic_cache_v1');
+        if (cached) {
+            _mnemonicCache = JSON.parse(cached) || {};
+        }
+    } catch(e) {
+        _mnemonicCache = {};
+    }
+}
+
+function _saveMnemonicCache() {
+    try {
+        localStorage.setItem('mnemonic_cache_v1', JSON.stringify(_mnemonicCache));
+    } catch(e) {}
+}
+
+async function fetchMnemonic(char) {
+    if (!char) return null;
+
+    /* ═══ Check cache memory ═══ */
+    if (_mnemonicCache[char]) {
+        return _mnemonicCache[char];
+    }
+
+    /* ═══ Gọi API Server 2 ═══ */
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function() { controller.abort(); }, 12000);
+
+    try {
+        var res = await fetch(VOCAB_API_URL + '/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ char: char }),
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+
+        var json = await res.json();
+        if (!json.ok || !json.data) throw new Error('Invalid response');
+
+        /* ═══ Lưu cache ═══ */
+        _mnemonicCache[char] = json.data;
+        _saveMnemonicCache();
+
+        return json.data;
+    } catch(e) {
+        clearTimeout(timeoutId);
+        console.warn('[Mnemonic] Fetch error for "' + char + '":', e);
+        return null;
+    }
+}
+
+window.showMnemonic = async function(evt, btn) {
+    if (evt) {
+        evt.stopPropagation();
+        if (evt.preventDefault) evt.preventDefault();
+    }
+
+    var ch = btn.getAttribute('data-char');
+    if (!ch) return;
+
+    /* Xoá modal cũ */
+    var old = document.getElementById('mnemonicModal');
+    if (old) old.remove();
+
+    /* Tạo modal với loading */
+    var modal = document.createElement('div');
+    modal.id = 'mnemonicModal';
+    modal.className = 'mnemonic-modal show';
+    modal.innerHTML =
+        '<div class="mnemonic-box">' +
+            '<div class="mnemonic-loading">' +
+                '<div class="mnemonic-spinner"></div>' +
+                '<div>Đang tải mẹo nhớ cho "' + escapeHtml(ch) + '"...</div>' +
+            '</div>' +
+        '</div>';
+    document.body.appendChild(modal);
+
+    /* Click ngoài box → đóng */
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) window.closeMnemonic();
+    });
+
+    /* ═══ Fetch data ═══ */
+    var data = await fetchMnemonic(ch);
+
+    /* ═══ Nếu modal đã bị đóng → không render ═══ */
+    if (!document.getElementById('mnemonicModal')) return;
+
+    if (!data) {
+        modal.innerHTML =
+            '<div class="mnemonic-box">' +
+                '<div class="mnemonic-header">' +
+                    '<span class="mnemonic-char">' + escapeHtml(ch) + '</span>' +
+                    '<button class="mnemonic-close" onclick="closeMnemonic(event)">✕</button>' +
+                '</div>' +
+                '<div class="mnemonic-body">' +
+                    '<div class="mnemonic-section">' +
+                        '<div style="color:var(--danger);font-size:.85rem;text-align:center;padding:1rem 0;">' +
+                            'Không tải được mẹo nhớ. Kiểm tra kết nối mạng hoặc thử lại sau.' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        return;
+    }
+
+    renderMnemonicModal(modal, data);
+};
+
+function renderMnemonicModal(modal, data) {
+    var ch = data.char || '';
+    var py = data.pinyin || '';
+    var rad = data.radical || null;
+    var comps = data.components || [];
+    var mnemonic = data.mnemonic || '';
+    var similar = data.similar || null;
+
+    var html = '<div class="mnemonic-box">';
+
+    /* ═══ HEADER ═══ */
+    html += '<div class="mnemonic-header">';
+    html += '<span class="mnemonic-char">' + escapeHtml(ch) + '</span>';
+    if (py) html += '<span class="mnemonic-pinyin">' + escapeHtml(py) + '</span>';
+    if (rad && rad.zh) {
+        html += '<span class="mnemonic-radical-tag">' +
+                '<span>' + escapeHtml(rad.zh) + '</span>' +
+                '<span>' + escapeHtml(rad.pinyin || '') + '</span>' +
+                '</span>';
+    }
+    html += '<button class="mnemonic-close" onclick="closeMnemonic(event)">✕</button>';
+    html += '</div>';
+
+    html += '<div class="mnemonic-body">';
+
+    /* ═══ BỘ THỦ CHÍNH ═══ */
+    if (rad && rad.zh) {
+        html += '<div class="mnemonic-section">';
+        html += '<div class="mnemonic-section-title">🏛️ Bộ thủ chính</div>';
+        html += '<div class="mnemonic-radical-row">';
+        html += '<span class="mnemonic-rad-char">' + escapeHtml(rad.zh) + '</span>';
+        html += '<div class="mnemonic-rad-info">';
+        html += '<span class="mnemonic-rad-name">Bộ ' + escapeHtml(rad.pinyin || '') + '</span>';
+        html += '<span class="mnemonic-rad-meaning">' + escapeHtml(rad.meaning || '') + '</span>';
+        html += '</div>';
+        html += '</div>';
+        html += '</div>';
+    }
+
+    /* ═══ THÀNH PHẦN ═══ */
+    if (comps.length > 0) {
+        html += '<div class="mnemonic-section">';
+        html += '<div class="mnemonic-section-title">🧩 Thành phần cấu tạo</div>';
+        html += '<div class="mnemonic-comp-list">';
+        comps.forEach(function(c) {
+            html += '<div class="mnemonic-comp-item">';
+            html += '<span class="mnemonic-comp-char">' + escapeHtml(c.zh || '') + '</span>';
+            html += '<span class="mnemonic-comp-py">' + escapeHtml(c.pinyin || '') + '</span>';
+            html += '<span class="mnemonic-comp-meaning">' + escapeHtml(c.meaning || '') + '</span>';
+            html += '</div>';
+        });
+        html += '</div>';
+        html += '</div>';
+    }
+
+    /* ═══ MẸO NHỚ ═══ */
+    if (mnemonic) {
+        html += '<div class="mnemonic-section">';
+        html += '<div class="mnemonic-section-title">💡 Mẹo nhớ</div>';
+        html += '<div class="mnemonic-text">' + escapeHtml(mnemonic) + '</div>';
+        html += '</div>';
+    }
+
+    /* ═══ CHỮ DỄ NHẦM ═══ */
+    if (similar && similar.list && similar.list.length > 0) {
+        html += '<div class="mnemonic-section">';
+        html += '<div class="mnemonic-section-title">🔍 Dễ nhầm</div>';
+        html += '<div class="mnemonic-similar-cards">';
+        similar.list.forEach(function(item) {
+            html += '<div class="mnemonic-sim-card">';
+            html += '<span class="mnemonic-sim-char">' + escapeHtml(item.char || '') + '</span>';
+            html += '<span class="mnemonic-sim-py">' + escapeHtml(item.pinyin || '') + '</span>';
+            html += '<span class="mnemonic-sim-vi">' + escapeHtml(item.meaning || '') + '</span>';
+            html += '</div>';
+        });
+        html += '</div>';
+        html += '</div>';
+    }
+
+    html += '</div>'; /* end body */
+    html += '</div>'; /* end box */
+
+    modal.innerHTML = html;
+}
+
+window.closeMnemonic = function(evt) {
+    if (evt) {
+        evt.stopPropagation();
+        if (evt.preventDefault) evt.preventDefault();
+    }
+    var modal = document.getElementById('mnemonicModal');
+    if (modal) modal.remove();
+};
+
+/* ESC để đóng modal */
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        var modal = document.getElementById('mnemonicModal');
+        if (modal) window.closeMnemonic();
+    }
+});
+
+/* Load cache 1 lần khi init */
+_loadMnemonicCache();
+
+console.log('[Mnemonic] Module loaded OK — API: ' + VOCAB_API_URL);
 """
     return patch_grading_js(js)
 
