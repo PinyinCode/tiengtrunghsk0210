@@ -35,9 +35,13 @@ VOCAB_LABEL = "11000+ Từ vựng HSK"
 # =================================================================
 #  CSS: BUTTONS 2 ROWS — COVER TOÀN BỘ NÚT DATASET
 # =================================================================
+# =================================================================
+#  CSS: BUTTONS 2 ROWS — COVER TOÀN BỘ NÚT DATASET
+#  Icon WATERMARK chìm góc phải, chữ full width
+# =================================================================
 BUTTONS_2ROWS_CSS = r"""
 /* ═══════════════════════════════════════════════════════════ */
-/* FIX.PY: DATASET BUTTONS — 2 HÀNG GỌN (ICON | TITLE + SUB)   */
+/* FIX.PY: DATASET BUTTONS — 2 HÀNG + ICON WATERMARK CHÌM      */
 /* ═══════════════════════════════════════════════════════════ */
 
 .ds-main-row {
@@ -57,8 +61,8 @@ BUTTONS_2ROWS_CSS = r"""
 .ds-btn {
     display: flex !important;
     align-items: center !important;
-    gap: .65rem !important;
-    padding: .65rem .8rem !important;
+    gap: 0 !important;
+    padding: .65rem .85rem !important;
     min-height: 60px !important;
     height: 100% !important;
     border: 1.5px solid var(--border) !important;
@@ -70,7 +74,7 @@ BUTTONS_2ROWS_CSS = r"""
     cursor: pointer !important;
     transition: all .2s ease !important;
     position: relative !important;
-    overflow: visible !important;
+    overflow: hidden !important;
 }
 .ds-btn:hover {
     border-color: var(--primary) !important;
@@ -79,31 +83,43 @@ BUTTONS_2ROWS_CSS = r"""
     box-shadow: 0 6px 16px -6px rgba(15,23,42,.15) !important;
 }
 
-/* ── Icon ── */
+/* ⭐ ICON — WATERMARK CHÌM Ở GÓC PHẢI */
 .ds-btn .ds-btn-icon {
-    flex-shrink: 0 !important;
-    width: 36px !important;
-    height: 36px !important;
-    border-radius: 10px !important;
+    position: absolute !important;
+    right: .5rem !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: 52px !important;
+    height: 52px !important;
+    border-radius: 0 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    font-size: 1.05rem !important;
-    background: linear-gradient(135deg, rgba(99,102,241,.14), rgba(139,92,246,.08)) !important;
-    color: var(--primary) !important;
-    transition: all .2s !important;
+    font-size: 2.6rem !important;
+    background: none !important;
+    color: currentColor !important;
+    opacity: .08 !important;
+    pointer-events: none !important;
+    z-index: 0 !important;
+    transition: opacity .2s !important;
+}
+.ds-btn:hover .ds-btn-icon {
+    opacity: .15 !important;
 }
 
-/* ── Khối text 2 hàng ── */
+/* ⭐ KHỐI TEXT — FULL WIDTH */
 .ds-btn .ds-btn-text {
+    position: relative !important;
+    z-index: 1 !important;
     flex: 1 1 auto !important;
     min-width: 0 !important;
     display: flex !important;
     flex-direction: column !important;
     gap: .12rem !important;
+    padding-right: 2.6rem !important;
 }
 .ds-btn .ds-btn-title {
-    font-size: clamp(.78rem, 1vw, .9rem) !important;
+    font-size: clamp(.82rem, 1.05vw, .95rem) !important;
     font-weight: 700 !important;
     color: var(--text) !important;
     line-height: 1.2 !important;
@@ -119,7 +135,7 @@ BUTTONS_2ROWS_CSS = r"""
     margin-right: .15rem !important;
 }
 .ds-btn .ds-btn-sub {
-    font-size: clamp(.62rem, .78vw, .72rem) !important;
+    font-size: clamp(.65rem, .82vw, .75rem) !important;
     font-weight: 600 !important;
     color: var(--text-3) !important;
     line-height: 1.25 !important;
@@ -138,7 +154,7 @@ BUTTONS_2ROWS_CSS = r"""
     transform: translateY(-2px) !important;
 }
 .ds-btn.active .ds-btn-icon {
-    background: rgba(255,255,255,.2) !important;
+    opacity: .18 !important;
     color: #fff !important;
 }
 .ds-btn.active .ds-btn-title,
@@ -158,11 +174,16 @@ BUTTONS_2ROWS_CSS = r"""
     color: var(--text-3) !important;
     transition: transform .25s !important;
     pointer-events: none !important;
+    z-index: 2 !important;
+}
+.ds-btn[data-dataset-group="chuyen-nganh"] .ds-btn-text {
+    padding-right: 1.8rem !important;
 }
 .ds-btn[data-dataset-group="chuyen-nganh"].active .ds-arrow {
     transform: translateY(-50%) rotate(180deg) !important;
     color: #fff !important;
 }
+
 .ds-new-badge {
     position: absolute !important;
     top: -7px !important;
@@ -190,8 +211,8 @@ BUTTONS_2ROWS_CSS = r"""
     border-color: rgba(245,158,11,.5) !important;
 }
 .ds-btn[data-dataset="tu-vung"] .ds-btn-icon {
-    background: linear-gradient(135deg, rgba(245,158,11,.3), rgba(217,119,6,.15)) !important;
     color: #d97706 !important;
+    opacity: .12 !important;
 }
 .ds-btn[data-dataset="tu-vung"] .ds-btn-title,
 .ds-btn[data-dataset="tu-vung"] .ds-btn-title b { color: #92400e !important; }
@@ -208,8 +229,8 @@ BUTTONS_2ROWS_CSS = r"""
 .ds-btn[data-dataset="tu-vung"].active .ds-btn-title b { color: #fff !important; }
 .ds-btn[data-dataset="tu-vung"].active .ds-btn-sub { color: rgba(255,255,255,.85) !important; }
 .ds-btn[data-dataset="tu-vung"].active .ds-btn-icon {
-    background: rgba(255,255,255,.22) !important;
     color: #fff !important;
+    opacity: .25 !important;
 }
 
 /* ═══ YÊU THÍCH ═══ */
@@ -218,8 +239,8 @@ BUTTONS_2ROWS_CSS = r"""
     border-color: rgba(239,68,68,.35) !important;
 }
 .ds-btn[data-dataset-group="favorites"] .ds-btn-icon {
-    background: linear-gradient(135deg, rgba(239,68,68,.2), rgba(220,38,38,.1)) !important;
     color: #ef4444 !important;
+    opacity: .12 !important;
 }
 .ds-btn[data-dataset-group="favorites"] .ds-btn-title,
 .ds-btn[data-dataset-group="favorites"] .ds-btn-title b { color: #991b1b !important; }
@@ -231,11 +252,12 @@ BUTTONS_2ROWS_CSS = r"""
 .ds-btn[data-dataset-group="favorites"].active .ds-btn-title,
 .ds-btn[data-dataset-group="favorites"].active .ds-btn-title b,
 .ds-btn[data-dataset-group="favorites"].active .ds-btn-sub { color: #fff !important; }
+.ds-btn[data-dataset-group="favorites"].active .ds-btn-icon {
+    color: #fff !important;
+    opacity: .25 !important;
+}
 
 /* ═══ DARK MODE ═══ */
-[data-theme="dark"] .ds-btn .ds-btn-icon {
-    background: linear-gradient(135deg, rgba(99,102,241,.28), rgba(139,92,246,.18)) !important;
-}
 [data-theme="dark"] .ds-btn[data-dataset="tu-vung"] {
     background: linear-gradient(135deg, rgba(245,158,11,.18), rgba(217,119,6,.12)) !important;
     border-color: rgba(245,158,11,.45) !important;
@@ -256,102 +278,20 @@ BUTTONS_2ROWS_CSS = r"""
     .ds-btn {
         min-height: 56px !important;
         padding: .55rem .7rem !important;
-        gap: .5rem !important;
     }
     .ds-btn .ds-btn-icon {
-        width: 32px !important;
-        height: 32px !important;
-        font-size: .92rem !important;
-        border-radius: 9px !important;
+        width: 44px !important;
+**        height: 44px !important;
+        font-size: 2.2rem !important;
+        right: .35rem !important;
     }
-    .ds-btn .ds-btn-title { font-size: .76rem !important; }
-    .ds-btn .ds-btn-sub   { font-size: .6rem !important; }
+    .ds-btn .ds-btn-text {
+        padding-right: 2.2rem !important;
+    }
+    .ds-btn .ds-btn-title { font-size: .78rem !important; }
+    .ds-btn .ds-btn-sub   { font-size: .62rem !important; }
 }
 """
-
-
-# =================================================================
-#  VOCAB WARNING CSS
-# =================================================================
-VOCAB_WARNING_CSS = r"""
-/* ═══ BANNER CẢNH BÁO TỪ VỰNG ═══ */
-.vocab-warning-banner {
-    display: flex; align-items: center; gap: .85rem;
-    padding: .85rem 1rem; margin-bottom: 1rem;
-    border-radius: 12px;
-    background: linear-gradient(135deg, rgba(251, 191, 36, .15), rgba(245, 158, 11, .08));
-    border: 1.5px solid rgba(245, 158, 11, .45);
-    animation: vocabWarnIn .4s cubic-bezier(.34, 1.56, .64, 1);
-}
-@keyframes vocabWarnIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-.vocab-warning-banner.tier-trial {
-    background: linear-gradient(135deg, rgba(99, 102, 241, .12), rgba(139, 92, 246, .08));
-    border-color: rgba(99, 102, 241, .45);
-}
-.vocab-warning-banner.tier-expired {
-    background: linear-gradient(135deg, rgba(220, 38, 38, .12), rgba(251, 146, 60, .08));
-    border-color: rgba(220, 38, 38, .5);
-}
-.vocab-warning-banner.tier-active {
-    background: linear-gradient(135deg, rgba(8, 145, 178, .12), rgba(6, 182, 212, .08));
-    border-color: rgba(8, 145, 178, .45);
-}
-.vocab-warning-icon {
-    width: 40px; height: 40px; border-radius: 50%;
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
-    color: #fff; display: flex; align-items: center; justify-content: center;
-    font-size: 1.1rem; flex-shrink: 0;
-    box-shadow: 0 4px 12px rgba(245, 158, 11, .4);
-}
-.vocab-warning-banner.tier-trial .vocab-warning-icon {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, .4);
-}
-.vocab-warning-banner.tier-expired .vocab-warning-icon {
-    background: linear-gradient(135deg, #dc2626, #b91c1c);
-    box-shadow: 0 4px 12px rgba(220, 38, 38, .4);
-}
-.vocab-warning-banner.tier-active .vocab-warning-icon {
-    background: linear-gradient(135deg, #0891b2, #06b6d4);
-    box-shadow: 0 4px 12px rgba(8, 145, 178, .4);
-}
-.vocab-warning-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .15rem; }
-.vocab-warning-text strong { font-size: .92rem; font-weight: 800; color: #92400e; }
-.vocab-warning-banner.tier-trial .vocab-warning-text strong { color: #4f46e5; }
-.vocab-warning-banner.tier-expired .vocab-warning-text strong { color: #991b1b; }
-.vocab-warning-banner.tier-active .vocab-warning-text strong { color: #075985; }
-.vocab-warning-text span { font-size: .8rem; color: var(--text-2); line-height: 1.4; }
-.vocab-warning-btn {
-    padding: .55rem .9rem; border-radius: 10px; border: none;
-    background: linear-gradient(135deg, #fbbf24, #f59e0b 50%, #ea580c);
-    color: #fff; font-weight: 800; font-size: .8rem;
-    font-family: inherit; cursor: pointer;
-    display: inline-flex; align-items: center; gap: .35rem;
-    box-shadow: 0 4px 12px rgba(245, 158, 11, .4);
-    transition: all .2s; white-space: nowrap; flex-shrink: 0;
-}
-.vocab-warning-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(245, 158, 11, .6);
-}
-[data-theme="dark"] .vocab-warning-banner {
-    background: linear-gradient(135deg, rgba(251, 191, 36, .2), rgba(245, 158, 11, .1));
-}
-[data-theme="dark"] .vocab-warning-text strong { color: #fcd34d; }
-[data-theme="dark"] .vocab-warning-banner.tier-trial .vocab-warning-text strong { color: #c4b5fd; }
-[data-theme="dark"] .vocab-warning-banner.tier-expired .vocab-warning-text strong { color: #fca5a5; }
-[data-theme="dark"] .vocab-warning-banner.tier-active .vocab-warning-text strong { color: #67e8f9; }
-@media (max-width: 600px) {
-    .vocab-warning-banner { flex-wrap: wrap; gap: .6rem; padding: .7rem .8rem; }
-    .vocab-warning-icon { width: 34px; height: 34px; font-size: .95rem; }
-    .vocab-warning-text strong { font-size: .85rem; }
-    .vocab-warning-text span { font-size: .74rem; }
-}
-"""
-
 
 # =================================================================
 #  VOCAB JS PATCH
