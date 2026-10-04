@@ -937,9 +937,6 @@ full_body = (
 # ═══════════════════════════════════════════════════════════════════
 #  🎯 GRADING API — Chấm điểm qua Render
 # ═══════════════════════════════════════════════════════════════════
-# ═══════════════════════════════════════════════════════════════════
-#  🎯 GRADING API — Chấm điểm qua Render
-# ═══════════════════════════════════════════════════════════════════
 def _build_grading_js():
     return r"""
 /* ═══════════════════════════════════════════════════════════ */
@@ -949,8 +946,6 @@ var GRADING_API_URL = 'https://chinese-grading.onrender.com/check';
 
 /* ═══════════════════════════════════════════════════════════ */
 /* HELPER: Chuẩn hoá message từ server về tiếng Việt có dấu    */
-/* - Ưu tiên message của server NẾU có dấu tiếng Việt          */
-/* - Nếu message trống hoặc không có dấu → tự map theo status  */
 /* ═══════════════════════════════════════════════════════════ */
 var _GRADING_FALLBACK_MESSAGES = {
     'correct': 'Đúng hoàn toàn',
@@ -985,8 +980,8 @@ function _formatGradingErrors(errors) {
 
     return errors.map(function(e) {
         if (!e) return '';
-        if (e.type ===-check 'wrong')   return '"' +-st (e.user || '') + '" → "'t + (e.correct || '') +=" '"';
-        if (e.type ===' 'missing') return 'Thiếu "' + + (e.correct || '') + '"';
+        if (e.type === 'wrong')   return '"' + (e.user || '') + '" → "' + (e.correct || '') + '"';
+        if (e.type === 'missing') return 'Thiếu "' + (e.correct || '') + '"';
         if (e.type === 'extra')   return 'Thừa "' + (e.user || '') + '"';
         return '';
     }).filter(Boolean).join(' · ');
@@ -1047,7 +1042,7 @@ window.gradeWithAPI = gradeWithAPI;
         }
 
         var stt = input.dataset.stt;
-        var cells = document.querySelectorAll('[data stt + '"]');
+        var cells = document.querySelectorAll('[data-check-stt="' + stt + '"]');
 
         cells.forEach(function(c) {
             c.innerHTML = '<span class="ai-reason">Đang chấm...</span>';
