@@ -6794,6 +6794,103 @@ body:not(.practice-full-open) .pf-fav-filter-summary{
     }
 }
 
+/* ═══════════════════════════════════════════════════════════ */
+/* ⭐ GRADING API — Chấm điểm qua Render                        */
+/* ═══════════════════════════════════════════════════════════ */
+var GRADING_API_URL = 'https://chinese-grading.onrender.com/check';
+
+async function gradeWithAPI(userAnswer, correctAnswer) {
+    try {
+        var res = await fetch(GRADING_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_answer: userAnswer,
+                correct_answer: correctAnswer
+            })
+        });
+        return await res.json();
+    } catch(e) {
+        console.warn('[Grading] API error:', e);
+        return null;
+    }
+}
+
+window.gradeWithAPI = gradeWithAPI;
+
+/* ⭐ Override checkInput — dùng API chấm điểm */
+(function() {
+    var _origCheckInput = window.checkInput;
+
+    window.checkInput = async function(input) {
+        var answer = input.dataset.answer;
+        var val = input.value.trim();
+
+        if (!val) {
+            var stt0 = input.dataset.stt;
+            var cells0 = document.querySelectorAll('[data-check-stt="' + stt0 + '"]');
+            cells0.forEach(function(c) { c.innerHTML = ''; });
+            return;
+        }
+
+        /* Update preview local trước */
+        if (typeof updateInlinePreview === 'function') {
+            updateInlinePreview(input, answer);
+        }
+
+        /* Chỉ chấm khi toggle hiển thị */
+        var wrap = input.closest('.card-practice');
+        var btn = wrap ? wrap.querySelector('.toggle-check-btn') : null;
+        var isVisible = btn && btn.dataset.visible === '1';
+        if (!isVisible) return;
+
+        var stt = input.dataset.stt;
+        var cells = document.querySelectorAll('[data-check-stt="' + stt + '"]');
+
+        /* Loading */
+        cells.forEach(function(c) {
+            c.innerHTML = '<span class="ai-reason">Đang chấm...</span>';
+        });
+
+        /* Gọi API */
+        var result = await gradeWithAPI(val, answer);
+
+        if (!result) {
+            if (_origCheckInput) _origCheckInput.call(this, input);
+            return;
+        }
+
+        /* Render kết quả */
+        var html = '';
+        if (result.status === 'correct') {
+            html = '<span class="ai-correct">' + result.message + '</span>';
+        } else if (result.status === 'partial') {
+            html = '<span class="ai-partial">' + result.message + ' (' + result.score + '%)</span>';
+        } else {
+            html = '<span class="ai-wrong">' + result.message + '</span>';
+        }
+
+        if (result.errors && result.errors.length > 0) {
+            var detail = result.errors.map(function(e) {
+                if (e.type === 'wrong') return '"' + e.user + '" thành "' + e.correct + '"';
+                if (e.type === 'missing') return 'Thiếu "' + e.correct + '"';
+                if (e.type === 'extra') return 'Thừa "' + e.user + '"';
+                return '';
+            }).join(' · ');
+            html += '<span class="ai-reason">' + detail + '</span>';
+        }
+
+        var answerHtml = '<div class="answer-inline-display">' +
+            '<span class="answer-inline-label"><i class="fas fa-check-circle"></i> Đáp án:</span>' +
+            '<span class="answer-inline-text">' + escapeHtml(answer) + '</span>' +
+            '</div>';
+
+        cells.forEach(function(c) { c.innerHTML = html + answerHtml; });
+    };
+
+    console.log('✅ [Grading] Đã override checkInput dùng API');
+})();
+
 /* ==== 💬 CHAT SUPPORT CSS ==== */
 
 /* ═══ CHAT BUTTON ═══ */
