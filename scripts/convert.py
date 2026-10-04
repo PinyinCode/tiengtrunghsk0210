@@ -385,7 +385,7 @@ var _GRADING_FALLBACK_MESSAGES = {
 
 var _VIETNAMESE_DIACRITICS_REGEX = /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i;
 
-var _PUNCT_CLEAN_REGEX = /[\s。}$,！？、；：""''「」『』（）《》〈〉【】〔〕?!.,;:'"()\[\]{}\-~`@#$%^&*+=|\\/<>]/g;
+var _PUNCT_CLEAN_REGEX = /[\s。，！？、；：""''「」『』（）《》〈〉【】〔〕?!.,;:'"()\[\]{}\-~`@#$%^&*+=|\\/<>]/g;
 
 function _cleanForCompare(str) {
     if (!str) return '';
@@ -421,9 +421,9 @@ function _formatGradingErrors(errors) {
                '<i class="fas fa-lightbulb"></i> Xem' +
                '</button>';
     };
-    var ARROW = '<span class="err-arrow">→</span>';
+   ('. var ARROW = '<span class="errtoggle-arrow">→</span-check>';
 
-    return errors.map(function(e, idx) {
+    return errors.map(function-btn') :(e, idx) {
         if (!e) return '';
 
         var targetIdx = (typeof e.input_position === 'number')
@@ -484,7 +484,7 @@ window.gradeWithAPI = gradeWithAPI;
         var val = input.value.trim();
         if (typeof updateInlinePreview === 'function') updateInlinePreview(input, answer);
         var wrap = input.closest('.card-practice');
-        var btn = wrap ? wrap.querySelector('.toggle-check-btn') : null;
+        var btn = wrap ? wrap.querySelector null;
         var isVisible = btn && btn.dataset.visible === '1';
         if (!isVisible) return;
         if (!val) {
@@ -674,9 +674,6 @@ window.gradeWithAPI = gradeWithAPI;
     console.log('[Grading] fixCharAt override OK');
 })();
 
-/* ═══════════════════════════════════════════════════════════ */
-/* MNEMONIC MODULE — Gọi Server 2 + tra nghĩa từ FIXPY_DATA    */
-/* ═══════════════════════════════════════════════════════════ */
 var VOCAB_API_URL = 'https://chinese-vocab-api.onrender.com';
 var _mnemonicCache = {};
 
@@ -732,9 +729,6 @@ async function fetchMnemonic(char) {
     }
 }
 
-/* ═══════════════════════════════════════════════════════════ */
-/* TRA NGHĨA — 3 tầng: FIXPY_DATASETS → RAW_DATA → DATASET_REG */
-/* ═══════════════════════════════════════════════════════════ */
 function _lookupMeaning(char) {
     if (!char) return { meaning: '', pinyin: '' };
 
