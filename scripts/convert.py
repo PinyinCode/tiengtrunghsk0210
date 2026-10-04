@@ -421,9 +421,9 @@ function _formatGradingErrors(errors) {
                '<i class="fas fa-lightbulb"></i> Xem' +
                '</button>';
     };
-   ('. var ARROW = '<span class="errtoggle-arrow">→</span-check>';
+    var ARROW = '<span class="err-arrow">→</span>';
 
-    return errors.map(function-btn') :(e, idx) {
+    return errors.map(function(e, idx) {
         if (!e) return '';
 
         var targetIdx = (typeof e.input_position === 'number')
@@ -484,7 +484,7 @@ window.gradeWithAPI = gradeWithAPI;
         var val = input.value.trim();
         if (typeof updateInlinePreview === 'function') updateInlinePreview(input, answer);
         var wrap = input.closest('.card-practice');
-        var btn = wrap ? wrap.querySelector null;
+        var btn = wrap ? wrap.querySelector('.toggle-check-btn') : null;
         var isVisible = btn && btn.dataset.visible === '1';
         if (!isVisible) return;
         if (!val) {
@@ -967,7 +967,7 @@ function renderMnemonicModal(modal, data) {
     html += '</div>';
 
     modal.innerHTML = html;
-}
+};
 
 window.closeMnemonic = function(evt) {
     if (evt) {
@@ -990,6 +990,7 @@ _loadMnemonicCache();
 console.log('[Mnemonic] Module loaded OK — API: ' + VOCAB_API_URL);
 """
     return patch_grading_js(js)
+
 
 
 
