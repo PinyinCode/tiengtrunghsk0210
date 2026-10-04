@@ -14725,7 +14725,7 @@ function loadPracticeFull(stt) {
     var gradeBtn = $('pfGradeToggleBtn');
     if (gradeBtn) {
         gradeBtn.classList.remove('active');
-        gradeBtn.innerHTML = '<i class="fas fa-check-double"></i> Cham diem';
+        gradeBtn.innerHTML = '<i class="fas fa-check-double"></i> Chấm điểm';
     }
     updateCharPreview();
     $('pfPrevBtn').disabled = (idx === 0);
@@ -15043,7 +15043,7 @@ function toggleGrade() {
 
     if (pfGradeEnabled) {
         btn.classList.add('active');
-        btn.innerHTML = '<i class="fas fa-check-double"></i> Dang cham';
+        btn.innerHTML = '<i class="fas fa-check-double"></i> Đang chấm';
 
         var input = $('pfInput');
         if (input && input.value.trim()) {
@@ -15051,7 +15051,7 @@ function toggleGrade() {
         }
     } else {
         btn.classList.remove('active');
-        btn.innerHTML = '<i class="fas fa-check-double"></i> Cham diem';
+        btn.innerHTML = '<i class="fas fa-check-double"></i> Chấm điểm';
 
         var statusEl = $('pfStatus');
         if (statusEl) {
