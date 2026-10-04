@@ -3348,6 +3348,7 @@ body.practice-full-open .pf-tiktok-float {
 }
 
 
+/* ═══ Patch: nút toggle Chấm điểm ═══ */
 #pfGradeToggleBtn.active {
     background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
     color: #fff !important;
@@ -3363,6 +3364,43 @@ body.practice-full-open .pf-tiktok-float {
     40%  { transform: scale(1.4); }
     70%  { transform: scale(.9); }
     100% { transform: scale(1); }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Patch: chữ chi tiết lỗi — ĐẬM, RÕ, THEO THEME
+   ═══════════════════════════════════════════════════════════ */
+.ai-reason,
+.card-check .ai-reason,
+.practice-full-status .ai-reason {
+    display: block !important;
+    font-size: .85rem !important;
+    color: var(--text) !important;
+    font-weight: 700 !important;
+    font-style: normal !important;
+    margin-top: .5rem !important;
+    line-height: 1.5 !important;
+    letter-spacing: .01em !important;
+    text-align: center !important;
+    opacity: 1 !important;
+    padding: .5rem .85rem !important;
+    background: var(--surface-2) !important;
+    border: 1px dashed var(--border-strong) !important;
+    border-radius: 10px !important;
+}
+
+/* Dark mode: tự động nhờ var(--text) đã đổi màu */
+[data-theme="dark"] .ai-reason {
+    color: var(--text) !important;
+    background: var(--surface-2) !important;
+    border-color: var(--border-strong) !important;
+}
+
+/* "Đang gõ..." và "Đang chấm..." — chữ đậm hơn, không có khung */
+.practice-full-status .ai-reason:only-child {
+    background: transparent !important;
+    border: none !important;
+    color: var(--text-2) !important;
+    font-weight: 600 !important;
 }
 
 /* SOCIAL */
