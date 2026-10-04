@@ -33,7 +33,7 @@ BUTTON_CONFIG = {
 DEFAULT_CONFIG = {
     "icon": "fa-comments",
     "title_template": "<b>{count}</b> {name}",
-    "sub_template": "Câu giao tiếp",
+    "sub_template": "Hội thoại thực tế",
 }
 
 
