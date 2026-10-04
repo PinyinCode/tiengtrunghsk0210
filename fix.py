@@ -33,15 +33,11 @@ VOCAB_LABEL = "11000+ Từ vựng HSK"
 
 
 # =================================================================
-#  CSS: BUTTONS 2 ROWS — COVER TOÀN BỘ NÚT DATASET
-# =================================================================
-# =================================================================
-#  CSS: BUTTONS 2 ROWS — COVER TOÀN BỘ NÚT DATASET
-#  Icon WATERMARK chìm góc phải, chữ full width
+#  CSS: BUTTONS 2 ROWS — ICON WATERMARK CHÌM GÓC PHẢI
 # =================================================================
 BUTTONS_2ROWS_CSS = r"""
 /* ═══════════════════════════════════════════════════════════ */
-/* FIX.PY: DATASET BUTTONS — 2 HÀNG + ICON WATERMARK CHÌM      */
+/* FIX.PY: DATASET BUTTONS — ICON WATERMARK CHÌM               */
 /* ═══════════════════════════════════════════════════════════ */
 
 .ds-main-row {
@@ -83,8 +79,9 @@ BUTTONS_2ROWS_CSS = r"""
     box-shadow: 0 6px 16px -6px rgba(15,23,42,.15) !important;
 }
 
-/* ⭐ ICON — WATERMARK CHÌM Ở GÓC PHẢI */
-.ds-btn .ds-btn-icon {
+/* ⭐ ICON — WATERMARK CHÌM GÓC PHẢI */
+.ds-btn .ds-btn-icon,
+.ds-btn > i.ds-btn-icon {
     position: absolute !important;
     right: .5rem !important;
     top: 50% !important;
@@ -97,13 +94,17 @@ BUTTONS_2ROWS_CSS = r"""
     justify-content: center !important;
     font-size: 2.6rem !important;
     background: none !important;
+    background-color: transparent !important;
     color: currentColor !important;
     opacity: .08 !important;
     pointer-events: none !important;
     z-index: 0 !important;
     transition: opacity .2s !important;
+    box-shadow: none !important;
+    border: none !important;
 }
-.ds-btn:hover .ds-btn-icon {
+.ds-btn:hover .ds-btn-icon,
+.ds-btn:hover > i.ds-btn-icon {
     opacity: .15 !important;
 }
 
@@ -153,9 +154,11 @@ BUTTONS_2ROWS_CSS = r"""
     box-shadow: 0 6px 18px -4px rgba(124,58,237,.45) !important;
     transform: translateY(-2px) !important;
 }
-.ds-btn.active .ds-btn-icon {
+.ds-btn.active .ds-btn-icon,
+.ds-btn.active > i.ds-btn-icon {
     opacity: .18 !important;
     color: #fff !important;
+    background: none !important;
 }
 .ds-btn.active .ds-btn-title,
 .ds-btn.active .ds-btn-title b { color: #fff !important; }
@@ -210,9 +213,11 @@ BUTTONS_2ROWS_CSS = r"""
     background: linear-gradient(135deg, #fffbeb, #fef3c7) !important;
     border-color: rgba(245,158,11,.5) !important;
 }
-.ds-btn[data-dataset="tu-vung"] .ds-btn-icon {
+.ds-btn[data-dataset="tu-vung"] .ds-btn-icon,
+.ds-btn[data-dataset="tu-vung"] > i.ds-btn-icon {
     color: #d97706 !important;
     opacity: .12 !important;
+    background: none !important;
 }
 .ds-btn[data-dataset="tu-vung"] .ds-btn-title,
 .ds-btn[data-dataset="tu-vung"] .ds-btn-title b { color: #92400e !important; }
@@ -228,7 +233,8 @@ BUTTONS_2ROWS_CSS = r"""
 .ds-btn[data-dataset="tu-vung"].active .ds-btn-title,
 .ds-btn[data-dataset="tu-vung"].active .ds-btn-title b { color: #fff !important; }
 .ds-btn[data-dataset="tu-vung"].active .ds-btn-sub { color: rgba(255,255,255,.85) !important; }
-.ds-btn[data-dataset="tu-vung"].active .ds-btn-icon {
+.ds-btn[data-dataset="tu-vung"].active .ds-btn-icon,
+.ds-btn[data-dataset="tu-vung"].active > i.ds-btn-icon {
     color: #fff !important;
     opacity: .25 !important;
 }
@@ -238,9 +244,11 @@ BUTTONS_2ROWS_CSS = r"""
     background: linear-gradient(135deg, #fef2f2, #fee2e2) !important;
     border-color: rgba(239,68,68,.35) !important;
 }
-.ds-btn[data-dataset-group="favorites"] .ds-btn-icon {
+.ds-btn[data-dataset-group="favorites"] .ds-btn-icon,
+.ds-btn[data-dataset-group="favorites"] > i.ds-btn-icon {
     color: #ef4444 !important;
     opacity: .12 !important;
+    background: none !important;
 }
 .ds-btn[data-dataset-group="favorites"] .ds-btn-title,
 .ds-btn[data-dataset-group="favorites"] .ds-btn-title b { color: #991b1b !important; }
@@ -252,7 +260,8 @@ BUTTONS_2ROWS_CSS = r"""
 .ds-btn[data-dataset-group="favorites"].active .ds-btn-title,
 .ds-btn[data-dataset-group="favorites"].active .ds-btn-title b,
 .ds-btn[data-dataset-group="favorites"].active .ds-btn-sub { color: #fff !important; }
-.ds-btn[data-dataset-group="favorites"].active .ds-btn-icon {
+.ds-btn[data-dataset-group="favorites"].active .ds-btn-icon,
+.ds-btn[data-dataset-group="favorites"].active > i.ds-btn-icon {
     color: #fff !important;
     opacity: .25 !important;
 }
@@ -279,9 +288,10 @@ BUTTONS_2ROWS_CSS = r"""
         min-height: 56px !important;
         padding: .55rem .7rem !important;
     }
-    .ds-btn .ds-btn-icon {
+    .ds-btn .ds-btn-icon,
+    .ds-btn > i.ds-btn-icon {
         width: 44px !important;
-**        height: 44px !important;
+        height: 44px !important;
         font-size: 2.2rem !important;
         right: .35rem !important;
     }
@@ -292,7 +302,6 @@ BUTTONS_2ROWS_CSS = r"""
     .ds-btn .ds-btn-sub   { font-size: .62rem !important; }
 }
 """
-
 # =================================================================
 #  VOCAB JS PATCH
 # =================================================================
