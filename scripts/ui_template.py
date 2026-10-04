@@ -3737,7 +3737,14 @@ window.addEventListener('resize', function() {
 /* ============================================================ */
 /* DATASET SWITCHING                                             */
 /* ============================================================ */
-var labelEl = $('dsTonghopLabel');
+/* ============================================================ */
+/* DATASET SWITCHING                                             */
+/* ============================================================ */
+function initDatasetSelector() {
+    if (typeof DATASET_REGISTRY === 'undefined' || !DATASET_REGISTRY) return;
+    if (!DATASET_REGISTRY.tonghop) return;
+
+    var labelEl = $('dsTonghopLabel');
     if (labelEl) {
         var count = DATASET_REGISTRY.tonghop.count
                  || (DATASET_REGISTRY.tonghop.data || []).length;
