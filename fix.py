@@ -296,7 +296,11 @@ def build_vocab_js_patch():
     }
 
     function injectVocabWarningBanner() {
-        if (!_isVocabMode()) return;
+    if (!_isVocabMode()) {
+        var oldOut = document.getElementById('vocabWarningBanner');
+        if (oldOut) oldOut.remove();
+        return;
+    }
         var old = document.getElementById('vocabWarningBanner');
         if (old) old.remove();
 
