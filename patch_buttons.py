@@ -19,12 +19,10 @@ Hoặc import:
 import os
 import re
 import sys
-import unicodedata
 
 
 # =================================================================
 #  CONFIG — NỘI DUNG TỪNG NÚT
-#  Mỗi nút có: icon, hàng 1 (title), hàng 2 (sub), class đặc biệt
 # =================================================================
 BUTTON_CONFIG = {
     "tonghop": {
@@ -43,7 +41,7 @@ BUTTON_CONFIG = {
         ),
     },
     "tu-vung": {
-        "icon": "",   # ⭐ BỎ ICON VƯƠNG MIỆN
+        "icon": "",
         "title_html": "<b>11000+</b> Từ vựng HSK",
         "sub": "Mẹo nhớ · Bộ thủ",
     },
@@ -55,7 +53,6 @@ BUTTON_CONFIG = {
     },
 }
 
-# Nút giao tiếp thường đến từ FIXPY_DATASETS → dùng config mặc định
 DEFAULT_CONFIG = {
     "icon": "fa-comments",
     "title_template": "<b>{count}</b> {name}",
@@ -64,7 +61,7 @@ DEFAULT_CONFIG = {
 
 
 # =================================================================
-#  CSS MỚI — 2 HÀNG GỌN
+#  CSS MỚI — 2 HÀNG GỌN + FIX CLICK
 # =================================================================
 BUTTONS_CSS = r"""
 /* ═══════════════════════════════════════════════════════════ */
@@ -89,8 +86,8 @@ BUTTONS_CSS = r"""
     display: flex;
     align-items: center;
     gap: .65rem;
-    padding: .65rem .8rem;
-    min-height: 60px;
+    padding: .7rem .8rem;
+    min-height: 68px;
     height: 100%;
     border: 1.5px solid var(--border);
     border-radius: 12px;
@@ -134,7 +131,7 @@ BUTTONS_CSS = r"""
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: .12rem;
+    gap: .18rem;
     pointer-events: auto;
     z-index: 2;
     position: relative;
@@ -144,10 +141,14 @@ BUTTONS_CSS = r"""
     font-weight: 700;
     color: var(--text);
     line-height: 1.2;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
     letter-spacing: -.01em;
+    white-space: normal;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    text-overflow: ellipsis;
+    word-break: break-word;
 }
 .ds-btn .ds-btn-title b {
     font-weight: 900;
@@ -159,9 +160,13 @@ BUTTONS_CSS = r"""
     font-weight: 600;
     color: var(--text-3);
     line-height: 1.25;
-    white-space: nowrap;
+    white-space: normal;
     overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     text-overflow: ellipsis;
+    word-break: break-word;
 }
 
 /* ── Active ── */
@@ -273,7 +278,7 @@ BUTTONS_CSS = r"""
     border-color: rgba(239,68,68,.35);
     pointer-events: auto;
     cursor: pointer;
-    z-index: 5;
+    z-index: 10;
 }
 .ds-btn[data-dataset-group="favorites"] .ds-btn-icon {
     background: linear-gradient(135deg, rgba(239,68,68,.2), rgba(220,38,38,.1));
@@ -289,15 +294,6 @@ BUTTONS_CSS = r"""
 .ds-btn[data-dataset-group="favorites"].active .ds-btn-title,
 .ds-btn[data-dataset-group="favorites"].active .ds-btn-title b,
 .ds-btn[data-dataset-group="favorites"].active .ds-btn-sub { color: #fff; }
-
-/* ⭐ NÚT YÊU THÍCH — Đảm bảo click được */
-.ds-btn[data-dataset-group="favorites"] > i,
-.ds-btn[data-dataset-group="favorites"] .ds-fav-badge,
-.ds-btn[data-dataset-group="favorites"] .ds-fav-lock,
-.ds-btn[data-dataset-group="favorites"]::before,
-.ds-btn[data-dataset-group="favorites"]::after {
-    pointer-events: none !important;
-}
 
 /* ═══ DARK MODE ═══ */
 [data-theme="dark"] .ds-btn .ds-btn-icon {
@@ -321,8 +317,8 @@ BUTTONS_CSS = r"""
 /* ═══ MOBILE ═══ */
 @media (max-width: 500px) {
     .ds-btn {
-        min-height: 56px;
-        padding: .55rem .7rem;
+        min-height: 64px;
+        padding: .6rem .7rem;
         gap: .5rem;
     }
     .ds-btn .ds-btn-icon {
@@ -333,6 +329,71 @@ BUTTONS_CSS = r"""
     }
     .ds-btn .ds-btn-title { font-size: .76rem; }
     .ds-btn .ds-btn-sub   { font-size: .6rem; }
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* ⭐⭐⭐ FIX CLICK — ĐẢM BẢO MỌI NÚT BẤM ĐƯỢC ⭐⭐⭐ */
+/* ═══════════════════════════════════════════════════════════ */
+
+/* ── Nút CHUYÊN NGÀNH — nhận click ── */
+.ds-btn[data-dataset-group="chuyen-nganh"] {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    z-index: 10 !important;
+}
+.ds-btn[data-dataset-group="chuyen-nganh"] .ds-btn-text {
+    pointer-events: auto !important;
+    z-index: 20 !important;
+    position: relative !important;
+}
+.ds-btn[data-dataset-group="chuyen-nganh"] .ds-btn-title,
+.ds-btn[data-dataset-group="chuyen-nganh"] .ds-btn-sub,
+.ds-btn[data-dataset-group="chuyen-nganh"] span {
+    pointer-events: auto !important;
+}
+.ds-btn[data-dataset-group="chuyen-nganh"] > i:not(.ds-arrow),
+.ds-btn[data-dataset-group="chuyen-nganh"] .ds-btn-icon,
+.ds-btn[data-dataset-group="chuyen-nganh"] .ds-arrow,
+.ds-btn[data-dataset-group="chuyen-nganh"] .ds-new-badge,
+.ds-btn[data-dataset-group="chuyen-nganh"]::before,
+.ds-btn[data-dataset-group="chuyen-nganh"]::after {
+    pointer-events: none !important;
+}
+
+/* ── Nút YÊU THÍCH — nhận click ── */
+.ds-btn[data-dataset-group="favorites"] {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    z-index: 10 !important;
+}
+.ds-btn[data-dataset-group="favorites"] .ds-btn-text {
+    pointer-events: auto !important;
+    z-index: 20 !important;
+    position: relative !important;
+}
+.ds-btn[data-dataset-group="favorites"] .ds-btn-title,
+.ds-btn[data-dataset-group="favorites"] .ds-btn-sub,
+.ds-btn[data-dataset-group="favorites"] span {
+    pointer-events: auto !important;
+}
+.ds-btn[data-dataset-group="favorites"] > i,
+.ds-btn[data-dataset-group="favorites"] .ds-btn-icon,
+.ds-btn[data-dataset-group="favorites"] .ds-fav-badge,
+.ds-btn[data-dataset-group="favorites"] .ds-fav-lock,
+.ds-btn[data-dataset-group="favorites"]::before,
+.ds-btn[data-dataset-group="favorites"]::after {
+    pointer-events: none !important;
+}
+
+/* ── Đảm bảo mọi nút trong .ds-main-row đều nhận click ── */
+.ds-main-row > .ds-btn {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+}
+.ds-main-row > .ds-btn > .ds-btn-icon,
+.ds-main-row > .ds-btn > i.fas,
+.ds-main-row > .ds-btn > i[class*="fa-"] {
+    pointer-events: none !important;
 }
 """
 
@@ -348,7 +409,6 @@ def build_button_html(config_key, extra=None):
     else:
         cfg = dict(cfg)
 
-    # Merge extra data (VD: name, count từ FIXPY_DATASETS)
     if extra:
         if "title_html" in extra:
             cfg["title_html"] = extra["title_html"]
@@ -359,7 +419,6 @@ def build_button_html(config_key, extra=None):
         if "dataset_id" in extra:
             cfg["dataset_id"] = extra["dataset_id"]
 
-    # Nếu dùng template (cho giao tiếp)
     title = cfg.get("title_html")
     if not title and "title_template" in cfg:
         title = cfg["title_template"].format(
@@ -379,7 +438,6 @@ def build_button_html(config_key, extra=None):
     extra_attrs = cfg.get("extra_attrs", "")
     extra_html = cfg.get("extra_html", "")
 
-    # Xác định data attribute
     if "dataset_id" in cfg:
         data_attr = 'data-dataset="' + cfg["dataset_id"] + '"'
     elif config_key == "chuyen-nganh":
@@ -389,10 +447,8 @@ def build_button_html(config_key, extra=None):
     else:
         data_attr = 'data-dataset="' + config_key + '"'
 
-    # Class active mặc định cho tonghop
     active_cls = " active" if config_key == "tonghop" else ""
 
-    # ⭐ Chỉ render icon nếu có
     icon_html = ''
     if icon:
         icon_html = '            <i class="fas ' + icon + ' ds-btn-icon"></i>\n'
@@ -414,13 +470,20 @@ def build_button_html(config_key, extra=None):
 #  PATCHERS
 # =================================================================
 def patch_css(html):
-    """Chèn CSS mới vào trước </style> (idempotent)."""
-    MARKER = "/* PATCH_BUTTONS: DATASET BUTTONS — 2 HÀNG GỌN"
+    """
+    Chèn CSS mới — LUÔN XÓA CSS CŨ TRƯỚC (không dùng marker check).
+    Đảm bảo Action chạy nhiều lần vẫn cập nhật CSS mới.
+    """
+    # ⭐ XÓA CSS PATCH_BUTTONS CŨ (nếu có)
+    pat_old = re.compile(
+        r'/\* ═+ \*/\s*/\* PATCH_BUTTONS: DATASET BUTTONS.*?(?=</style>)',
+        re.DOTALL
+    )
+    html, n_removed = pat_old.subn('', html)
+    if n_removed > 0:
+        print("   [clean] Da xoa " + str(n_removed) + " block CSS cu")
 
-    if MARKER in html:
-        print("   [skip CSS] Da co patch_buttons CSS")
-        return html
-
+    # ⭐ CHÈN CSS MỚI
     pat = re.compile(r'(\s*)(</style>)', re.MULTILINE)
     html, n = pat.subn(
         lambda m: m.group(1) + BUTTONS_CSS + m.group(1) + m.group(2),
@@ -491,21 +554,21 @@ def patch_button_favorites(html):
     new_html = build_button_html("favorites")
     html, n = pat.subn(new_html, html, count=1)
     if n:
-        print("   [OK] Patch nut Yeu thich")
+        print("   [OK] Patch nut Yeu    thich")
     return html
 
 
-def patch_other_buttons(html):
+ )
+
+def patch_other_buttons(html   ):
     """
-    Thay các nút .ds-btn[data-dataset="..."] còn lại (không phải tonghop/tu-vung)
+    Thay các n SKIPút .ds-btn[data-dataset="..."] còn lại
     → chủ yếu là nút "1000+ Câu giao tiếp" từ FIXPY_DATASETS.
     """
     pat_all = re.compile(
         r'<button[^>]*class="[^"]*ds-btn[^"]*"[^>]*data-dataset="([^"]+)"[^>]*>(.*?)</button>',
         re.MULTILINE | re.DOTALL
-    )
-
-    SKIP_IDS = {"tonghop", "tu-vung"}
+_IDS = {"tonghop", "tu-vung"}
 
     def replacer(match):
         ds_id = match.group(1)
@@ -524,6 +587,13 @@ def patch_other_buttons(html):
             count = ""
             name = text
 
+        # ⭐ Rút gọn tên: bỏ chữ "Câu" ở đầu nếu có
+        short_name = name
+        if short_name.lower().startswith("câu "):
+            short_name = short_name[4:].strip()
+        if short_name:
+            short_name = short_name[0].upper() + short_name[1:]
+
         if '<br' in inner.lower():
             parts = re.split(r'<br\s*/?>', inner)
             if len(parts) >= 2:
@@ -535,14 +605,19 @@ def patch_other_buttons(html):
                 m2 = re.match(r'^([\d\+]+)\s+(.+)$', first)
                 if m2:
                     count = m2.group(1)
-                    name = m2.group(2)
+                    name_part = m2.group(2)
+                    short_name = name_part
+                    if short_name.lower().startswith("câu "):
+                        short_name = short_name[4:].strip()
+                    if short_name:
+                        short_name = short_name[0].upper() + short_name[1:]
                 sub = re.sub(r'\s+', ' ', rest).strip()
             else:
                 sub = DEFAULT_CONFIG["sub_template"]
         else:
             sub = DEFAULT_CONFIG["sub_template"]
 
-        title_html = "<b>" + count + "</b> " + name if count else name
+        title_html = "<b>" + count + "</b> " + short_name if count else short_name
 
         return build_button_html(
             "giao-tiep",
