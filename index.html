@@ -3638,6 +3638,353 @@ body.practice-full-open .pf-tiktok-float {
     }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   Nút info ⓘ + Modal mẹo nhớ
+   ═══════════════════════════════════════════════════════════ */
+
+/* Nút ⓘ nhỏ cạnh chữ Hán */
+.ai-reason .err-info-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 1.15em !important;
+    height: 1.15em !important;
+    margin: 0 .25em !important;
+    padding: 0 !important;
+    border: 1.5px solid var(--primary, #2563eb) !important;
+    border-radius: 50% !important;
+    background: transparent !important;
+    color: var(--primary, #2563eb) !important;
+    font-size: .65rem !important;
+    font-weight: 900 !important;
+    font-family: inherit !important;
+    line-height: 1 !important;
+    cursor: pointer !important;
+    transition: all .15s ease !important;
+    flex-shrink: 0 !important;
+    vertical-align: middle !important;
+    position: relative !important;
+    top: -2px !important;
+}
+.ai-reason .err-info-btn:hover {
+    background: var(--primary, #2563eb) !important;
+    color: #fff !important;
+    transform: scale(1.15) !important;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, .4) !important;
+}
+.ai-reason .err-info-btn:active {
+    transform: scale(.95) !important;
+}
+[data-theme="dark"] .ai-reason .err-info-btn {
+    border-color: #93c5fd !important;
+    color: #93c5fd !important;
+}
+[data-theme="dark"] .ai-reason .err-info-btn:hover {
+    background: #93c5fd !important;
+    color: #1e293b !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Modal mẹo nhớ
+   ═══════════════════════════════════════════════════════════ */
+.mnemonic-modal {
+    position: fixed !important;
+    inset: 0 !important;
+    background: rgba(15, 23, 42, .75) !important;
+    backdrop-filter: blur(6px) !important;
+    -webkit-backdrop-filter: blur(6px) !important;
+    z-index: 9999 !important;
+    display: none !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 1rem !important;
+    animation: mnemonicFadeIn .2s ease !important;
+}
+.mnemonic-modal.show {
+    display: flex !important;
+}
+@keyframes mnemonicFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.mnemonic-box {
+    background: var(--surface, #fff) !important;
+    border-radius: 18px !important;
+    max-width: 480px !important;
+    width: 100% !important;
+    max-height: 85vh !important;
+    overflow-y: auto !important;
+    padding: 1.25rem !important;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .4) !important;
+    animation: mnemonicSlideUp .35s cubic-bezier(.34, 1.56, .64, 1) !important;
+    position: relative !important;
+}
+@keyframes mnemonicSlideUp {
+    from { transform: translateY(30px) scale(.95); opacity: 0; }
+    to   { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.mnemonic-loading {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: .75rem !important;
+    padding: 2rem 1rem !important;
+    color: var(--text-2, #475569) !important;
+    font-size: .9rem !important;
+}
+.mnemonic-spinner {
+    width: 32px !important;
+    height: 32px !important;
+    border: 3px solid var(--border, #e2e8f0) !important;
+    border-top-color: var(--primary, #2563eb) !important;
+    border-radius: 50% !important;
+    animation: mnemonicSpin .8s linear infinite !important;
+}
+@keyframes mnemonicSpin {
+    to { transform: rotate(360deg); }
+}
+
+.mnemonic-header {
+    display: flex !important;
+    align-items: center !important;
+    gap: .75rem !important;
+    margin-bottom: 1rem !important;
+    padding-bottom: .85rem !important;
+    border-bottom: 1px solid var(--border, #e2e8f0) !important;
+}
+.mnemonic-char {
+    font-family: var(--font-zh, 'PingFang SC', 'Microsoft YaHei', sans-serif) !important;
+    font-size: 2.5rem !important;
+    font-weight: 700 !important;
+    color: var(--text, #0f172a) !important;
+    line-height: 1 !important;
+    flex-shrink: 0 !important;
+}
+.mnemonic-pinyin {
+    font-size: 1rem !important;
+    font-style: italic !important;
+    color: var(--text-3, #94a3b8) !important;
+    font-weight: 500 !important;
+}
+.mnemonic-radical-tag {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: .2rem !important;
+    padding: .2rem .6rem !important;
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe) !important;
+    color: #1d4ed8 !important;
+    font-size: .72rem !important;
+    font-weight: 700 !important;
+    border-radius: 6px !important;
+    margin-left: auto !important;
+    margin-right: .5rem !important;
+    white-space: nowrap !important;
+}
+[data-theme="dark"] .mnemonic-radical-tag {
+    background: linear-gradient(135deg, rgba(59, 130, 246, .3), rgba(37, 99, 235, .25)) !important;
+    color: #93c5fd !important;
+}
+.mnemonic-close {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+    border: none !important;
+    background: var(--surface-2, #f8fafc) !important;
+    color: var(--text-2, #475569) !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: .85rem !important;
+    flex-shrink: 0 !important;
+    transition: all .15s !important;
+}
+.mnemonic-close:hover {
+    background: var(--danger-light, #fee2e2) !important;
+    color: var(--danger, #dc2626) !important;
+    transform: rotate(90deg) !important;
+}
+
+.mnemonic-body {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1rem !important;
+}
+
+.mnemonic-section {
+    background: var(--surface-2, #f8fafc) !important;
+    border-radius: 10px !important;
+    padding: .75rem .9rem !important;
+}
+.mnemonic-section-title {
+    font-size: .72rem !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: .5px !important;
+    color: var(--text-3, #94a3b8) !important;
+    margin-bottom: .5rem !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: .35rem !important;
+}
+
+/* Bộ thủ */
+.mnemonic-radical-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: .75rem !important;
+    flex-wrap: wrap !important;
+}
+.mnemonic-rad-char {
+    font-family: var(--font-zh, 'PingFang SC', sans-serif) !important;
+    font-size: 2rem !important;
+    font-weight: 700 !important;
+    color: #1d4ed8 !important;
+    line-height: 1 !important;
+}
+.mnemonic-rad-info {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: .15rem !important;
+}
+.mnemonic-rad-name {
+    font-size: .85rem !important;
+    font-weight: 700 !important;
+    color: #1d4ed8 !important;
+}
+[data-theme="dark"] .mnemonic-rad-name,
+[data-theme="dark"] .mnemonic-rad-char {
+    color: #93c5fd !important;
+}
+.mnemonic-rad-meaning {
+    font-size: .8rem !important;
+    color: var(--text-2, #475569) !important;
+}
+
+/* Thành phần */
+.mnemonic-comp-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: .4rem !important;
+}
+.mnemonic-comp-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: .65rem !important;
+    padding: .4rem .5rem !important;
+    background: var(--surface, #fff) !important;
+    border-radius: 8px !important;
+}
+.mnemonic-comp-char {
+    font-family: var(--font-zh, 'PingFang SC', sans-serif) !important;
+    font-size: 1.4rem !important;
+    font-weight: 700 !important;
+    color: var(--text, #0f172a) !important;
+    line-height: 1 !important;
+    min-width: 1.2em !important;
+}
+.mnemonic-comp-py {
+    font-size: .75rem !important;
+    font-style: italic !important;
+    color: var(--text-3, #94a3b8) !important;
+    min-width: 3.5em !important;
+}
+.mnemonic-comp-meaning {
+    font-size: .82rem !important;
+    color: var(--text-2, #475569) !important;
+    flex: 1 !important;
+}
+
+/* Mẹo nhớ */
+.mnemonic-text {
+    background: linear-gradient(135deg, #fffbeb, #fef3c7) !important;
+    border-left: 4px solid #f59e0b !important;
+    padding: .75rem .9rem !important;
+    border-radius: 8px !important;
+    font-size: .88rem !important;
+    color: #78350f !important;
+    line-height: 1.7 !important;
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+}
+[data-theme="dark"] .mnemonic-text {
+    background: linear-gradient(135deg, rgba(245, 158, 11, .15), rgba(217, 119, 6, .1)) !important;
+    color: #fcd34d !important;
+}
+
+/* Chữ dễ nhầm */
+.mnemonic-similar-cards {
+    display: flex !important;
+    gap: .5rem !important;
+    flex-wrap: wrap !important;
+}
+.mnemonic-sim-card {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    min-width: 70px !important;
+    padding: .5rem .65rem !important;
+    background: linear-gradient(135deg, #fef2f2, #fee2e2) !important;
+    border: 2px solid #fecaca !important;
+    border-radius: 10px !important;
+    gap: .15rem !important;
+    transition: all .15s !important;
+}
+.mnemonic-sim-card:hover {
+    transform: translateY(-2px) !important;
+    border-color: #ef4444 !important;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, .2) !important;
+}
+.mnemonic-sim-char {
+    font-family: var(--font-zh, 'PingFang SC', sans-serif) !important;
+    font-size: 1.65rem !important;
+    font-weight: 700 !important;
+    color: #111827 !important;
+    line-height: 1 !important;
+}
+.mnemonic-sim-py {
+    font-size: .7rem !important;
+    font-style: italic !important;
+    color: #6b7280 !important;
+}
+.mnemonic-sim-vi {
+    font-size: .7rem !important;
+    font-weight: 700 !important;
+    color: #b91c1c !important;
+    text-align: center !important;
+}
+[data-theme="dark"] .mnemonic-sim-card {
+    background: linear-gradient(135deg, rgba(239, 68, 68, .15), rgba(220, 38, 38, .1)) !important;
+    border-color: rgba(248, 113, 113, .4) !important;
+}
+[data-theme="dark"] .mnemonic-sim-char {
+    color: #f1f5f9 !important;
+}
+[data-theme="dark"] .mnemonic-sim-vi {
+    color: #fca5a5 !important;
+}
+
+/* Mobile */
+@media (max-width: 500px) {
+    .mnemonic-box {
+        padding: 1rem !important;
+        border-radius: 14px !important;
+        max-height: 90vh !important;
+    }
+    .mnemonic-char {
+        font-size: 2rem !important;
+    }
+    .mnemonic-rad-char {
+        font-size: 1.65rem !important;
+    }
+    .mnemonic-section {
+        padding: .6rem .75rem !important;
+    }
+}
+
 /* SOCIAL */
 
 /* ============ FLOATING LEFT GROUP (Zalo + TikTok) ============ */
