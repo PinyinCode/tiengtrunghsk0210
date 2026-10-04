@@ -3271,20 +3271,50 @@ body.practice-full-open .pf-tiktok-float {
 /* ═══════════════════════════════════════════════════════════ */
 /* NÚT TỔNG HỢP — Cho phép hiển thị 2 dòng                     */
 /* ═══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════ */
+/* NÚT TỔNG HỢP — Tự resize chữ để vừa ô, không mất nội dung   */
+/* ═══════════════════════════════════════════════════════════ */
 .ds-btn[data-dataset="tonghop"] {
     min-height: 64px;
     align-items: center;
     line-height: 1.3;
+    padding: .55rem .7rem;
+    container-type: inline-size;
+    container-name: ds-tonghop;
 }
+
 .ds-btn[data-dataset="tonghop"] > span {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    display: block;
+    flex: 1;
+    min-width: 0;
     white-space: normal;
     word-break: break-word;
+    overflow-wrap: anywhere;
     text-align: left;
-    line-height: 1.35;
+    line-height: 1.3;
+    font-size: clamp(0.7rem, 2.4cqw, 0.85rem);
+}
+
+@supports not (font-size: 1cqw) {
+    .ds-btn[data-dataset="tonghop"] > span {
+        font-size: clamp(.68rem, 1.7vw, .82rem);
+    }
+}
+
+@media (max-width: 500px) {
+    .ds-btn[data-dataset="tonghop"] {
+        min-height: 58px;
+        padding: .5rem .6rem;
+    }
+    .ds-btn[data-dataset="tonghop"] > span {
+        font-size: clamp(.65rem, 2.2cqw, .78rem);
+    }
+}
+
+@media (min-width: 501px) and (max-width: 768px) {
+    .ds-btn[data-dataset="tonghop"] > span {
+        font-size: clamp(.7rem, 1.9cqw, .82rem);
+    }
 }
 """
 def build_ui_html():
@@ -3676,20 +3706,45 @@ function showPracticeFullLockMessage() {
         }
     }
 }
+/* ⭐ Auto-fit font-size cho label — tránh bị cắt nội dung */
+function autoFitLabel(el) {
+    if (!el) return;
+    var parent = el.closest('.ds-btn') || el.parentElement;
+    if (!parent) return;
 
+    var maxSize = 14;
+    var minSize = 9;
+    var size = maxSize;
+
+    el.style.fontSize = size + 'px';
+
+    var safety = 0;
+    while (safety < 30 && size > minSize) {
+        var overflow = el.scrollHeight > parent.clientHeight - 8
+                    || el.scrollWidth > parent.clientWidth - 8;
+        if (!overflow) break;
+        size -= 0.5;
+        el.style.fontSize = size + 'px';
+        safety++;
+    }
+}
+
+// ⭐ Re-fit khi resize window
+window.addEventListener('resize', function() {
+    var labelEl = document.getElementById('dsTonghopLabel');
+    if (labelEl) autoFitLabel(labelEl);
+});
 /* ============================================================ */
 /* DATASET SWITCHING                                             */
 /* ============================================================ */
-function initDatasetSelector() {
-    if (typeof DATASET_REGISTRY === 'undefined' || !DATASET_REGISTRY) return;
-    if (!DATASET_REGISTRY.tonghop) return;
-
-    var labelEl = $('dsTonghopLabel');
+var labelEl = $('dsTonghopLabel');
     if (labelEl) {
         var count = DATASET_REGISTRY.tonghop.count
                  || (DATASET_REGISTRY.tonghop.data || []).length;
-        // ⭐ ĐỔI textContent → innerHTML để render thẻ <br>
         labelEl.innerHTML = count + '+ Câu phản xạ<br>Văn phòng - Công xưởng';
+        labelEl.title = 'Văn phòng - Công xưởng';
+        // ⭐ Auto-fit font sau khi DOM render
+        setTimeout(function() { autoFitLabel(labelEl); }, 100);
     }
 
     var chuyenNganhKeys = Object.keys(DATASET_REGISTRY).filter(function(id) {
