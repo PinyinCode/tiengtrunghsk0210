@@ -12,6 +12,7 @@ on:
       - 'scripts/config.json'
       # ⭐ FIX.PY — chạy sau convert.py để thêm tab từ data/
       - 'fix.py'
+      - 'patch_buttons.py'
       # ⭐ VOCAB PREMIUM — module từ vựng
       - 'vocab_premium.py'
       - 'vocab_data/**'
