@@ -1533,28 +1533,6 @@ def main():
     print("[fix.py] CHI 1 TAB ACTIVE tai mot thoi diem")
     print("=" * 62)
 
-    # ═══════════════════════════════════════════════════════════
-    #  BƯỚC CUỐI: GỌI patch_buttons.py ĐỂ COVER LẠI 3 NÚT
-    # ═══════════════════════════════════════════════════════════
-    print("")
-    print("=" * 62)
-    print("[fix.py] Chay patch_buttons.py de cover 3 nut...")
-    print("=" * 62)
-    try:
-        from patch_buttons import patch_all_buttons
-        ok = patch_all_buttons(INDEX_HTML)
-        if ok:
-            print("[fix.py] patch_buttons.py -> THANH CONG")
-        else:
-            print("[fix.py] patch_buttons.py -> THAT BAI")
-    except ImportError as e:
-        print("[fix.py] Khong tim thay patch_buttons.py: " + str(e))
-        print("[fix.py] Bo qua buoc nay")
-    except Exception as e:
-        print("[fix.py] Loi khi chay patch_buttons.py: " + str(e))
-        import traceback
-        traceback.print_exc()
-
 
 if __name__ == "__main__":
     main()
