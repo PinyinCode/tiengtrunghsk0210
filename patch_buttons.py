@@ -4,6 +4,7 @@ patch_buttons.py - Cover CSS nút dataset trong index.html.
                     - Parse số có chữ K/M (1K+, 1.5K+...)
                     - Giữ HTML gốc cho chuyen-nganh + favorites
                     - CSS icon match cả khi thiếu class ds-btn-icon
+                    - FIX ACTIVE TAB: clear tab Yêu thích khi chuyển
 
 Cách dùng:
     python patch_buttons.py
@@ -33,7 +34,7 @@ BUTTON_CONFIG = {
 DEFAULT_CONFIG = {
     "icon": "fa-comments",
     "title_template": "<b>{count}</b> {name}",
-    "sub_template": "Hội thoại thực tế",
+    "sub_template": "Hội thoại thực tế",   # ⭐ ĐÃ SỬA từ "Câu giao tiếp"
 }
 
 
@@ -486,8 +487,8 @@ def patch_button_tu_vung(html):
 def patch_other_buttons(html):
     """
     Patch các nút data-dataset khác (giao tiếp...).
-    ⭐ Parse số có chữ K/M — VD: "1K+", "1.5K+", "10M+".
-    ⭐ SKIP chuyen-nganh + favorites để giữ event listener.
+    Parse số có chữ K/M — VD: "1K+", "1.5K+", "10M+".
+    SKIP chuyen-nganh + favorites để giữ event listener.
     """
     pat_all = re.compile(
         r'<button[^>]*class="[^"]*ds-btn[^"]*"[^>]*data-dataset="([^"]+)"[^>]*>(.*?)</button>',
@@ -505,7 +506,7 @@ def patch_other_buttons(html):
         text = re.sub(r'<[^>]+>', ' ', inner)
         text = re.sub(r'\s+', ' ', text).strip()
 
-        # ⭐ Regex hỗ trợ "1K+", "1.5K+", "1000+", "10M+", "500"
+        # Regex hỗ trợ "1K+", "1.5K+", "1000+", "10M+", "500"
         m = re.match(r'^([\d\.]+[KkMm]?\+?)\s+(.+)$', text)
         if m:
             count = m.group(1)
@@ -551,11 +552,87 @@ def patch_other_buttons(html):
 
 
 # =================================================================
+#  ⭐ FIX ACTIVE TAB — clear tab Yêu thích khi chuyển tab khác
+# =================================================================
+def add_active_fix_js(html):
+    """
+    Thêm JS nhỏ vào cuối HTML để:
+    - Khi bấm Chuyên ngành / Từ vựng / bất kỳ tab → clear active của Yêu thích
+    - Khi bấm sub-ngành → clear Yêu thích + Từ vựng
+    """
+    MARKER = "/* PATCH_BUTTONS: FIX ACTIVE TAB */"
+    if MARKER in html:
+        print("   [skip JS] Da co fix active tab")
+        return html
+
+    js = """
+<script>
+/* PATCH_BUTTONS: FIX ACTIVE TAB */
+(function() {
+    'use strict';
+    console.log('[patch_buttons] Fix active tab ready');
+
+    function clearOthers(except) {
+        document.querySelectorAll('.ds-btn, .ds-sub-btn').forEach(function(b) {
+            if (b !== except) b.classList.remove('active');
+        });
+    }
+
+    // Bấm bất kỳ nút dataset nào → clear Yêu thích ngay
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.ds-btn, .ds-sub-btn');
+        if (!btn) return;
+
+        // Nút Chuyên ngành (mở dropdown) → clear Yêu thích + Từ vựng
+        if (btn.id === 'dsChuyenNganhBtn' ||
+            btn.getAttribute('data-dataset-group') === 'chuyen-nganh') {
+
+            var fav = document.querySelector('.ds-btn[data-dataset-group="favorites"]');
+            if (fav) fav.classList.remove('active');
+            var tv = document.querySelector('.ds-btn[data-dataset="tu-vung"]');
+            if (tv) tv.classList.remove('active');
+            return;
+        }
+
+        // Sub-ngành → clear Yêu thích + Từ vựng, active Chuyên ngành
+        if (btn.classList.contains('ds-sub-btn')) {
+            var fav2 = document.querySelector('.ds-btn[data-dataset-group="favorites"]');
+            if (fav2) fav2.classList.remove('active');
+            var tv2 = document.querySelector('.ds-btn[data-dataset="tu-vung"]');
+            if (tv2) tv2.classList.remove('active');
+            var cn = document.querySelector('.ds-btn[data-dataset-group="chuyen-nganh"]');
+            if (cn) cn.classList.add('active');
+            return;
+        }
+
+        // Các tab khác (Từ vựng, Tổng hợp, Giao tiếp...) → clear Yêu thích
+        var favBtn = document.querySelector('.ds-btn[data-dataset-group="favorites"]');
+        if (favBtn && btn !== favBtn) {
+            favBtn.classList.remove('active');
+        }
+    }, true);
+})();
+</script>
+"""
+
+    pat = re.compile(r'(\s*)(</body>)', re.MULTILINE)
+    html, n = pat.subn(
+        lambda m: m.group(1) + js + m.group(1) + m.group(2),
+        html, count=1
+    )
+    if n == 0:
+        print("   [!] Khong tim thay </body>")
+    else:
+        print("   [OK JS] Da chen fix active tab")
+    return html
+
+
+# =================================================================
 #  MAIN
 # =================================================================
 def patch_all_buttons(index_path="index.html"):
     print("=" * 62)
-    print("[patch_buttons] Cover CSS nut — GIU HTML chuyen-nganh + favorites")
+    print("[patch_buttons] Cover CSS nut + FIX ACTIVE TAB")
     print("=" * 62)
 
     if not os.path.isfile(index_path):
@@ -566,20 +643,25 @@ def patch_all_buttons(index_path="index.html"):
         html = f.read()
 
     print("")
-    print("[1/4] Patch CSS...")
+    print("[1/5] Patch CSS...")
     html = patch_css(html)
 
     print("")
-    print("[2/4] Patch nut Tong hop...")
+    print("[2/5] Patch nut Tong hop...")
     html = patch_button_tonghop(html)
 
     print("")
-    print("[3/4] Patch nut Tu vung...")
+    print("[3/5] Patch nut Tu vung...")
     html = patch_button_tu_vung(html)
 
     print("")
-    print("[4/4] Patch nut khac (KHONG patch chuyen-nganh + favorites)...")
+    print("[4/5] Patch nut khac (KHONG patch chuyen-nganh + favorites)...")
     html = patch_other_buttons(html)
+
+    # ⭐ BƯỚC MỚI: Fix active tab
+    print("")
+    print("[5/5] Fix active tab khi chuyển...")
+    html = add_active_fix_js(html)
 
     with open(index_path, "w", encoding="utf-8") as f:
         f.write(html)
