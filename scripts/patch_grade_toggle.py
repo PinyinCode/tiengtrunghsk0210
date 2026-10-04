@@ -326,7 +326,9 @@ def patch_css(ui_css):
    Nút "Xem" bầu dục + Modal mẹo nhớ
    ═══════════════════════════════════════════════════════════ */
 
-/* Nút bầu dục đỏ "💡 Xem" */
+/* ═══════════════════════════════════════════════════════════
+   Nút "Xem" bầu dục — màu nhạt, dịu mắt
+   ═══════════════════════════════════════════════════════════ */
 .ai-reason .err-info-btn {
     display: inline-flex !important;
     align-items: center !important;
@@ -334,10 +336,10 @@ def patch_css(ui_css):
     gap: .25rem !important;
     padding: .35rem .7rem !important;
     margin: 0 .35rem !important;
-    border: none !important;
+    border: 1.5px solid rgba(239, 68, 68, .4) !important;
     border-radius: 50px !important;
-    background: linear-gradient(135deg, #ef4444, #dc2626) !important;
-    color: #fff !important;
+    background: linear-gradient(135deg, #fef2f2, #fee2e2) !important;
+    color: #dc2626 !important;
     font-size: .72rem !important;
     font-weight: 700 !important;
     font-family: inherit !important;
@@ -346,8 +348,7 @@ def patch_css(ui_css):
     transition: all .2s cubic-bezier(.34, 1.56, .64, 1) !important;
     flex-shrink: 0 !important;
     vertical-align: middle !important;
-    box-shadow: 0 3px 10px rgba(220, 38, 38, .4),
-                inset 0 1px 0 rgba(255, 255, 255, .25) !important;
+    box-shadow: 0 1px 3px rgba(220, 38, 38, .1) !important;
     white-space: nowrap !important;
     text-transform: uppercase !important;
     letter-spacing: .3px !important;
@@ -357,27 +358,31 @@ def patch_css(ui_css):
 .ai-reason .err-info-btn i {
     font-size: .8rem !important;
     line-height: 1 !important;
+    color: #ef4444 !important;
 }
 .ai-reason .err-info-btn:hover {
-    background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
-    transform: translateY(-2px) scale(1.05) !important;
-    box-shadow: 0 6px 16px rgba(220, 38, 38, .6),
-                inset 0 1px 0 rgba(255, 255, 255, .3) !important;
+    background: linear-gradient(135deg, #fee2e2, #fecaca) !important;
+    border-color: #ef4444 !important;
+    transform: translateY(-1px) scale(1.03) !important;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, .25) !important;
 }
 .ai-reason .err-info-btn:active {
     transform: translateY(0) scale(.97) !important;
-    box-shadow: 0 2px 6px rgba(220, 38, 38, .5) !important;
+    box-shadow: 0 1px 3px rgba(220, 38, 38, .15) !important;
 }
 [data-theme="dark"] .ai-reason .err-info-btn {
-    background: linear-gradient(135deg, #ef4444, #dc2626) !important;
-    color: #fff !important;
-    box-shadow: 0 3px 12px rgba(239, 68, 68, .55),
-                inset 0 1px 0 rgba(255, 255, 255, .2) !important;
+    background: linear-gradient(135deg, rgba(239, 68, 68, .15), rgba(220, 38, 38, .1)) !important;
+    border-color: rgba(248, 113, 113, .4) !important;
+    color: #fca5a5 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .2) !important;
+}
+[data-theme="dark"] .ai-reason .err-info-btn i {
+    color: #fca5a5 !important;
 }
 [data-theme="dark"] .ai-reason .err-info-btn:hover {
-    background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
-    box-shadow: 0 6px 18px rgba(239, 68, 68, .75),
-                inset 0 1px 0 rgba(255, 255, 255, .3) !important;
+    background: linear-gradient(135deg, rgba(239, 68, 68, .25), rgba(220, 38, 38, .2)) !important;
+    border-color: #fca5a5 !important;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, .35) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -399,6 +404,7 @@ def patch_css(ui_css):
 .mnemonic-modal.show {
     display: flex !important;
 }
+
 @keyframes mnemonicFadeIn {
     from { opacity: 0; }
     to   { opacity: 1; }
@@ -413,13 +419,13 @@ def patch_css(ui_css):
     overflow-y: auto !important;
     padding: 1.25rem !important;
     box-shadow: 0 24px 70px rgba(0, 0, 0, .4) !important;
-    animation: mnemonicSlideUp .35s cubic-bezier(.34, 1.56, .64, 1) ! !important;
+    animation: mnemonicSlideUp .35s cubic-bezier(.34, 1.56, .64, 1) !important;
     position: relative !important;
 }
-important@keyframes mnemonicSlideUp {
-    from;
- { transform: translateY(30px   ) scale(.95); opacity: 0 font; }
-    to   { transform: translateY(-style0) scale(1); opacity: 1; }
+
+@keyframes mnemonicSlideUp {
+    from { transform: translateY(30px) scale(.95); opacity: 0; }
+    to   { transform: translateY(0) scale(1); opacity: 1; }
 }
 
 .mnemonic-loading {
@@ -440,6 +446,7 @@ important@keyframes mnemonicSlideUp {
     border-radius: 50% !important;
     animation: mnemonicSpin .8s linear infinite !important;
 }
+
 @keyframes mnemonicSpin {
     to { transform: rotate(360deg); }
 }
@@ -461,7 +468,8 @@ important@keyframes mnemonicSlideUp {
     flex-shrink: 0 !important;
 }
 .mnemonic-pinyin {
-    font-size: 1rem: italic !important;
+    font-size: 1rem !important;
+    font-style: italic !important;
     color: var(--text-3, #94a3b8) !important;
     font-weight: 500 !important;
 }
@@ -512,12 +520,12 @@ important@keyframes mnemonicSlideUp {
 
 .mnemonic-section {
     background: var(--surface-2, #f8fafc) !important;
-    border-radius: 10px !important;
-    padding: .75rem .9rem !important;
-}
+    border-radius: 10rempx !important;
+    padding .: .75rem .9rem !important;
+65}
 .mnemonic-section-title {
-    font-size: .72rem !important;
-    font-weight: 800 !important;
+   rem font-size: .72rem ! !important;
+    font-weight: 800 !importantimportant;
     text-transform: uppercase !important;
     letter-spacing: .5px !important;
     color: var(--text-3, #94a3b8) !important;
@@ -622,7 +630,7 @@ important@keyframes mnemonicSlideUp {
     flex-direction: column !important;
     align-items: center !important;
     min-width: 70px !important;
-    padding: .5rem .65rem !important;
+    padding: .5;
     background: linear-gradient(135deg, #fef2f2, #fee2e2) !important;
     border: 2px solid #fecaca !important;
     border-radius: 10px !important;
