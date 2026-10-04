@@ -3705,25 +3705,20 @@ function showPracticeFullLockMessage() {
         }
     }
 }
-/* ⭐ Auto-fit font-size cho label — tránh bị cắt nội dung */
 /* ⭐ Auto-fit font-size cho label — thu nhỏ để hiển thị ĐỦ nội dung */
 function autoFitLabel(el) {
     if (!el) return;
     var parent = el.closest('.ds-btn') || el.parentElement;
     if (!parent) return;
 
-    // Reset về max trước khi đo
     var maxSize = 13;
     var minSize = 8;
     var size = maxSize;
 
-    // Đo bằng cách set font size tăng dần rồi kiểm tra overflow
     el.style.fontSize = maxSize + 'px';
 
-    // Giảm dần cho đến khi không còn overflow
     var safety = 0;
     while (safety < 40 && size > minSize) {
-        // Đo chiều cao thực của span so với parent
         var spanH = el.scrollHeight;
         var parentH = parent.clientHeight;
         var padTop = parseFloat(getComputedStyle(parent).paddingTop) || 0;
@@ -3740,9 +3735,7 @@ function autoFitLabel(el) {
         safety++;
     }
 }
-/* ============================================================ */
-/* DATASET SWITCHING                                             */
-/* ============================================================ */
+
 /* ============================================================ */
 /* DATASET SWITCHING                                             */
 /* ============================================================ */
@@ -3756,8 +3749,7 @@ function initDatasetSelector() {
                  || (DATASET_REGISTRY.tonghop.data || []).length;
         labelEl.innerHTML = count + '+ Câu phản xạ<br>Văn phòng - Công xưởng';
         labelEl.title = 'Văn phòng - Công xưởng';
-        // ⭐ Auto-fit font sau khi DOM render
-        // Đợi 2 frame cho layout ổn định rồi mới đo
+        // ⭐ Auto-fit font sau khi DOM render (đợi 2 frame cho layout ổn định)
         requestAnimationFrame(function() {
             requestAnimationFrame(function() {
                 autoFitLabel(labelEl);
@@ -3827,9 +3819,7 @@ function initDatasetSelector() {
         }
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       NÚT TỔNG HỢP — Click để về tab tổng hợp
-       ═══════════════════════════════════════════════════════════ */
+    /* NÚT TỔNG HỢP — Click để về tab tổng hợp */
     document.querySelectorAll('.ds-btn[data-dataset="tonghop"]').forEach(function(btn) {
         if (btn.__boundDataset) return;
         btn.__boundDataset = true;
@@ -3845,9 +3835,7 @@ function initDatasetSelector() {
         });
     });
 
-    /* ═══════════════════════════════════════════════════════════
-       NÚT CHUYÊN NGÀNH — Click để mở/đóng dropdown
-       ═══════════════════════════════════════════════════════════ */
+    /* NÚT CHUYÊN NGÀNH — Click để mở/đóng dropdown */
     if (cnBtn && !cnBtn.__boundToggle) {
         cnBtn.__boundToggle = true;
         cnBtn.addEventListener('click', function() {
@@ -3868,9 +3856,7 @@ function initDatasetSelector() {
         });
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       SUB-BUTTONS CHUYÊN NGÀNH — Click để chuyển dataset
-       ═══════════════════════════════════════════════════════════ */
+    /* SUB-BUTTONS CHUYÊN NGÀNH — Click để chuyển dataset */
     document.querySelectorAll('.ds-sub-btn').forEach(function(btn) {
         if (btn.__boundSub) return;
         btn.__boundSub = true;
@@ -3896,22 +3882,6 @@ function initDatasetSelector() {
     });
 
     markCurrentDatasetActive();
-}
-function markCurrentDatasetActive() {
-    var current = (typeof CURRENT_DATASET !== 'undefined') ? CURRENT_DATASET : 'tonghop';
-    document.querySelectorAll('.ds-sub-btn').forEach(function(b) {
-        b.classList.toggle('active', b.dataset.dataset === current);
-    });
-    document.querySelectorAll('.ds-btn[data-dataset="tonghop"]').forEach(function(b) {
-        b.classList.toggle('active', current === 'tonghop');
-    });
-    if (current !== 'tonghop') {
-        var wrap = $('dsSubWrap');
-        if (wrap) wrap.style.display = 'block';
-        document.querySelectorAll('.ds-btn[data-dataset-group="chuyen-nganh"]').forEach(function(b) {
-            b.classList.add('active');
-        });
-    }
 }
 
 function switchDataset(datasetId) {
