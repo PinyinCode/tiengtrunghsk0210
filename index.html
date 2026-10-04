@@ -27584,8 +27584,9 @@ function _normalizeGradingMessage(result) {
 function _formatGradingErrors(errors) {
     if (!errors || !errors.length) return '';
 
-    var HANZI = function(ch) {
-        return '<span class="err-hanzi">' + escapeHtml(ch) + '</span>';
+    var HANZI = function(ch, idx) {
+        return '<span class="err-hanzi" data-error-idx="' + idx + '">' +
+               escapeHtml(ch) + '</span>';
     };
     var PINYIN = function(py) {
         return py ? '<span class="err-pinyin">' + escapeHtml(py) + '</span>' : '';
@@ -27593,21 +27594,21 @@ function _formatGradingErrors(errors) {
     var ARROW = '<span class="err-arrow">→</span>';
     var SEP = '<span class="err-sep">·</span>';
 
-    return errors.map(function(e) {
+    return errors.map(function(e, idx) {
         if (!e) return '';
 
         if (e.type === 'wrong') {
-            return HANZI(e.user || '') + PINYIN(e.user_pinyin) +
+            return HANZI(e.user || '', idx) + PINYIN(e.user_pinyin) +
                    ARROW +
-                   HANZI(e.correct || '') + PINYIN(e.correct_pinyin);
+                   HANZI(e.correct || '', idx) + PINYIN(e.correct_pinyin);
         }
         if (e.type === 'missing') {
             return '<span class="err-label">Thiếu</span> ' +
-                   HANZI(e.correct || '') + PINYIN(e.correct_pinyin);
+                   HANZI(e.correct || '', idx) + PINYIN(e.correct_pinyin);
         }
         if (e.type === 'extra') {
             return '<span class="err-label">Thừa</span> ' +
-                   HANZI(e.user || '') + PINYIN(e.user_pinyin);
+                   HANZI(e.user || '', idx) + PINYIN(e.user_pinyin);
         }
         return '';
     }).filter(Boolean).join(SEP);
@@ -27779,6 +27780,49 @@ window.gradeWithAPI = gradeWithAPI;
     }
 
     console.log('[Grading] checkFullAnswer override OK');
+})();
+
+(function() {
+    var _origFixCharAt = window.fixCharAt;
+
+    window.highlightGradingErrorByIdx = function(idx) {
+        var statusEl = document.getElementById('pfStatus');
+        if (!statusEl) return;
+
+        statusEl.querySelectorAll('.err-hanzi.highlight, .err-pinyin.highlight')
+            .forEach(function(el) {
+                el.classList.remove('highlight');
+            });
+
+        var targets = statusEl.querySelectorAll('.err-hanzi[data-error-idx="' + idx + '"]');
+        if (!targets.length) return;
+
+        targets.forEach(function(target) {
+            target.classList.add('highlight');
+
+            var next = target.nextElementSibling;
+            if (next && next.classList.contains('err-pinyin')) {
+                next.classList.add('highlight');
+            }
+        });
+
+        setTimeout(function() {
+            statusEl.querySelectorAll('.highlight').forEach(function(el) {
+                el.classList.remove('highlight');
+            });
+        }, 2000);
+    };
+
+    window.fixCharAt = function(idx, el) {
+        if (typeof _origFixCharAt === 'function') {
+            _origFixCharAt.call(this, idx, el);
+        }
+        if (typeof window.highlightGradingErrorByIdx === 'function') {
+            window.highlightGradingErrorByIdx(idx);
+        }
+    };
+
+    console.log('[Grading] fixCharAt override OK');
 })();
 
 
