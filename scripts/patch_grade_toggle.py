@@ -123,15 +123,17 @@ def patch_css(ui_css):
 
 
 /* ═══════════════════════════════════════════════════════════
-   Chi tiết lỗi — Hán tự TO, pinyin nhỏ dễ nhìn
+   Chi tiết lỗi — Container + err-item + highlight
    ═══════════════════════════════════════════════════════════ */
+
+/* Container — flex wrap, mỗi item là 1 khối */
 .ai-reason,
 .card-check .ai-reason,
 .practice-full-status .ai-reason {
     display: flex !important;
     flex-wrap: wrap !important;
-    justify-content: center !important;
     align-items: center !important;
+    justify-content: center !important;
     gap: .35rem .5rem !important;
     font-size: .85rem !important;
     color: var(--text) !important;
@@ -148,6 +150,40 @@ def patch_css(ui_css):
 [data-theme="dark"] .ai-reason {
     background: var(--surface-2) !important;
     border-color: var(--border-strong) !important;
+}
+
+/* Mỗi lỗi — 1 khối nhỏ, KHÔNG tách */
+.ai-reason .err-item {
+    display: inline-flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: .3rem !important;
+    flex-shrink: 0 !important;
+    padding: .25rem .55rem !important;
+    border-radius: 6px !important;
+    background: var(--surface) !important;
+    white-space: nowrap !important;
+    transition: background .2s ease !important;
+}
+
+/* Xen kẽ nền cho dễ phân biệt */
+.ai-reason .err-item:nth-child(even) {
+    background: var(--bg) !important;
+}
+
+/* Highlight cả khối khi bấm ô đỏ */
+.ai-reason .err-item.highlight {
+    background: linear-gradient(135deg, #fef3c7, #fde68a) !important;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, .55), 0 4px 12px rgba(245, 158, 11, .3) !important;
+    animation: errItemPulse .6s ease-in-out 2 !important;
+}
+[data-theme="dark"] .ai-reason .err-item.highlight {
+    background: linear-gradient(135deg, #78350f, #92400e) !important;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, .5), 0 4px 12px rgba(245, 158, 11, .3) !important;
+}
+@keyframes errItemPulse {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.03); }
 }
 
 /* Hán tự — TO, ĐẬM */
@@ -184,14 +220,9 @@ def patch_css(ui_css):
     vertical-align: middle !important;
 }
 
-/* Dấu phân cách · */
+/* Dấu phân cách · (ẩn đi vì đã dùng err-item) */
 .ai-reason .err-sep {
-    color: var(--text-3) !important;
-    font-size: 1rem !important;
-    margin: 0 .35rem !important;
-    opacity: .6 !important;
-    display: inline-block !important;
-    vertical-align: middle !important;
+    display: none !important;
 }
 
 /* Nhãn "Thiếu" / "Thừa" */
@@ -223,8 +254,8 @@ def patch_css(ui_css):
     padding: .35rem 0 !important;
 }
 
-/* Mobile */
-@media (max-width: 500px) {
+/* Mobile — mỗi lỗi 1 dòng */
+@media (max-width: 600px) {
     #pfGradeToggleBtn,
     #pfRevealBtn {
         padding: .55rem .75rem !important;
@@ -233,6 +264,16 @@ def patch_css(ui_css):
     #pfGradeToggleBtn i,
     #pfRevealBtn i {
         font-size: .82rem !important;
+    }
+    .ai-reason {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: .35rem !important;
+    }
+    .ai-reason .err-item {
+        width: 100% !important;
+        justify-content: flex-start !important;
+        padding: .35rem .6rem !important;
     }
     .ai-reason .err-hanzi {
         font-size: 1.2rem !important;
@@ -243,44 +284,6 @@ def patch_css(ui_css):
     .ai-reason .err-arrow {
         font-size: 1rem !important;
     }
-}
-
-/* ═══ Highlight lỗi khi bấm ô đỏ preview ═══ */
-.ai-reason .err-hanzi.highlight {
-    background: linear-gradient(135deg, #fef3c7, #fde68a) !important;
-    color: #78350f !important;
-    padding: .1em .35em !important;
-    border-radius: 6px !important;
-    box-shadow: 0 0 0 3px rgba(245, 158, 11, .35) !important;
-    animation: errPulse 0.6s ease-in-out 2 !important;
-    transition: all .2s ease !important;
-}
-.ai-reason .err-pinyin.highlight {
-    color: #b45309 !important;
-    font-weight: 700 !important;
-    background: rgba(254, 243, 199, .5) !important;
-    padding: .05em .3em !important;
-    border-radius: 4px !important;
-}
-@keyframes errPulse {
-    0%, 100% {
-        transform: scale(1);
-        box-shadow: 0 0 0 3px rgba(245, 158, 11, .35);
-    }
-    50% {
-        transform: scale(1.15);
-        box-shadow: 0 0 0 6px rgba(245, 158, 11, .55);
-    }
-}
-
-[data-theme="dark"] .ai-reason .err-hanzi.highlight {
-    background: linear-gradient(135deg, #78350f, #92400e) !important;
-    color: #fef3c7 !important;
-    box-shadow: 0 0 0 3px rgba(245, 158, 11, .5) !important;
-}
-[data-theme="dark"] .ai-reason .err-pinyin.highlight {
-    color: #fcd34d !important;
-    background: rgba(120, 53, 15, .6) !important;
 }
 """
     return ui_css + extra_css
@@ -373,7 +376,6 @@ def patch_js(ui_js):
     else:
         print("[Patch] WARN: không tìm thấy toggleHint")
 
-    # KHÔNG reset toggle khi đổi câu
     old_reset = "pfHintEnabled = false;\n    $('pfHintBtn').classList.remove('active');\n    updateCharPreview();"
     new_reset = "/* Giữ nguyên toggle khi đổi câu */\n    updateCharPreview();"
     if old_reset in ui_js:
