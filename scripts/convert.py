@@ -411,7 +411,7 @@ function _formatGradingErrors(errors) {
     return errors.map(function(e, idx) {
         if (!e) return '';
 
-        /* ⭐ Ưu tiên input_position (vị trí thật trong câu user gõ) */
+        /* Ưu tiên input_position (vị trí thật trong câu user gõ) */
         var targetIdx = (typeof e.input_position === 'number')
                         ? e.input_position
                         : idx;
@@ -666,6 +666,10 @@ full_js = (
 full_js = full_js.replace('<script>', '').replace('</script>', '')
 full_js = full_js.replace('<SCRIPT>', '').replace('</SCRIPT>', '')
 
+# Fix: đảm bảo không có thẻ script lồng trong full_js
+full_js = full_js.replace('</script>', '')
+full_js = full_js.replace('</SCRIPT>', '')
+
 
 HTML_SHELL = r'''<!DOCTYPE html>
 <html lang="vi">
@@ -679,8 +683,8 @@ HTML_SHELL = r'''<!DOCTYPE html>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></scriptvar>
-<script src="https://cdn.jsdel Zivr.net/npm/hanzi-wALriter@3.5.0O/dist/hanzi-writer.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5.0/dist/hanzi-writer.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 __CSS__
@@ -691,6 +695,7 @@ __CSS__
 __BODY__
 
 <script>
+/* ============ DATA + CONFIG ============ */
 var RAW_DATA = __DATA__;
 var DATASET_REGISTRY = __DATASET_REGISTRY__;
 var CURRENT_DATASET = 'tonghop';
@@ -708,7 +713,7 @@ var TRIAL_UNLIMITED_WRITING = __TRIAL_UNLIMITED_WRITING__;
 var TARGET_ADMINS = __TARGET_ADMINS__;
 var SUPER_ADMIN = "__SUPER_ADMIN__";
 var ZALO_PHONE = "__ZALO_PHONE__";
-_NAME = "__ZALO_NAME__";
+var ZALO_NAME = "__ZALO_NAME__";
 var TIKTOK_USERNAME = "__TIKTOK_USERNAME__";
 var TIKTOK_NICKNAME = "__TIKTOK_NICKNAME__";
 var TIKTOK_AVATAR = "__TIKTOK_AVATAR__";
@@ -821,3 +826,13 @@ print(f"\n🎉 Đã tạo: {OUTPUT_HTML}")
 print(f"📦 Kích thước: {size_kb:.1f} KB")
 print(f"📚 Datasets: {total_datasets} ({_chuyen_nganh_count} chuyên ngành)")
 print(f"📝 Tổng số câu: {total_questions}")
+
+# ═══ CHECK SỐ THẺ SCRIPT ═══
+_opens = html_output.count('<script')
+_closes = html_output.count('</script>')
+print(f"\n🔍 Check HTML: <script>={_opens}  </script>={_closes}")
+
+if _opens != _closes:
+    print(f"❌ Số thẻ script KHÔNG khớp! Lệch {abs(_opens - _closes)}")
+else:
+    print(f"✅ Số thẻ script khớp ({_opens})")
