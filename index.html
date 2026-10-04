@@ -10369,7 +10369,7 @@ body[data-vocab-mode="1"] .mobile-view {
     border-color: rgba(239,68,68,.35);
     pointer-events: auto;
     cursor: pointer;
-    z-index: 5;
+    z-index: 10;
 }
 .ds-btn[data-dataset-group="favorites"] .ds-btn-icon {
     background: linear-gradient(135deg, rgba(239,68,68,.2), rgba(220,38,38,.1));
@@ -10385,15 +10385,6 @@ body[data-vocab-mode="1"] .mobile-view {
 .ds-btn[data-dataset-group="favorites"].active .ds-btn-title,
 .ds-btn[data-dataset-group="favorites"].active .ds-btn-title b,
 .ds-btn[data-dataset-group="favorites"].active .ds-btn-sub { color: #fff; }
-
-/* ⭐ NÚT YÊU THÍCH — Đảm bảo click được */
-.ds-btn[data-dataset-group="favorites"] > i,
-.ds-btn[data-dataset-group="favorites"] .ds-fav-badge,
-.ds-btn[data-dataset-group="favorites"] .ds-fav-lock,
-.ds-btn[data-dataset-group="favorites"]::before,
-.ds-btn[data-dataset-group="favorites"]::after {
-    pointer-events: none !important;
-}
 
 /* ═══ DARK MODE ═══ */
 [data-theme="dark"] .ds-btn .ds-btn-icon {
@@ -10430,17 +10421,19 @@ body[data-vocab-mode="1"] .mobile-view {
     .ds-btn .ds-btn-title { font-size: .76rem; }
     .ds-btn .ds-btn-sub   { font-size: .6rem; }
 }
+
 /* ═══════════════════════════════════════════════════════════ */
-/* ⭐ FIX CLICK — CHUYÊN NGÀNH + YÊU THÍCH BẤM ĐƯỢC            */
+/* ⭐⭐⭐ FIX CLICK — CHUYÊN NGÀNH + YÊU THÍCH BẤM ĐƯỢC ⭐⭐⭐ */
 /* ═══════════════════════════════════════════════════════════ */
 
-/* ── Nút CHUYÊN NGÀNH — nhận click ── */
+/* ── Nút CHUYÊN NGÀNH ── */
 .ds-btn[data-dataset-group="chuyen-nganh"] {
     pointer-events: auto !important;
     cursor: pointer !important;
     z-index: 10 !important;
 }
-.ds-btn[data-dataset-group="chuyen-nganh"] > .ds-btn-text {
+.ds-btn[data-dataset-group="chuyen-nganh"] > .ds-btn-text,
+.ds-btn[data-dataset-group="chuyen-nganh"] > span:not(.ds-new-badge) {
     pointer-events: auto !important;
     z-index: 20 !important;
     position: relative !important;
@@ -10457,13 +10450,14 @@ body[data-vocab-mode="1"] .mobile-view {
     pointer-events: none !important;
 }
 
-/* ── Nút YÊU THÍCH — nhận click ── */
+/* ── Nút YÊU THÍCH ── */
 .ds-btn[data-dataset-group="favorites"] {
     pointer-events: auto !important;
     cursor: pointer !important;
     z-index: 10 !important;
 }
-.ds-btn[data-dataset-group="favorites"] > .ds-btn-text {
+.ds-btn[data-dataset-group="favorites"] > .ds-btn-text,
+.ds-btn[data-dataset-group="favorites"] > span:not(.ds-fav-badge):not(.ds-fav-lock) {
     pointer-events: auto !important;
     z-index: 20 !important;
     position: relative !important;
@@ -10480,13 +10474,25 @@ body[data-vocab-mode="1"] .mobile-view {
     pointer-events: none !important;
 }
 
-/* ── Đảm bảo chung mọi nút con trong .ds-main-row ── */
+/* ── Đảm bảo CHUNG cho mọi nút trong .ds-main-row ── */
+.ds-main-row > .ds-btn {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+}
 .ds-main-row > .ds-btn > .ds-btn-text {
     pointer-events: auto !important;
     z-index: 20 !important;
 }
 .ds-main-row > .ds-btn > .ds-btn-text * {
     pointer-events: auto !important;
+}
+.ds-main-row > .ds-btn > i,
+.ds-main-row > .ds-btn > i.ds-btn-icon,
+.ds-main-row > .ds-btn > .ds-arrow,
+.ds-main-row > .ds-btn > .ds-new-badge,
+.ds-main-row > .ds-btn > .ds-fav-badge,
+.ds-main-row > .ds-btn > .ds-fav-lock {
+    pointer-events: none !important;
 }
 
 
