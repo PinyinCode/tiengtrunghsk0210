@@ -27990,7 +27990,9 @@ function _formatGradingErrors(errors) {
         return '<button class="err-info-btn" type="button" ' +
                'data-char="' + escapeHtml(ch) + '" ' +
                'onclick="showMnemonic(event, this)" ' +
-               'title="Xem mẹo nhớ">i</button>';
+               'title="Xem mẹo nhớ cho ' + escapeHtml(ch) + '">' +
+               '<i class="fas fa-lightbulb"></i> Xem' +
+               '</button>';
     };
     var ARROW = '<span class="err-arrow">→</span>';
 
