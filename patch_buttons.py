@@ -1,20 +1,10 @@
 # -*- coding: utf-8 -*-
 r"""
 patch_buttons.py - Cover lại TOÀN BỘ nút dataset trong index.html
-                    với layout 2 hàng gọn, đầy đủ nội dung.
-
-Nút được cover:
-  1. Tổng hợp      (data-dataset="tonghop")
-  2. Chuyên ngành  (data-dataset-group="chuyen-nganh")
-  3. Từ vựng HSK   (data-dataset="tu-vung")
-  4. Yêu thích     (data-dataset-group="favorites")
-  5. 1000+ Câu giao tiếp (data-dataset bất kỳ từ FIXPY_DATASETS)
+                    với layout 2 hàng gọn, đầy đủ nội dung + FIX CLICK.
 
 Cách dùng:
     python patch_buttons.py
-Hoặc import:
-    from patch_buttons import patch_all_buttons
-    patch_all_buttons("index.html")
 """
 import os
 import re
@@ -24,7 +14,6 @@ import unicodedata
 
 # =================================================================
 #  CONFIG — NỘI DUNG TỪNG NÚT
-#  Mỗi nút có: icon, hàng 1 (title), hàng 2 (sub), class đặc biệt
 # =================================================================
 BUTTON_CONFIG = {
     "tonghop": {
@@ -43,7 +32,7 @@ BUTTON_CONFIG = {
         ),
     },
     "tu-vung": {
-        "icon": "",   # ⭐ BỎ ICON VƯƠNG MIỆN
+        "icon": "",
         "title_html": "<b>11000+</b> Từ vựng HSK",
         "sub": "Mẹo nhớ · Bộ thủ",
     },
@@ -55,7 +44,6 @@ BUTTON_CONFIG = {
     },
 }
 
-# Nút giao tiếp thường đến từ FIXPY_DATASETS → dùng config mặc định
 DEFAULT_CONFIG = {
     "icon": "fa-comments",
     "title_template": "<b>{count}</b> {name}",
@@ -64,7 +52,7 @@ DEFAULT_CONFIG = {
 
 
 # =================================================================
-#  CSS MỚI — 2 HÀNG GỌN
+#  CSS MỚI — 2 HÀNG GỌN + FIX CLICK
 # =================================================================
 BUTTONS_CSS = r"""
 /* ═══════════════════════════════════════════════════════════ */
@@ -273,7 +261,7 @@ BUTTONS_CSS = r"""
     border-color: rgba(239,68,68,.35);
     pointer-events: auto;
     cursor: pointer;
-    z-index: 5;
+    z-index: 10;
 }
 .ds-btn[data-dataset-group="favorites"] .ds-btn-icon {
     background: linear-gradient(135deg, rgba(239,68,68,.2), rgba(220,38,38,.1));
@@ -289,15 +277,6 @@ BUTTONS_CSS = r"""
 .ds-btn[data-dataset-group="favorites"].active .ds-btn-title,
 .ds-btn[data-dataset-group="favorites"].active .ds-btn-title b,
 .ds-btn[data-dataset-group="favorites"].active .ds-btn-sub { color: #fff; }
-
-/* ⭐ NÚT YÊU THÍCH — Đảm bảo click được */
-.ds-btn[data-dataset-group="favorites"] > i,
-.ds-btn[data-dataset-group="favorites"] .ds-fav-badge,
-.ds-btn[data-dataset-group="favorites"] .ds-fav-lock,
-.ds-btn[data-dataset-group="favorites"]::before,
-.ds-btn[data-dataset-group="favorites"]::after {
-    pointer-events: none !important;
-}
 
 /* ═══ DARK MODE ═══ */
 [data-theme="dark"] .ds-btn .ds-btn-icon {
@@ -334,17 +313,19 @@ BUTTONS_CSS = r"""
     .ds-btn .ds-btn-title { font-size: .76rem; }
     .ds-btn .ds-btn-sub   { font-size: .6rem; }
 }
+
 /* ═══════════════════════════════════════════════════════════ */
-/* ⭐ FIX CLICK — CHUYÊN NGÀNH + YÊU THÍCH BẤM ĐƯỢC            */
+/* ⭐⭐⭐ FIX CLICK — CHUYÊN NGÀNH + YÊU THÍCH BẤM ĐƯỢC ⭐⭐⭐ */
 /* ═══════════════════════════════════════════════════════════ */
 
-/* ── Nút CHUYÊN NGÀNH — nhận click ── */
+/* ── Nút CHUYÊN NGÀNH ── */
 .ds-btn[data-dataset-group="chuyen-nganh"] {
     pointer-events: auto !important;
     cursor: pointer !important;
     z-index: 10 !important;
 }
-.ds-btn[data-dataset-group="chuyen-nganh"] > .ds-btn-text {
+.ds-btn[data-dataset-group="chuyen-nganh"] > .ds-btn-text,
+.ds-btn[data-dataset-group="chuyen-nganh"] > span:not(.ds-new-badge) {
     pointer-events: auto !important;
     z-index: 20 !important;
     position: relative !important;
@@ -361,13 +342,14 @@ BUTTONS_CSS = r"""
     pointer-events: none !important;
 }
 
-/* ── Nút YÊU THÍCH — nhận click ── */
+/* ── Nút YÊU THÍCH ── */
 .ds-btn[data-dataset-group="favorites"] {
     pointer-events: auto !important;
     cursor: pointer !important;
     z-index: 10 !important;
 }
-.ds-btn[data-dataset-group="favorites"] > .ds-btn-text {
+.ds-btn[data-dataset-group="favorites"] > .ds-btn-text,
+.ds-btn[data-dataset-group="favorites"] > span:not(.ds-fav-badge):not(.ds-fav-lock) {
     pointer-events: auto !important;
     z-index: 20 !important;
     position: relative !important;
@@ -384,13 +366,25 @@ BUTTONS_CSS = r"""
     pointer-events: none !important;
 }
 
-/* ── Đảm bảo chung mọi nút con trong .ds-main-row ── */
+/* ── Đảm bảo CHUNG cho mọi nút trong .ds-main-row ── */
+.ds-main-row > .ds-btn {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+}
 .ds-main-row > .ds-btn > .ds-btn-text {
     pointer-events: auto !important;
     z-index: 20 !important;
 }
 .ds-main-row > .ds-btn > .ds-btn-text * {
     pointer-events: auto !important;
+}
+.ds-main-row > .ds-btn > i,
+.ds-main-row > .ds-btn > i.ds-btn-icon,
+.ds-main-row > .ds-btn > .ds-arrow,
+.ds-main-row > .ds-btn > .ds-new-badge,
+.ds-main-row > .ds-btn > .ds-fav-badge,
+.ds-main-row > .ds-btn > .ds-fav-lock {
+    pointer-events: none !important;
 }
 """
 
@@ -406,7 +400,6 @@ def build_button_html(config_key, extra=None):
     else:
         cfg = dict(cfg)
 
-    # Merge extra data (VD: name, count từ FIXPY_DATASETS)
     if extra:
         if "title_html" in extra:
             cfg["title_html"] = extra["title_html"]
@@ -417,7 +410,6 @@ def build_button_html(config_key, extra=None):
         if "dataset_id" in extra:
             cfg["dataset_id"] = extra["dataset_id"]
 
-    # Nếu dùng template (cho giao tiếp)
     title = cfg.get("title_html")
     if not title and "title_template" in cfg:
         title = cfg["title_template"].format(
@@ -437,7 +429,6 @@ def build_button_html(config_key, extra=None):
     extra_attrs = cfg.get("extra_attrs", "")
     extra_html = cfg.get("extra_html", "")
 
-    # Xác định data attribute
     if "dataset_id" in cfg:
         data_attr = 'data-dataset="' + cfg["dataset_id"] + '"'
     elif config_key == "chuyen-nganh":
@@ -447,10 +438,8 @@ def build_button_html(config_key, extra=None):
     else:
         data_attr = 'data-dataset="' + config_key + '"'
 
-    # Class active mặc định cho tonghop
     active_cls = " active" if config_key == "tonghop" else ""
 
-    # ⭐ Chỉ render icon nếu có
     icon_html = ''
     if icon:
         icon_html = '            <i class="fas ' + icon + ' ds-btn-icon"></i>\n'
@@ -472,13 +461,17 @@ def build_button_html(config_key, extra=None):
 #  PATCHERS
 # =================================================================
 def patch_css(html):
-    """Chèn CSS mới vào trước </style> (idempotent)."""
-    MARKER = "/* PATCH_BUTTONS: DATASET BUTTONS — 2 HÀNG GỌN"
+    """Chèn CSS mới — LUÔN XÓA CSS CŨ TRƯỚC."""
+    # Xóa CSS PATCH_BUTTONS cũ (nếu có)
+    pat_old = re.compile(
+        r'/\* ═+ \*/\s*/\* PATCH_BUTTONS: DATASET BUTTONS.*?(?=</style>)',
+        re.DOTALL
+    )
+    html, n_removed = pat_old.subn('', html)
+    if n_removed > 0:
+        print("   [clean] Da xoa " + str(n_removed) + " block CSS cu")
 
-    if MARKER in html:
-        print("   [skip CSS] Da co patch_buttons CSS")
-        return html
-
+    # Chèn CSS mới
     pat = re.compile(r'(\s*)(</style>)', re.MULTILINE)
     html, n = pat.subn(
         lambda m: m.group(1) + BUTTONS_CSS + m.group(1) + m.group(2),
@@ -487,12 +480,11 @@ def patch_css(html):
     if n == 0:
         print("   [!] Khong tim thay </style>")
     else:
-        print("   [OK CSS] Da chen CSS 2 hang gon")
+        print("   [OK CSS] Da chen CSS 2 hang gon + fix click")
     return html
 
 
 def patch_button_tonghop(html):
-    """Thay nút Tổng hợp."""
     pat = re.compile(
         r'<button[^>]*class="[^"]*ds-btn[^"]*"[^>]*data-dataset="tonghop"[^>]*>.*?</button>',
         re.MULTILINE | re.DOTALL
@@ -507,7 +499,6 @@ def patch_button_tonghop(html):
 
 
 def patch_button_chuyen_nganh(html):
-    """Thay nút Chuyên ngành."""
     pat = re.compile(
         r'<button[^>]*class="[^"]*ds-btn[^"]*"[^>]*data-dataset-group="chuyen-nganh"[^>]*>.*?</button>',
         re.MULTILINE | re.DOTALL
@@ -522,7 +513,6 @@ def patch_button_chuyen_nganh(html):
 
 
 def patch_button_tu_vung(html):
-    """Thay nút Từ vựng (nếu tồn tại)."""
     pat = re.compile(
         r'<button[^>]*class="[^"]*ds-btn[^"]*"[^>]*data-dataset="tu-vung"[^>]*>.*?</button>',
         re.MULTILINE | re.DOTALL
@@ -538,7 +528,6 @@ def patch_button_tu_vung(html):
 
 
 def patch_button_favorites(html):
-    """Thay nút Yêu thích (nếu tồn tại)."""
     pat = re.compile(
         r'<button[^>]*class="[^"]*ds-btn[^"]*"[^>]*data-dataset-group="favorites"[^>]*>.*?</button>',
         re.MULTILINE | re.DOTALL
@@ -554,10 +543,6 @@ def patch_button_favorites(html):
 
 
 def patch_other_buttons(html):
-    """
-    Thay các nút .ds-btn[data-dataset="..."] còn lại (không phải tonghop/tu-vung)
-    → chủ yếu là nút "1000+ Câu giao tiếp" từ FIXPY_DATASETS.
-    """
     pat_all = re.compile(
         r'<button[^>]*class="[^"]*ds-btn[^"]*"[^>]*data-dataset="([^"]+)"[^>]*>(.*?)</button>',
         re.MULTILINE | re.DOTALL
@@ -623,7 +608,7 @@ def patch_other_buttons(html):
 # =================================================================
 def patch_all_buttons(index_path="index.html"):
     print("=" * 62)
-    print("[patch_buttons] Cover toan bo nut dataset")
+    print("[patch_buttons] Cover toan bo nut dataset + FIX CLICK")
     print("=" * 62)
 
     if not os.path.isfile(index_path):
