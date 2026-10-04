@@ -71,7 +71,7 @@ BUTTONS_2ROWS_CSS = r"""
     cursor: pointer !important;
     transition: all .2s ease !important;
     position: relative !important;
-    overflow: hidden !important;
+    overflow: visible !important;
 }
 .ds-btn:hover {
     border-color: var(--primary) !important;
@@ -201,7 +201,7 @@ BUTTONS_2ROWS_CSS = r"""
     letter-spacing: .5px !important;
     box-shadow: 0 2px 8px rgba(220,38,38,.5), 0 0 0 2px var(--surface) !important;
     animation: dsNewPulse 1.6s ease-in-out infinite !important;
-    z-index: 10 !important;
+    z-index: 100 !important;
     pointer-events: none !important;
 }
 @keyframes dsNewPulse {
@@ -213,12 +213,6 @@ BUTTONS_2ROWS_CSS = r"""
 .ds-btn[data-dataset="tu-vung"] {
     background: linear-gradient(135deg, #fffbeb, #fef3c7) !important;
     border-color: rgba(245,158,11,.5) !important;
-}
-.ds-btn[data-dataset="tu-vung"] .ds-btn-icon,
-.ds-btn[data-dataset="tu-vung"] > i.ds-btn-icon {
-    color: #d97706 !important;
-    opacity: .12 !important;
-    background: none !important;
 }
 .ds-btn[data-dataset="tu-vung"] .ds-btn-title,
 .ds-btn[data-dataset="tu-vung"] .ds-btn-title b { color: #92400e !important; }
@@ -234,10 +228,41 @@ BUTTONS_2ROWS_CSS = r"""
 .ds-btn[data-dataset="tu-vung"].active .ds-btn-title,
 .ds-btn[data-dataset="tu-vung"].active .ds-btn-title b { color: #fff !important; }
 .ds-btn[data-dataset="tu-vung"].active .ds-btn-sub { color: rgba(255,255,255,.85) !important; }
-.ds-btn[data-dataset="tu-vung"].active .ds-btn-icon,
-.ds-btn[data-dataset="tu-vung"].active > i.ds-btn-icon {
+
+/* ⭐ NÚT TỪ VỰNG — Ẩn icon vương miện watermark */
+.ds-btn[data-dataset="tu-vung"] .ds-btn-icon,
+.ds-btn[data-dataset="tu-vung"] > i.ds-btn-icon {
+    display: none !important;
+}
+
+/* ⭐ NÚT TỪ VỰNG — Badge PREMIUM nổi rõ, không bị che */
+.ds-btn[data-dataset="tu-vung"] .ds-vocab-badge {
+    position: absolute !important;
+    top: -8px !important;
+    right: -8px !important;
+    z-index: 100 !important;
+    background: linear-gradient(135deg, #7c3aed, #a855f7) !important;
     color: #fff !important;
-    opacity: .25 !important;
+    font-size: .58rem !important;
+    font-weight: 900 !important;
+    padding: .18rem .55rem !important;
+    border-radius: 50px !important;
+    letter-spacing: .5px !important;
+    text-transform: uppercase !important;
+    box-shadow: 0 2px 8px rgba(124,58,237,.5), 0 0 0 2px var(--surface) !important;
+    pointer-events: none !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: .2rem !important;
+    white-space: nowrap !important;
+}
+
+/* ⭐ NÚT CHUYÊN NGÀNH — Badge NEW nổi rõ, không bị che */
+.ds-btn[data-dataset-group="chuyen-nganh"] .ds-new-badge {
+    z-index: 100 !important;
+    position: absolute !important;
+    top: -8px !important;
+    right: -8px !important;
 }
 
 /* ═══ YÊU THÍCH ═══ */
@@ -306,7 +331,7 @@ BUTTONS_2ROWS_CSS = r"""
 
 
 # =================================================================
-#  VOCAB WARNING CSS — Banner cảnh báo giới hạn từ vựng
+#  VOCAB WARNING CSS
 # =================================================================
 VOCAB_WARNING_CSS = r"""
 /* ═══ BANNER CẢNH BÁO TỪ VỰNG ═══ */
@@ -1478,10 +1503,13 @@ def build_js_override(ids_js, datasets_json):
 def _build_button_2rows(data_attr, icon, title_html, sub,
                         extra_cls="", extra_html="", extra_attrs=""):
     """Sinh HTML nút 2 hàng: icon | (title + sub)."""
+    icon_html = ''
+    if icon:
+        icon_html = '<i class="fas ' + icon + ' ds-btn-icon"></i>\n'
     return (
         '<button class="ds-btn ds-btn-primary' + extra_cls + '" '
         + data_attr + ' ' + extra_attrs + '>\n'
-        '            <i class="fas ' + icon + ' ds-btn-icon"></i>\n'
+        '            ' + icon_html +
         '            <span class="ds-btn-text">\n'
         '                <span class="ds-btn-title">' + title_html + '</span>\n'
         '                <span class="ds-btn-sub">' + sub + '</span>\n'
