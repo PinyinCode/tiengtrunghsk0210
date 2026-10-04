@@ -27392,24 +27392,34 @@ function _normalizeGradingMessage(result) {
 
 function _formatGradingErrors(errors) {
     if (!errors || !errors.length) return '';
+
+    var HANZI = function(ch) {
+        return '<span class="err-hanzi">' + escapeHtml(ch) + '</span>';
+    };
+    var PINYIN = function(py) {
+        return py ? '<span class="err-pinyin">' + escapeHtml(py) + '</span>' : '';
+    };
+    var ARROW = '<span class="err-arrow">→</span>';
+    var SEP = '<span class="err-sep">·</span>';
+
     return errors.map(function(e) {
         if (!e) return '';
+
         if (e.type === 'wrong') {
-            var uPinyin = e.user_pinyin ? ' (' + e.user_pinyin + ')' : '';
-            var cPinyin = e.correct_pinyin ? ' (' + e.correct_pinyin + ')' : '';
-            return '"' + (e.user || '') + uPinyin + '" → "' +
-                   (e.correct || '') + cPinyin + '"';
+            return HANZI(e.user || '') + PINYIN(e.user_pinyin) +
+                   ARROW +
+                   HANZI(e.correct || '') + PINYIN(e.correct_pinyin);
         }
         if (e.type === 'missing') {
-            var cp = e.correct_pinyin ? ' (' + e.correct_pinyin + ')' : '';
-            return 'Thiếu "' + (e.correct || '') + cp + '"';
+            return '<span class="err-label">Thiếu</span> ' +
+                   HANZI(e.correct || '') + PINYIN(e.correct_pinyin);
         }
         if (e.type === 'extra') {
-            var up = e.user_pinyin ? ' (' + e.user_pinyin + ')' : '';
-            return 'Thừa "' + (e.user || '') + up + '"';
+            return '<span class="err-label">Thừa</span> ' +
+                   HANZI(e.user || '') + PINYIN(e.user_pinyin);
         }
         return '';
-    }).filter(Boolean).join(' · ');
+    }).filter(Boolean).join(SEP);
 }
 
 async function gradeWithAPI(userAnswer, correctAnswer) {
