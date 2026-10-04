@@ -244,6 +244,44 @@ def patch_css(ui_css):
         font-size: 1rem !important;
     }
 }
+
+/* ═══ Highlight lỗi khi bấm ô đỏ preview ═══ */
+.ai-reason .err-hanzi.highlight {
+    background: linear-gradient(135deg, #fef3c7, #fde68a) !important;
+    color: #78350f !important;
+    padding: .1em .35em !important;
+    border-radius: 6px !important;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, .35) !important;
+    animation: errPulse 0.6s ease-in-out 2 !important;
+    transition: all .2s ease !important;
+}
+.ai-reason .err-pinyin.highlight {
+    color: #b45309 !important;
+    font-weight: 700 !important;
+    background: rgba(254, 243, 199, .5) !important;
+    padding: .05em .3em !important;
+    border-radius: 4px !important;
+}
+@keyframes errPulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 3px rgba(245, 158, 11, .35);
+    }
+    50% {
+        transform: scale(1.15);
+        box-shadow: 0 0 0 6px rgba(245, 158, 11, .55);
+    }
+}
+
+[data-theme="dark"] .ai-reason .err-hanzi.highlight {
+    background: linear-gradient(135deg, #78350f, #92400e) !important;
+    color: #fef3c7 !important;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, .5) !important;
+}
+[data-theme="dark"] .ai-reason .err-pinyin.highlight {
+    color: #fcd34d !important;
+    background: rgba(120, 53, 15, .6) !important;
+}
 """
     return ui_css + extra_css
 
