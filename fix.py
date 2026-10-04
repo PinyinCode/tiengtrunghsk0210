@@ -3,6 +3,7 @@ r"""
 fix.py - Auto-scan data/ và thêm MỌI file Excel thành tab riêng.
 + TỰ ĐỘNG thêm tab TỪ VỰNG PREMIUM từ data/tu_vung_hsk.xlsx
 + COVER LẠI TOÀN BỘ NÚT DATASET SANG LAYOUT 2 HÀNG GỌN
++ ICON WATERMARK CHÌM GÓC PHẢI
 
 Cách chạy:
     python scripts/convert.py
@@ -33,11 +34,11 @@ VOCAB_LABEL = "11000+ Từ vựng HSK"
 
 
 # =================================================================
-#  CSS: BUTTONS 2 ROWS — ICON WATERMARK CHÌM GÓC PHẢI
+#  CSS: BUTTONS 2 ROWS — ICON WATERMARK CHÌM
 # =================================================================
 BUTTONS_2ROWS_CSS = r"""
 /* ═══════════════════════════════════════════════════════════ */
-/* FIX.PY: DATASET BUTTONS — ICON WATERMARK CHÌM               */
+/* FIX.PY: DATASET BUTTONS — 2 HÀNG + ICON WATERMARK CHÌM      */
 /* ═══════════════════════════════════════════════════════════ */
 
 .ds-main-row {
@@ -79,7 +80,7 @@ BUTTONS_2ROWS_CSS = r"""
     box-shadow: 0 6px 16px -6px rgba(15,23,42,.15) !important;
 }
 
-/* ⭐ ICON — WATERMARK CHÌM GÓC PHẢI */
+/* ICON — WATERMARK CHÌM Ở GÓC PHẢI */
 .ds-btn .ds-btn-icon,
 .ds-btn > i.ds-btn-icon {
     position: absolute !important;
@@ -108,7 +109,7 @@ BUTTONS_2ROWS_CSS = r"""
     opacity: .15 !important;
 }
 
-/* ⭐ KHỐI TEXT — FULL WIDTH */
+/* KHỐI TEXT — FULL WIDTH */
 .ds-btn .ds-btn-text {
     position: relative !important;
     z-index: 1 !important;
@@ -302,6 +303,91 @@ BUTTONS_2ROWS_CSS = r"""
     .ds-btn .ds-btn-sub   { font-size: .62rem !important; }
 }
 """
+
+
+# =================================================================
+#  VOCAB WARNING CSS — Banner cảnh báo giới hạn từ vựng
+# =================================================================
+VOCAB_WARNING_CSS = r"""
+/* ═══ BANNER CẢNH BÁO TỪ VỰNG ═══ */
+.vocab-warning-banner {
+    display: flex; align-items: center; gap: .85rem;
+    padding: .85rem 1rem; margin-bottom: 1rem;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(251, 191, 36, .15), rgba(245, 158, 11, .08));
+    border: 1.5px solid rgba(245, 158, 11, .45);
+    animation: vocabWarnIn .4s cubic-bezier(.34, 1.56, .64, 1);
+}
+@keyframes vocabWarnIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.vocab-warning-banner.tier-trial {
+    background: linear-gradient(135deg, rgba(99, 102, 241, .12), rgba(139, 92, 246, .08));
+    border-color: rgba(99, 102, 241, .45);
+}
+.vocab-warning-banner.tier-expired {
+    background: linear-gradient(135deg, rgba(220, 38, 38, .12), rgba(251, 146, 60, .08));
+    border-color: rgba(220, 38, 38, .5);
+}
+.vocab-warning-banner.tier-active {
+    background: linear-gradient(135deg, rgba(8, 145, 178, .12), rgba(6, 182, 212, .08));
+    border-color: rgba(8, 145, 178, .45);
+}
+.vocab-warning-icon {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, .4);
+}
+.vocab-warning-banner.tier-trial .vocab-warning-icon {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, .4);
+}
+.vocab-warning-banner.tier-expired .vocab-warning-icon {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, .4);
+}
+.vocab-warning-banner.tier-active .vocab-warning-icon {
+    background: linear-gradient(135deg, #0891b2, #06b6d4);
+    box-shadow: 0 4px 12px rgba(8, 145, 178, .4);
+}
+.vocab-warning-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .15rem; }
+.vocab-warning-text strong { font-size: .92rem; font-weight: 800; color: #92400e; }
+.vocab-warning-banner.tier-trial .vocab-warning-text strong { color: #4f46e5; }
+.vocab-warning-banner.tier-expired .vocab-warning-text strong { color: #991b1b; }
+.vocab-warning-banner.tier-active .vocab-warning-text strong { color: #075985; }
+.vocab-warning-text span { font-size: .8rem; color: var(--text-2); line-height: 1.4; }
+.vocab-warning-btn {
+    padding: .55rem .9rem; border-radius: 10px; border: none;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b 50%, #ea580c);
+    color: #fff; font-weight: 800; font-size: .8rem;
+    font-family: inherit; cursor: pointer;
+    display: inline-flex; align-items: center; gap: .35rem;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, .4);
+    transition: all .2s; white-space: nowrap; flex-shrink: 0;
+}
+.vocab-warning-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(245, 158, 11, .6);
+}
+[data-theme="dark"] .vocab-warning-banner {
+    background: linear-gradient(135deg, rgba(251, 191, 36, .2), rgba(245, 158, 11, .1));
+}
+[data-theme="dark"] .vocab-warning-text strong { color: #fcd34d; }
+[data-theme="dark"] .vocab-warning-banner.tier-trial .vocab-warning-text strong { color: #c4b5fd; }
+[data-theme="dark"] .vocab-warning-banner.tier-expired .vocab-warning-text strong { color: #fca5a5; }
+[data-theme="dark"] .vocab-warning-banner.tier-active .vocab-warning-text strong { color: #67e8f9; }
+@media (max-width: 600px) {
+    .vocab-warning-banner { flex-wrap: wrap; gap: .6rem; padding: .7rem .8rem; }
+    .vocab-warning-icon { width: 34px; height: 34px; font-size: .95rem; }
+    .vocab-warning-text strong { font-size: .85rem; }
+    .vocab-warning-text span { font-size: .74rem; }
+}
+"""
+
+
 # =================================================================
 #  VOCAB JS PATCH
 # =================================================================
@@ -1411,7 +1497,7 @@ def _build_button_2rows(data_attr, icon, title_html, sub,
 def build_layout_css(new_datasets, add_vocab):
     css_lines = []
 
-    # CSS BUTTONS 2 HÀNG GỌN (COVER TOÀN BỘ NÚT)
+    # CSS BUTTONS 2 HÀNG (COVER TOÀN BỘ NÚT)
     css_lines.append(BUTTONS_2ROWS_CSS)
 
     # GRID cho CHUYÊN NGÀNH sub-buttons
@@ -1588,7 +1674,7 @@ def main():
     add_vocab = bool(vocab_data) and not vocab_exists_in_html
 
     # =============================================================
-    #  PATCH 2: BUTTONS MỚI (2 HÀNG GỌN)
+    #  PATCH 2: BUTTONS MỚI (2 HÀNG)
     # =============================================================
     print("")
     print("[PATCH 2] Them button tabs moi (2 hang gon)...")
@@ -1597,7 +1683,6 @@ def main():
         label = ds["name"]
         count = ds["count"]
 
-        # Tách số khỏi tên
         m = re.match(r'^(\d+\+?)\s+(.+)$', label)
         if m:
             title_html = '<b>' + m.group(1) + '</b> ' + _html_escape(m.group(2))
@@ -1742,7 +1827,7 @@ def main():
         print("[fix.py]    (chi Admin + Premium moi mo duoc)")
 
     print("[fix.py] Layout: PC 4 cot - Mobile 2 cot")
-    print("[fix.py] Buttons: 2 hang gon (icon | title + sub)")
+    print("[fix.py] Buttons: 2 hang + icon watermark chim")
     print("[fix.py] CHI 1 TAB ACTIVE tai mot thoi diem")
     print("=" * 62)
 
