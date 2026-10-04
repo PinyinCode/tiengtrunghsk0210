@@ -934,22 +934,22 @@ full_body = (
     + "\n" + build_admin_chat_html()
     + '\n</div>'
 )
-# ═══════════════════════════════════════════════════════════════════
-#  🎯 GRADING API — Chấm điểm qua Render
-# ═══════════════════════════════════════════════════════════════════
+# ===================================================================
+#  GRADING API - Cham diem qua Render
+# ===================================================================
 def _build_grading_js():
     return r"""
-/* ═══════════════════════════════════════════════════════════ */
-/* GRADING API — Chấm điểm qua Render                          */
-/* ═══════════════════════════════════════════════════════════ */
+/* ============================================================ */
+/* GRADING API - Cham diem qua Render                           */
+/* ============================================================ */
 var GRADING_API_URL = 'https://chinese-grading.onrender.com/check';
 
-/* ═══════════════════════════════════════════════════════════ */
-/* HELPER: Chuẩn hoá message từ server về tiếng Việt có dấu    */
-/* ═══════════════════════════════════════════════════════════ */
+/* ============================================================ */
+/* HELPER: Chuan hoa message tu server ve tieng Viet co dau     */
+/* ============================================================ */
 var _GRADING_FALLBACK_MESSAGES = {
-    'correct': 'Đúng hoàn toàn',
-    'partial': 'Gần đúng',
+    'correct': 'Dung hoan toan',
+    'partial': 'Gan dung',
     'wrong':   'Sai'
 };
 
@@ -972,22 +972,24 @@ function _normalizeGradingMessage(result) {
     return fallback;
 }
 
-/* ═══════════════════════════════════════════════════════════ */
-/* HELPER: Chuẩn hoá chi tiết lỗi (errors array)               */
-/* ═══════════════════════════════════════════════════════════ */
-function _formatGradingErrors(errors) {
+/* ============================================================ */
+/* HELPER: Chuan hoa chi tiet loi (errors array)                */
+/* =(err=========================================================== */
+function _formatGradingErrorsors) {
     if (!errors || !errors.length) return '';
 
     return errors.map(function(e) {
         if (!e) return '';
-        if (e.type === 'wrong')   return '"' + (e.user || '') + '" → "' + (e.correct || '') + '"';
-        if (e.type === 'missing') return 'Thiếu "' + (e.correct || '') + '"';
-        if (e.type === 'extra')   return 'Thừa "' + (e.user || '') + '"';
+        if (e.type === 'wrong')   return '"' + (e.user || '') + '" thanh "' + (e.correct || '') + '"';
+        if (e.type === 'missing') return 'Thieu "' + (e.correct || '') + '"';
+        if (e.type === 'extra')   return 'Thua "' + (e.user || '') + '"';
         return '';
-    }).filter(Boolean).join(' · ');
+    }).filter(Boolean).join(' . ');
 }
 
-
+/* ============================================================ */
+/* HAM CHINH: Goi API cham diem                                 */
+/* ============================================================ */
 async function gradeWithAPI(userAnswer, correctAnswer) {
     try {
         var controller = new AbortController();
@@ -1014,10 +1016,9 @@ async function gradeWithAPI(userAnswer, correctAnswer) {
 }
 window.gradeWithAPI = gradeWithAPI;
 
-
-/* ═══════════════════════════════════════════════════════════ */
-/* OVERRIDE checkInput — Card trang chính                      */
-/* ═══════════════════════════════════════════════════════════ */
+/* ============================================================ */
+/* OVERRIDE checkInput - Card trang chinh                       */
+/* ============================================================ */
 (function() {
     var _origCheckInput = window.checkInput;
 
@@ -1045,7 +1046,7 @@ window.gradeWithAPI = gradeWithAPI;
         var cells = document.querySelectorAll('[data-check-stt="' + stt + '"]');
 
         cells.forEach(function(c) {
-            c.innerHTML = '<span class="ai-reason">Đang chấm...</span>';
+            c.innerHTML = '<span class="ai-reason">Dang cham...</span>';
         });
 
         var result = await gradeWithAPI(val, answer);
@@ -1073,20 +1074,19 @@ window.gradeWithAPI = gradeWithAPI;
         if (detail) html += '<span class="ai-reason">' + detail + '</span>';
 
         var answerHtml = '<div class="answer-inline-display">' +
-            '<span class="answer-inline-label"><i class="fas fa-check-circle"></i> Đáp án:</span>' +
+            '<span class="answer-inline-label"><i class="fas fa-check-circle"></i> Dap an:</span>' +
             '<span class="answer-inline-text">' + escapeHtml(answer) + '</span>' +
             '</div>';
 
         cells.forEach(function(c) { c.innerHTML = html + answerHtml; });
     };
 
-    console.log('[Grading] checkInput đã override dùng API');
+    console.log('[Grading] checkInput da override dung API');
 })();
 
-
-/* ═══════════════════════════════════════════════════════════ */
-/* OVERRIDE checkFullAnswer — Practice Full mode               */
-/* ═══════════════════════════════════════════════════════════ */
+/* ============================================================ */
+/* OVERRIDE checkFullAnswer - Practice Full mode                */
+/* ============================================================ */
 (function() {
     var _origCheckFullAnswer = window.checkFullAnswer;
     var _pfGradeToken = 0;
@@ -1117,7 +1117,7 @@ window.gradeWithAPI = gradeWithAPI;
 
         var myToken = ++_pfGradeToken;
 
-        statusEl.innerHTML = '<span class="ai-reason">Đang chấm...</span>';
+        statusEl.innerHTML = '<span class="ai-reason">Dang cham...</span>';
         statusEl.className = 'practice-full-status';
 
         var result = await gradeWithAPI(val, answer);
@@ -1153,7 +1153,7 @@ window.gradeWithAPI = gradeWithAPI;
         statusEl.innerHTML = html;
     }
 
-    console.log('[Grading] checkFullAnswer đã override dùng API');
+    console.log('[Grading] checkFullAnswer da override dung API');
 })();
 """
 # ═══════════════════════════════════════════════════════════════════
