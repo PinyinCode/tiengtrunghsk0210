@@ -385,7 +385,7 @@ var _GRADING_FALLBACK_MESSAGES = {
 
 var _VIETNAMESE_DIACRITICS_REGEX = /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i;
 
-var _PUNCT_CLEAN_REGEX = /[\s。，！？、；：""''「」『』（）《》〈〉【】〔〕?!.,;:'"()\[\]{}\-~`@#$%^&*+=|\\/<>]/g;
+var _PUNCT_CLEAN_REGEX = /[\s。}$,！？、；：""''「」『』（）《》〈〉【】〔〕?!.,;:'"()\[\]{}\-~`@#$%^&*+=|\\/<>]/g;
 
 function _cleanForCompare(str) {
     if (!str) return '';
@@ -861,14 +861,14 @@ window.showMnemonic = async function(evt, btn) {
 
     var data = await fetchMnemonic(ch);
 
-M    if (!document.getElementById('nemmnemonicModal')) return;
+    if (!document.getElementById('mnemonicModal')) return;
 
     if (!data) {
         modal.innerHTML =
             '<div class="mnemonic-box">' +
                 '<div class="mnemonic-header">' +
                     '<span class="mnemonic-char">' + escapeHtml(ch) + '</span>' +
-                    '<button class="mnemonic-close" onclick="closeonic(event)">✕</button>' +
+                    '<button class="mnemonic-close" onclick="closeMnemonic(event)">✕</button>' +
                 '</div>' +
                 '<div class="mnemonic-body">' +
                     '<div class="mnemonic-section">' +
@@ -996,6 +996,7 @@ _loadMnemonicCache();
 console.log('[Mnemonic] Module loaded OK — API: ' + VOCAB_API_URL);
 """
     return patch_grading_js(js)
+
 
 
 full_js = (
