@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Patch: doi nut Goi y thanh nut Cham diem (toggle ON/OFF)."""
+"""Patch: đổi nút Gợi ý thành nút Chấm điểm (toggle ON/OFF)."""
 
 import re
 
@@ -17,15 +17,15 @@ def patch_html(ui_html):
     old_btn = '<button id="pfHintBtn"><i class="fas fa-lightbulb"></i> Gợi ý</button>'
     if old_btn in ui_html:
         ui_html = ui_html.replace(old_btn, new_btn)
-        print("[Patch] Doi nut Goi y -> Cham diem (exact)")
+        print("[Patch] Đổi nút Gợi ý → Chấm điểm (exact)")
         return ui_html
     pattern = r'<button[^>]*id="pfHintBtn"[^>]*>.*?</button>'
     match = re.search(pattern, ui_html, flags=re.DOTALL)
     if match:
         ui_html = ui_html[:match.start()] + new_btn + ui_html[match.end():]
-        print("[Patch] Doi nut Goi y -> Cham diem (regex)")
+        print("[Patch] Đổi nút Gợi ý → Chấm điểm (regex)")
     else:
-        print("[Patch] WARN: khong tim thay pfHintBtn")
+        print("[Patch] WARN: không tìm thấy pfHintBtn")
     return ui_html
 
 
@@ -59,7 +59,7 @@ def patch_js(ui_js):
             'var pfHintEnabled = false;',
             'var pfGradeEnabled = false;'
         )
-        print("[Patch] Doi pfHintEnabled -> pfGradeEnabled")
+        print("[Patch] Đổi pfHintEnabled → pfGradeEnabled")
 
     new_preview = '''function updateCharPreview() {
     var input = $('pfInput');
@@ -107,7 +107,7 @@ def patch_js(ui_js):
     if n1:
         print("[Patch] Thay updateCharPreview")
     else:
-        print("[Patch] WARN: khong tim thay updateCharPreview")
+        print("[Patch] WARN: không tìm thấy updateCharPreview")
 
     new_toggle = '''function toggleGrade() {
     pfGradeEnabled = !pfGradeEnabled;
@@ -115,7 +115,7 @@ def patch_js(ui_js):
 
     if (pfGradeEnabled) {
         btn.classList.add('active');
-        btn.innerHTML = '<i class="fas fa-check-double"></i> Dang cham';
+        btn.innerHTML = '<i class="fas fa-check-double"></i> Đang chấm';
 
         var input = $('pfInput');
         if (input && input.value.trim()) {
@@ -123,7 +123,7 @@ def patch_js(ui_js):
         }
     } else {
         btn.classList.remove('active');
-        btn.innerHTML = '<i class="fas fa-check-double"></i> Cham diem';
+        btn.innerHTML = '<i class="fas fa-check-double"></i> Chấm điểm';
 
         var statusEl = $('pfStatus');
         if (statusEl) {
@@ -135,9 +135,9 @@ def patch_js(ui_js):
 
     ui_js, n2 = _replace_func(ui_js, 'toggleHint', new_toggle)
     if n2:
-        print("[Patch] Thay toggleHint -> toggleGrade")
+        print("[Patch] Thay toggleHint → toggleGrade")
     else:
-        print("[Patch] WARN: khong tim thay toggleHint")
+        print("[Patch] WARN: không tìm thấy toggleHint")
 
     old_reset = "pfHintEnabled = false;\n    $('pfHintBtn').classList.remove('active');\n    updateCharPreview();"
     new_reset = (
@@ -145,7 +145,7 @@ def patch_js(ui_js):
         "    var gradeBtn = $('pfGradeToggleBtn');\n"
         "    if (gradeBtn) {\n"
         "        gradeBtn.classList.remove('active');\n"
-        "        gradeBtn.innerHTML = '<i class=\"fas fa-check-double\"></i> Cham diem';\n"
+        "        gradeBtn.innerHTML = '<i class=\"fas fa-check-double\"></i> Chấm điểm';\n"
         "    }\n"
         "    updateCharPreview();"
     )
@@ -157,7 +157,7 @@ def patch_js(ui_js):
     new_listener = "$('pfGradeToggleBtn').addEventListener('click', toggleGrade);"
     if old_listener in ui_js:
         ui_js = ui_js.replace(old_listener, new_listener)
-        print("[Patch] Doi listener pfHintBtn -> pfGradeToggleBtn")
+        print("[Patch] Đổi listener pfHintBtn → pfGradeToggleBtn")
 
     ui_js = re.sub(
         r"pfHintEnabled\s*=\s*true;\s*\n\s*\$\(\s*['\"]pfHintBtn['\"]\s*\)\.classList\.add\(\s*['\"]active['\"]\s*\);",
@@ -188,8 +188,8 @@ def patch_grading_js(grading_js):
 
     if old in grading_js:
         grading_js = grading_js.replace(old, new)
-        print("[Patch] Them check toggle vao _doCheckFullAnswer")
+        print("[Patch] Thêm check toggle vào _doCheckFullAnswer")
     else:
-        print("[Patch] WARN: khong tim thay _doCheckFullAnswer")
+        print("[Patch] WARN: không tìm thấy _doCheckFullAnswer")
 
     return grading_js
