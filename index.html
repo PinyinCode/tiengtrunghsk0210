@@ -3286,11 +3286,15 @@ body.practice-full-open .pf-tiktok-float {
 /* ═══════════════════════════════════════════════════════════ */
 /* NÚT TỔNG HỢP — Hiển thị ĐỦ nội dung, tự co chữ để vừa       */
 /* ═══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════ */
+/* NÚT TỔNG HỢP — Tối đa 2 dòng, tự co chữ để vừa ô             */
+/* ═══════════════════════════════════════════════════════════ */
 .ds-btn[data-dataset="tonghop"] {
     min-height: 68px;
+    max-height: 68px;
     align-items: center;
     line-height: 1.2;
-    padding: .5rem .65rem;
+    padding: .45rem .6rem;
     overflow: hidden;
 }
 
@@ -3302,32 +3306,33 @@ body.practice-full-open .pf-tiktok-float {
     word-break: break-word;
     overflow-wrap: anywhere;
     text-align: left;
-    line-height: 1.2;
+    line-height: 1.15;
 
-    /* ⭐ Font size rất nhỏ — đủ chỗ cho 2 dòng đầy đủ */
-    font-size: clamp(0.62rem, 1.5vw, 0.78rem);
+    /* ⭐ Font nhỏ hơn để 2 dòng đầy đủ, không bị wrap */
+    font-size: clamp(0.56rem, 1.3vw, 0.72rem);
 }
 
 @media (max-width: 500px) {
     .ds-btn[data-dataset="tonghop"] {
         min-height: 62px;
-        padding: .4rem .55rem;
+        max-height: 62px;
+        padding: .35rem .5rem;
     }
     .ds-btn[data-dataset="tonghop"] > span {
-        font-size: clamp(0.58rem, 2.6vw, 0.7rem);
-        line-height: 1.15;
+        font-size: clamp(0.54rem, 2.4vw, 0.66rem);
+        line-height: 1.1;
     }
 }
 
 @media (min-width: 501px) and (max-width: 768px) {
     .ds-btn[data-dataset="tonghop"] > span {
-        font-size: clamp(0.62rem, 1.6vw, 0.74rem);
+        font-size: clamp(0.56rem, 1.4vw, 0.68rem);
     }
 }
 
 @media (min-width: 1200px) {
     .ds-btn[data-dataset="tonghop"] > span {
-        font-size: clamp(0.72rem, 1.1vw, 0.85rem);
+        font-size: clamp(0.66rem, 1vw, 0.78rem);
     }
 }
 
