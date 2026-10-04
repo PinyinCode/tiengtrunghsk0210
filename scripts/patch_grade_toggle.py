@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Patch: đổi nút Gợi ý thành nút Chấm điểm (toggle ON/OFF)."""
+"""Patch: nút Chấm điểm + Xem đáp án + chi tiết lỗi to rõ."""
 
 import re
 
@@ -32,13 +32,48 @@ def patch_html(ui_html):
 def patch_css(ui_css):
     extra_css = """
 
-/* ═══ Patch: nút toggle Chấm điểm ═══ */
+/* ═══ Nút Chấm điểm + Xem đáp án ═══ */
+#pfGradeToggleBtn,
+#pfRevealBtn {
+    padding: .6rem 1rem !important;
+    border-radius: 50px !important;
+    font-size: .85rem !important;
+    font-weight: 700 !important;
+    font-family: inherit !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: .4rem !important;
+    transition: all .2s ease !important;
+    border: 2px solid var(--border) !important;
+    background: var(--surface) !important;
+    color: var(--text-2) !important;
+    min-width: 0 !important;
+    line-height: 1.2 !important;
+}
+#pfGradeToggleBtn:hover,
+#pfRevealBtn:hover {
+    border-color: var(--primary) !important;
+    color: var(--primary) !important;
+    background: var(--primary-light) !important;
+    transform: translateY(-1px) !important;
+}
+#pfGradeToggleBtn i,
+#pfRevealBtn i {
+    font-size: .9rem !important;
+}
 #pfGradeToggleBtn.active {
-    background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+    background: var(--primary) !important;
     color: #fff !important;
-    border-color: transparent !important;
-    border-style: solid !important;
-    box-shadow: 0 6px 18px rgba(124, 58, 237, .4) !important;
+    border-color: var(--primary) !important;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, .3) !important;
+    transform: none !important;
+}
+#pfGradeToggleBtn.active:hover {
+    background: var(--primary-dark) !important;
+    border-color: var(--primary-dark) !important;
+    transform: translateY(-1px) !important;
 }
 #pfGradeToggleBtn.active i {
     animation: favHeartPop .4s cubic-bezier(.34, 1.56, .64, 1);
@@ -49,45 +84,167 @@ def patch_css(ui_css):
     70%  { transform: scale(.9); }
     100% { transform: scale(1); }
 }
+#pfRevealBtn.revealed {
+    background: var(--success) !important;
+    color: #fff !important;
+    border-color: var(--success) !important;
+    border-style: solid !important;
+    box-shadow: 0 4px 12px rgba(22, 163, 74, .3) !important;
+}
+#pfRevealBtn.revealed:hover {
+    filter: brightness(1.1) !important;
+}
+.reveal-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: .6rem !important;
+}
+[data-theme="dark"] #pfGradeToggleBtn,
+[data-theme="dark"] #pfRevealBtn {
+    background: var(--surface-2) !important;
+    color: var(--text) !important;
+    border-color: var(--border-strong) !important;
+}
+[data-theme="dark"] #pfGradeToggleBtn:hover,
+[data-theme="dark"] #pfRevealBtn:hover {
+    border-color: var(--primary) !important;
+    color: #93c5fd !important;
+    background: rgba(59, 130, 246, .15) !important;
+}
+[data-theme="dark"] #pfGradeToggleBtn.active {
+    background: var(--primary) !important;
+    color: #fff !important;
+    border-color: var(--primary) !important;
+}
+[data-theme="dark"] #pfRevealBtn.revealed {
+    background: var(--success) !important;
+    color: #fff !important;
+}
+
 
 /* ═══════════════════════════════════════════════════════════
-   Patch: chữ chi tiết lỗi — ĐẬM, RÕ, THEO THEME
+   Chi tiết lỗi — Hán tự TO, pinyin nhỏ dễ nhìn
    ═══════════════════════════════════════════════════════════ */
 .ai-reason,
 .card-check .ai-reason,
 .practice-full-status .ai-reason {
-    display: block !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: .35rem .5rem !important;
     font-size: .85rem !important;
     color: var(--text) !important;
     font-weight: 700 !important;
     font-style: normal !important;
     margin-top: .5rem !important;
-    line-height: 1.5 !important;
-    letter-spacing: .01em !important;
+    line-height: 1.6 !important;
     text-align: center !important;
-    opacity: 1 !important;
-    padding: .5rem .85rem !important;
+    padding: .6rem .9rem !important;
     background: var(--surface-2) !important;
     border: 1px dashed var(--border-strong) !important;
     border-radius: 10px !important;
 }
-
-/* Dark mode: tự động nhờ var(--text) đã đổi màu */
 [data-theme="dark"] .ai-reason {
-    color: var(--text) !important;
     background: var(--surface-2) !important;
     border-color: var(--border-strong) !important;
 }
 
-/* "Đang gõ..." và "Đang chấm..." — chữ đậm hơn, không có khung */
+/* Hán tự — TO, ĐẬM */
+.ai-reason .err-hanzi {
+    font-family: var(--font-zh, 'PingFang SC', 'Microsoft YaHei', sans-serif) !important;
+    font-size: 1.35rem !important;
+    font-weight: 700 !important;
+    color: var(--text) !important;
+    line-height: 1.2 !important;
+    padding: 0 .15em !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+}
+
+/* Pinyin — nhỏ, nghiêng, xám nhạt */
+.ai-reason .err-pinyin {
+    font-size: .72rem !important;
+    font-style: italic !important;
+    color: var(--text-3) !important;
+    font-weight: 500 !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+    margin-left: .15em !important;
+    opacity: .85 !important;
+}
+
+/* Mũi tên → */
+.ai-reason .err-arrow {
+    font-size: 1.1rem !important;
+    font-weight: 900 !important;
+    color: var(--primary) !important;
+    margin: 0 .3rem !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+}
+
+/* Dấu phân cách · */
+.ai-reason .err-sep {
+    color: var(--text-3) !important;
+    font-size: 1rem !important;
+    margin: 0 .35rem !important;
+    opacity: .6 !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+}
+
+/* Nhãn "Thiếu" / "Thừa" */
+.ai-reason .err-label {
+    font-size: .85rem !important;
+    font-weight: 700 !important;
+    color: var(--text-2) !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+}
+
+/* Dark mode */
+[data-theme="dark"] .ai-reason .err-pinyin {
+    color: #94a3b8 !important;
+}
+[data-theme="dark"] .ai-reason .err-arrow {
+    color: #93c5fd !important;
+}
+[data-theme="dark"] .ai-reason .err-label {
+    color: var(--text-3) !important;
+}
+
+/* "Đang gõ..." / "Đang chấm..." — không khung */
 .practice-full-status .ai-reason:only-child {
     background: transparent !important;
     border: none !important;
     color: var(--text-2) !important;
     font-weight: 600 !important;
+    padding: .35rem 0 !important;
+}
+
+/* Mobile */
+@media (max-width: 500px) {
+    #pfGradeToggleBtn,
+    #pfRevealBtn {
+        padding: .55rem .75rem !important;
+        font-size: .78rem !important;
+    }
+    #pfGradeToggleBtn i,
+    #pfRevealBtn i {
+        font-size: .82rem !important;
+    }
+    .ai-reason .err-hanzi {
+        font-size: 1.2rem !important;
+    }
+    .ai-reason .err-pinyin {
+        font-size: .68rem !important;
+    }
+    .ai-reason .err-arrow {
+        font-size: 1rem !important;
+    }
 }
 """
-    return ui_css + extra_css
     return ui_css + extra_css
 
 
@@ -178,19 +335,12 @@ def patch_js(ui_js):
     else:
         print("[Patch] WARN: không tìm thấy toggleHint")
 
+    # KHÔNG reset toggle khi đổi câu
     old_reset = "pfHintEnabled = false;\n    $('pfHintBtn').classList.remove('active');\n    updateCharPreview();"
-    new_reset = (
-        "pfGradeEnabled = false;\n"
-        "    var gradeBtn = $('pfGradeToggleBtn');\n"
-        "    if (gradeBtn) {\n"
-        "        gradeBtn.classList.remove('active');\n"
-        "        gradeBtn.innerHTML = '<i class=\"fas fa-check-double\"></i> Chấm điểm';\n"
-        "    }\n"
-        "    updateCharPreview();"
-    )
+    new_reset = "/* Giữ nguyên toggle khi đổi câu */\n    updateCharPreview();"
     if old_reset in ui_js:
         ui_js = ui_js.replace(old_reset, new_reset)
-        print("[Patch] Reset toggle trong loadPracticeFull")
+        print("[Patch] Giữ nguyên toggle khi đổi câu")
 
     old_listener = "$('pfHintBtn').addEventListener('click', toggleHint);"
     new_listener = "$('pfGradeToggleBtn').addEventListener('click', toggleGrade);"
