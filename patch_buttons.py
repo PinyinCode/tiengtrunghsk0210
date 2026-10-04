@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 r"""
-patch_buttons.py - Cover lại TOÀN BỘ nút dataset trong index.html
-                    với layout 2 hàng gọn, đầy đủ nội dung + FIX CLICK.
+patch_buttons.py - Cover CSS nút dataset trong index.html.
+                    GIỮ HTML GỐC cho nút Chuyên ngành + Yêu thích
+                    để không xóa event listener.
 
 Cách dùng:
     python patch_buttons.py
@@ -21,26 +22,11 @@ BUTTON_CONFIG = {
         "title_html": "<b>1750+</b> Câu phản xạ",
         "sub": "Văn phòng · Công xưởng",
     },
-    "chuyen-nganh": {
-        "icon": "fa-industry",
-        "title_html": "<b>Chuyên ngành</b>",
-        "sub": "Theo lĩnh vực",
-        "extra_attrs": 'data-dataset-group="chuyen-nganh"',
-        "extra_html": (
-            '<i class="fas fa-chevron-down ds-arrow"></i>'
-            '<span class="ds-new-badge">NEW</span>'
-        ),
-    },
+    # ⭐ KHÔNG dùng cho chuyen-nganh và favorites nữa
     "tu-vung": {
         "icon": "",
         "title_html": "<b>11000+</b> Từ vựng HSK",
         "sub": "Mẹo nhớ · Bộ thủ",
-    },
-    "favorites": {
-        "icon": "fa-heart",
-        "title_html": "<b>Yêu thích</b>",
-        "sub": "Câu đã lưu",
-        "extra_attrs": 'data-dataset-group="favorites"',
     },
 }
 
@@ -52,7 +38,7 @@ DEFAULT_CONFIG = {
 
 
 # =================================================================
-#  CSS MỚI — 2 HÀNG GỌN + FIX CLICK
+#  CSS — CHÈN VÀO INDEX.HTML
 # =================================================================
 BUTTONS_CSS = r"""
 /* ═══════════════════════════════════════════════════════════ */
@@ -187,7 +173,7 @@ BUTTONS_CSS = r"""
     color: #fff;
 }
 
-/* ⭐ NÚT CHUYÊN NGÀNH — Badge NEW hiện rõ */
+/* ⭐ Badge NEW */
 .ds-btn[data-dataset-group="chuyen-nganh"] .ds-new-badge {
     position: absolute;
     top: -8px;
@@ -230,13 +216,23 @@ BUTTONS_CSS = r"""
 .ds-btn[data-dataset="tu-vung"].active .ds-btn-title b { color: #fff; }
 .ds-btn[data-dataset="tu-vung"].active .ds-btn-sub { color: rgba(255,255,255,.85); }
 
-/* ⭐ NÚT TỪ VỰNG — Ẩn icon vương miện */
+/* ⭐ NÚT TỪ VỰNG — Ẩn icon vương miện (mọi loại) */
+.ds-btn[data-dataset="tu-vung"] > i,
+.ds-btn[data-dataset="tu-vung"] > i.fas,
+.ds-btn[data-dataset="tu-vung"] > i[class*="fa-"],
 .ds-btn[data-dataset="tu-vung"] .ds-btn-icon,
-.ds-btn[data-dataset="tu-vung"] > i.ds-btn-icon {
+.ds-btn[data-dataset="tu-vung"] .vocab-icon,
+.ds-btn[data-dataset="tu-vung"] .vocab-crown {
     display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    opacity: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
-/* ⭐ NÚT TỪ VỰNG — Badge PREMIUM hiện rõ */
+/* ⭐ NÚT TỪ VỰNG — Badge PREMIUM */
 .ds-btn[data-dataset="tu-vung"] .ds-vocab-badge {
     position: absolute;
     top: -8px;
@@ -262,10 +258,6 @@ BUTTONS_CSS = r"""
     pointer-events: auto;
     cursor: pointer;
     z-index: 10;
-}
-.ds-btn[data-dataset-group="favorites"] .ds-btn-icon {
-    background: linear-gradient(135deg, rgba(239,68,68,.2), rgba(220,38,38,.1));
-    color: #ef4444;
 }
 .ds-btn[data-dataset-group="favorites"] .ds-btn-title,
 .ds-btn[data-dataset-group="favorites"] .ds-btn-title b { color: #991b1b; }
@@ -315,7 +307,7 @@ BUTTONS_CSS = r"""
 }
 
 /* ═══════════════════════════════════════════════════════════ */
-/* ⭐⭐⭐ FIX CLICK — CHUYÊN NGÀNH + YÊU THÍCH BẤM ĐƯỢC ⭐⭐⭐ */
+/* ⭐ FIX CLICK — CHUYÊN NGÀNH + YÊU THÍCH BẤM ĐƯỢC            */
 /* ═══════════════════════════════════════════════════════════ */
 
 /* ── Nút CHUYÊN NGÀNH ── */
@@ -329,9 +321,6 @@ BUTTONS_CSS = r"""
     pointer-events: auto !important;
     z-index: 20 !important;
     position: relative !important;
-}
-.ds-btn[data-dataset-group="chuyen-nganh"] > .ds-btn-text * {
-    pointer-events: auto !important;
 }
 .ds-btn[data-dataset-group="chuyen-nganh"] > i,
 .ds-btn[data-dataset-group="chuyen-nganh"] > i.ds-btn-icon,
@@ -354,9 +343,6 @@ BUTTONS_CSS = r"""
     z-index: 20 !important;
     position: relative !important;
 }
-.ds-btn[data-dataset-group="favorites"] > .ds-btn-text * {
-    pointer-events: auto !important;
-}
 .ds-btn[data-dataset-group="favorites"] > i,
 .ds-btn[data-dataset-group="favorites"] > i.ds-btn-icon,
 .ds-btn[data-dataset-group="favorites"] > .ds-fav-badge,
@@ -365,35 +351,13 @@ BUTTONS_CSS = r"""
 .ds-btn[data-dataset-group="favorites"]::after {
     pointer-events: none !important;
 }
-
-/* ── Đảm bảo CHUNG cho mọi nút trong .ds-main-row ── */
-.ds-main-row > .ds-btn {
-    pointer-events: auto !important;
-    cursor: pointer !important;
-}
-.ds-main-row > .ds-btn > .ds-btn-text {
-    pointer-events: auto !important;
-    z-index: 20 !important;
-}
-.ds-main-row > .ds-btn > .ds-btn-text * {
-    pointer-events: auto !important;
-}
-.ds-main-row > .ds-btn > i,
-.ds-main-row > .ds-btn > i.ds-btn-icon,
-.ds-main-row > .ds-btn > .ds-arrow,
-.ds-main-row > .ds-btn > .ds-new-badge,
-.ds-main-row > .ds-btn > .ds-fav-badge,
-.ds-main-row > .ds-btn > .ds-fav-lock {
-    pointer-events: none !important;
-}
 """
 
 
 # =================================================================
-#  HTML GENERATOR
+#  HTML GENERATOR (chỉ dùng cho tonghop + tu-vung)
 # =================================================================
 def build_button_html(config_key, extra=None):
-    """Sinh HTML cho 1 nút theo config."""
     cfg = BUTTON_CONFIG.get(config_key)
     if cfg is None:
         cfg = dict(DEFAULT_CONFIG)
@@ -431,10 +395,6 @@ def build_button_html(config_key, extra=None):
 
     if "dataset_id" in cfg:
         data_attr = 'data-dataset="' + cfg["dataset_id"] + '"'
-    elif config_key == "chuyen-nganh":
-        data_attr = 'data-dataset-group="chuyen-nganh"'
-    elif config_key == "favorites":
-        data_attr = 'data-dataset-group="favorites"'
     else:
         data_attr = 'data-dataset="' + config_key + '"'
 
@@ -458,11 +418,11 @@ def build_button_html(config_key, extra=None):
 
 
 # =================================================================
-#  PATCHERS
+#  PATCH CSS
 # =================================================================
 def patch_css(html):
     """Chèn CSS mới — LUÔN XÓA CSS CŨ TRƯỚC."""
-    # Xóa CSS PATCH_BUTTONS cũ (nếu có)
+    # Xóa CSS PATCH_BUTTONS cũ
     pat_old = re.compile(
         r'/\* ═+ \*/\s*/\* PATCH_BUTTONS: DATASET BUTTONS.*?(?=</style>)',
         re.DOTALL
@@ -484,6 +444,10 @@ def patch_css(html):
     return html
 
 
+# =================================================================
+#  PATCH BUTTONS — CHỈ PATCH tonghop + tu-vung
+#  KHÔNG patch chuyen-nganh + favorites → GIỮ EVENT LISTENER
+# =================================================================
 def patch_button_tonghop(html):
     pat = re.compile(
         r'<button[^>]*class="[^"]*ds-btn[^"]*"[^>]*data-dataset="tonghop"[^>]*>.*?</button>',
@@ -495,20 +459,6 @@ def patch_button_tonghop(html):
         print("   [OK] Patch nut Tong hop")
     else:
         print("   [!] Khong tim thay nut Tong hop")
-    return html
-
-
-def patch_button_chuyen_nganh(html):
-    pat = re.compile(
-        r'<button[^>]*class="[^"]*ds-btn[^"]*"[^>]*data-dataset-group="chuyen-nganh"[^>]*>.*?</button>',
-        re.MULTILINE | re.DOTALL
-    )
-    new_html = build_button_html("chuyen-nganh")
-    html, n = pat.subn(new_html, html, count=1)
-    if n:
-        print("   [OK] Patch nut Chuyen nganh")
-    else:
-        print("   [!] Khong tim thay nut Chuyen nganh")
     return html
 
 
@@ -527,28 +477,17 @@ def patch_button_tu_vung(html):
     return html
 
 
-def patch_button_favorites(html):
-    pat = re.compile(
-        r'<button[^>]*class="[^"]*ds-btn[^"]*"[^>]*data-dataset-group="favorites"[^>]*>.*?</button>',
-        re.MULTILINE | re.DOTALL
-    )
-    if not pat.search(html):
-        print("   [skip] Khong co nut Yeu thich")
-        return html
-    new_html = build_button_html("favorites")
-    html, n = pat.subn(new_html, html, count=1)
-    if n:
-        print("   [OK] Patch nut Yeu thich")
-    return html
-
-
+# =================================================================
+#  PATCH CÁC NÚT KHÁC (giao tiếp...) — KHÔNG patch chuyen-nganh/favorites
+# =================================================================
 def patch_other_buttons(html):
     pat_all = re.compile(
         r'<button[^>]*class="[^"]*ds-btn[^"]*"[^>]*data-dataset="([^"]+)"[^>]*>(.*?)</button>',
         re.MULTILINE | re.DOTALL
     )
 
-    SKIP_IDS = {"tonghop", "tu-vung"}
+    # ⭐ SKIP cả chuyen-nganh và favorites để GIỮ event listener
+    SKIP_IDS = {"tonghop", "tu-vung", "chuyen-nganh", "favorites"}
 
     def replacer(match):
         ds_id = match.group(1)
@@ -608,7 +547,7 @@ def patch_other_buttons(html):
 # =================================================================
 def patch_all_buttons(index_path="index.html"):
     print("=" * 62)
-    print("[patch_buttons] Cover toan bo nut dataset + FIX CLICK")
+    print("[patch_buttons] Cover CSS nut — GIU HTML chuyen-nganh + favorites")
     print("=" * 62)
 
     if not os.path.isfile(index_path):
@@ -619,24 +558,19 @@ def patch_all_buttons(index_path="index.html"):
         html = f.read()
 
     print("")
-    print("[1/5] Patch CSS...")
+    print("[1/4] Patch CSS...")
     html = patch_css(html)
 
     print("")
-    print("[2/5] Patch nut Tong hop...")
+    print("[2/4] Patch nut Tong hop...")
     html = patch_button_tonghop(html)
 
     print("")
-    print("[3/5] Patch nut Chuyen nganh...")
-    html = patch_button_chuyen_nganh(html)
-
-    print("")
-    print("[4/5] Patch nut Tu vung...")
+    print("[3/4] Patch nut Tu vung...")
     html = patch_button_tu_vung(html)
 
     print("")
-    print("[5/5] Patch nut Yeu thich + cac nut khac...")
-    html = patch_button_favorites(html)
+    print("[4/4] Patch cac nut khac (KHONG patch chuyen-nganh + favorites)...")
     html = patch_other_buttons(html)
 
     with open(index_path, "w", encoding="utf-8") as f:
@@ -648,6 +582,8 @@ def patch_all_buttons(index_path="index.html"):
     print("[patch_buttons] HOAN TAT!")
     print("[patch_buttons] File: " + index_path +
           " (" + str(round(size_kb, 1)) + " KB)")
+    print("[patch_buttons] Luu y: GIU HTML goc cua chuyen-nganh + favorites")
+    print("[patch_buttons]        -> Event listener KHONG bi xoa -> bam duoc")
     print("=" * 62)
     return True
 
