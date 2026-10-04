@@ -1462,10 +1462,10 @@ def _build_button_2rows(data_attr, icon, title_html, sub,
 def build_layout_css(new_datasets, add_vocab):
     css_lines = []
 
-    # ⭐ CSS BUTTONS 2 HÀNG GỌN (COVER TOÀN BỘ NÚT)
+    # CSS BUTTONS 2 HÀNG GỌN (COVER TOÀN BỘ NÚT)
     css_lines.append(BUTTONS_2ROWS_CSS)
 
-    # ── GRID cho CHUYÊN NGÀNH sub-buttons ──
+    # GRID cho CHUYÊN NGÀNH sub-buttons
     css_lines.append("")
     css_lines.append("/* GRID DEU CHO TAB CON CHUYEN NGANH */")
     css_lines.append(".ds-sub-grid {")
@@ -1505,7 +1505,7 @@ def build_layout_css(new_datasets, add_vocab):
     css_lines.append("    overflow: hidden !important;")
     css_lines.append("}")
 
-    # ── Style riêng cho tab mới sinh ──
+    # Style riêng cho tab mới sinh
     for ds in new_datasets:
         i = ds["id"]
         sel = '.ds-btn[data-dataset="' + i + '"]'
@@ -1518,7 +1518,7 @@ def build_layout_css(new_datasets, add_vocab):
         css_lines.append("    box-shadow: 0 4px 12px rgba(124, 58, 237, .35) !important;")
         css_lines.append("}")
 
-    # ── VOCAB CSS + WARNING BANNER ──
+    # VOCAB CSS + WARNING BANNER
     if add_vocab:
         css_lines.append("")
         css_lines.append("/* VOCAB PREMIUM CSS */")
@@ -1536,7 +1536,7 @@ def patch_existing_buttons(html):
     print("")
     print("[PATCH 2.5] Rewrite nut co san -> layout 2 hang gon...")
 
-    # ── Nút TỔNG HỢP ──
+    # Nút TỔNG HỢP
     new_tonghop = _build_button_2rows(
         data_attr='data-dataset="tonghop"',
         icon="fa-book-open",
@@ -1552,7 +1552,7 @@ def patch_existing_buttons(html):
     if n:
         print("   [OK] Rewrite nut Tong hop")
 
-    # ── Nút CHUYÊN NGÀNH ──
+    # Nút CHUYÊN NGÀNH
     new_cn = _build_button_2rows(
         data_attr='data-dataset-group="chuyen-nganh"',
         icon="fa-industry",
@@ -1572,7 +1572,7 @@ def patch_existing_buttons(html):
     if n:
         print("   [OK] Rewrite nut Chuyen nganh")
 
-    # ── Nút YÊU THÍCH (nếu có) ──
+    # Nút YÊU THÍCH (nếu có)
     new_fav = _build_button_2rows(
         data_attr='data-dataset-group="favorites"',
         icon="fa-heart",
@@ -1608,10 +1608,10 @@ def main():
     with open(INDEX_HTML, "r", encoding="utf-8") as f:
         html = f.read()
 
-    # ═══ SCAN tab thường ═══
+    # SCAN tab thường
     datasets = scan_data_dir()
 
-    # ═══ ĐỌC FILE TỪ VỰNG PREMIUM ═══
+    # ĐỌC FILE TỪ VỰNG PREMIUM
     vocab_data = []
     vocab_real_path = None
     if HAS_VOCAB_MODULE:
@@ -1626,7 +1626,7 @@ def main():
         else:
             print("[VOCAB] Khong co file tu vung - bo qua")
 
-    # ═══ KIỂM TRA CÓ GÌ MỚI ═══
+    # KIỂM TRA CÓ GÌ MỚI
     all_new = []
     for ds in datasets:
         marker = 'data-dataset="' + ds["id"] + '"'
@@ -1638,9 +1638,9 @@ def main():
     vocab_exists_in_html = 'data-dataset="' + VOCAB_ID + '"' in html
     add_vocab = bool(vocab_data) and not vocab_exists_in_html
 
-    # ═══════════════════════════════════════════════════════════
+    # =============================================================
     #  PATCH 2: BUTTONS MỚI (2 HÀNG GỌN)
-    # ═══════════════════════════════════════════════════════════
+    # =============================================================
     print("")
     print("[PATCH 2] Them button tabs moi (2 hang gon)...")
     new_btns = ""
@@ -1648,7 +1648,7 @@ def main():
         label = ds["name"]
         count = ds["count"]
 
-        # ⭐ Tách số khỏi tên
+        # Tách số khỏi tên
         m = re.match(r'^(\d+\+?)\s+(.+)$', label)
         if m:
             title_html = '<b>' + m.group(1) + '</b> ' + _html_escape(m.group(2))
@@ -1700,14 +1700,14 @@ def main():
     else:
         print("   [skip] Khong co nut moi can them")
 
-    # ═══════════════════════════════════════════════════════════
+    # =============================================================
     #  PATCH 2.5: REWRITE NÚT CỨNG SANG 2 HÀNG
-    # ═══════════════════════════════════════════════════════════
+    # =============================================================
     html = patch_existing_buttons(html)
 
-    # ═══════════════════════════════════════════════════════════
+    # =============================================================
     #  PATCH 3: CSS
-    # ═══════════════════════════════════════════════════════════
+    # =============================================================
     print("")
     print("[PATCH 3] CSS layout + buttons 2 hang...")
 
@@ -1715,18 +1715,17 @@ def main():
 
     pat_style = re.compile(r'(\s*)(</style>)', re.MULTILINE)
     html, n = pat_style.subn(
-        lambda m: m.group(1) + css + m.groupAB(1) + m.group_ID(2),
+        lambda m: m.group(1) + css + m.group(1) + m.group(2),
         html, count=1
-)
     )
-    if n == 0       :
-        print("   [!] js Khong tim thay </ +=style>")
-    else '\n':
-        + print("   [OK] Da build inject CSS")
+    if n == 0:
+        print("   [!] Khong tim thay </style>")
+    else:
+        print("   [OK] Da inject CSS")
 
-    #_v ═══════════════════════════════════════════════════════════
+    # =============================================================
     #  PATCH 4: JS
-    # ═══════════════════════════════════════════════════════════
+    # =============================================================
     print("")
     print("[PATCH 4] JS binding...")
 
@@ -1755,7 +1754,8 @@ def main():
 
     if add_vocab:
         js += '\n<script>\n'
-        js += build_vocab_js_override(VOCocab_js_patch()
+        js += build_vocab_js_override(VOCAB_ID)
+        js += '\n' + build_vocab_js_patch()
         js += '\n</script>\n'
 
     modal_html = ""
@@ -1772,7 +1772,7 @@ def main():
         sys.exit(1)
     print("   [OK] Da inject JS + modal")
 
-    # ═══ GHI FILE ═══
+    # GHI FILE
     with open(INDEX_HTML, "w", encoding="utf-8") as f:
         f.write(html)
 
