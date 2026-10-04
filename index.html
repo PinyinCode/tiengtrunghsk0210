@@ -11817,16 +11817,19 @@ function showPracticeFullLockMessage() {
     }
 }
 /* ⭐ Auto-fit font-size cho label — thu nhỏ để hiển thị ĐỦ nội dung */
+/* ⭐ Auto-fit font-size cho label — thu nhỏ để hiển thị ĐỦ nội dung */
 function autoFitLabel(el) {
     if (!el) return;
     var parent = el.closest('.ds-btn') || el.parentElement;
     if (!parent) return;
 
-    var maxSize = 13;
+    // ⭐ Bắt đầu từ font-size hiện tại của CSS (không ép 13px)
+    var startSize = parseFloat(getComputedStyle(el).fontSize) || 12;
     var minSize = 8;
-    var size = maxSize;
+    var size = startSize;
 
-    el.style.fontSize = maxSize + 'px';
+    // ⭐ Reset về font-size gốc (CSS) rồi mới đo
+    el.style.fontSize = '';
 
     var safety = 0;
     while (safety < 40 && size > minSize) {
