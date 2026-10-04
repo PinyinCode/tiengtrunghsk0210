@@ -27720,8 +27720,8 @@ window.gradeWithAPI = gradeWithAPI;
 var GRADING_API_URL = 'https://chinese-grading.onrender.com/check';
 
 var _GRADING_FALLBACK_MESSAGES = {
-    'correct': 'Dung hoan toan',
-    'partial': 'Gan dung',
+    'correct': 'Đúng hoàn toàn',
+    'partial': 'Gần đúng',
     'wrong':   'Sai'
 };
 
@@ -27741,11 +27741,11 @@ function _formatGradingErrors(errors) {
     if (!errors || !errors.length) return '';
     return errors.map(function(e) {
         if (!e) return '';
-        if (e.type === 'wrong')   return '"' + (e.user || '') + '" thanh "' + (e.correct || '') + '"';
-        if (e.type === 'missing') return 'Thieu "' + (e.correct || '') + '"';
-        if (e.type === 'extra')   return 'Thua "' + (e.user || '') + '"';
+        if (e.type === 'wrong')   return '"' + (e.user || '') + '" thành "' + (e.correct || '') + '"';
+        if (e.type === 'missing') return 'Thiếu "' + (e.correct || '') + '"';
+        if (e.type === 'extra')   return 'Thừa "' + (e.user || '') + '"';
         return '';
-    }).filter(Boolean).join(' . ');
+    }).filter(Boolean).join(' · ');
 }
 
 async function gradeWithAPI(userAnswer, correctAnswer) {
@@ -27786,9 +27786,27 @@ window.gradeWithAPI = gradeWithAPI;
             document.querySelectorAll('[data-check-stt="' + stt0 + '"]').forEach(function(c) { c.innerHTML = ''; });
             return;
         }
+
+        /* Nếu user đang gõ đúng prefix đáp án → chưa chấm, chờ gõ tiếp */
+        var cleanUser = val.replace(/\s+/g, '');
+        var cleanAnswer = (answer || '').replace(/\s+/g, '');
+        var answerLen = cleanAnswer.length;
+        var userLen = cleanUser.length;
+        if (answerLen > 0 && userLen < answerLen) {
+            if (cleanAnswer.substring(0, userLen) === cleanUser) {
+                var stt0b = input.dataset.stt;
+                document.querySelectorAll('[data-check-stt="' + stt0b + '"]')
+                    .forEach(function(c) {
+                        c.innerHTML = '<span class="ai-reason">Đang gõ... (' +
+                                      userLen + '/' + answerLen + ')</span>';
+                    });
+                return;
+            }
+        }
+
         var stt = input.dataset.stt;
         var cells = document.querySelectorAll('[data-check-stt="' + stt + '"]');
-        cells.forEach(function(c) { c.innerHTML = '<span class="ai-reason">Dang cham...</span>'; });
+        cells.forEach(function(c) { c.innerHTML = '<span class="ai-reason">Đang chấm...</span>'; });
         var result = await gradeWithAPI(val, answer);
         if (!result) {
             if (typeof _origCheckInput === 'function') return _origCheckInput.call(this, input);
@@ -27807,46 +27825,75 @@ window.gradeWithAPI = gradeWithAPI;
         var detail = _formatGradingErrors(result.errors);
         if (detail) html += '<span class="ai-reason">' + detail + '</span>';
         var answerHtml = '<div class="answer-inline-display">' +
-            '<span class="answer-inline-label"><i class="fas fa-check-circle"></i> Dap an:</span>' +
+            '<span class="answer-inline-label"><i class="fas fa-check-circle"></i> Đáp án:</span>' +
             '<span class="answer-inline-text">' + escapeHtml(answer) + '</span>' +
             '</div>';
         cells.forEach(function(c) { c.innerHTML = html + answerHtml; });
     };
     console.log('[Grading] checkInput da override');
 })();
-
 (function() {
     var _origCheckFullAnswer = window.checkFullAnswer;
     var _pfGradeToken = 0;
     var _pfDebounceTimer = null;
+
     window.checkFullAnswer = function() {
         clearTimeout(_pfDebounceTimer);
         _pfDebounceTimer = setTimeout(function() { _doCheckFullAnswer(); }, 400);
     };
+
     async function _doCheckFullAnswer() {
         var input = document.getElementById('pfInput');
         var statusEl = document.getElementById('pfStatus');
         if (!input || !statusEl) return;
+
         var val = input.value.trim();
+
         if (!val) {
             statusEl.innerHTML = '';
             statusEl.className = 'practice-full-status';
             return;
         }
+
         var answer = (typeof pfCurrentAnswer !== 'undefined') ? pfCurrentAnswer : '';
         if (!answer) return;
+
+        /* Nếu user đang gõ đúng prefix đáp án → chưa chấm */
+        var cleanUser = val.replace(/\s+/g, '');
+        var cleanAnswer = answer.replace(/\s+/g, '');
+        var answerLen = cleanAnswer.length;
+        var userLen = cleanUser.length;
+
+        if (userLen < answerLen) {
+            var isPrefixCorrect = cleanAnswer.substring(0, userLen) === cleanUser;
+            if (isPrefixCorrect) {
+                statusEl.innerHTML = '<span class="ai-reason">Đang gõ... (' +
+                                     userLen + '/' + answerLen + ')</span>';
+                statusEl.className = 'practice-full-status';
+                return;
+            }
+        }
+
         var myToken = ++_pfGradeToken;
-        statusEl.innerHTML = '<span class="ai-reason">Dang cham...</span>';
+
+        statusEl.innerHTML = '<span class="ai-reason">Đang chấm...</span>';
         statusEl.className = 'practice-full-status';
+
         var result = await gradeWithAPI(val, answer);
+
         if (myToken !== _pfGradeToken) return;
         if (input.value.trim() !== val) return;
+
         if (!result) {
-            if (typeof _origCheckFullAnswer === 'function') return _origCheckFullAnswer.apply(this, arguments);
+            if (typeof _origCheckFullAnswer === 'function') {
+                return _origCheckFullAnswer.apply(this, arguments);
+            }
             return;
         }
+
         var msg = _normalizeGradingMessage(result);
         var html = '';
+
         if (result.status === 'correct') {
             html = '<span class="ai-correct">' + msg + '</span>';
             statusEl.className = 'practice-full-status correct';
@@ -27858,10 +27905,13 @@ window.gradeWithAPI = gradeWithAPI;
             html = '<span class="ai-wrong">' + msg + '</span>';
             statusEl.className = 'practice-full-status wrong';
         }
+
         var detail = _formatGradingErrors(result.errors);
         if (detail) html += '<span class="ai-reason">' + detail + '</span>';
+
         statusEl.innerHTML = html;
     }
+
     console.log('[Grading] checkFullAnswer da override');
 })();
 
