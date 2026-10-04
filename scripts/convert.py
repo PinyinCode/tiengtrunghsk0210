@@ -937,6 +937,9 @@ full_body = (
 # ═══════════════════════════════════════════════════════════════════
 #  🎯 GRADING API — Chấm điểm qua Render
 # ═══════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════════
+#  🎯 GRADING API — Chấm điểm qua Render
+# ═══════════════════════════════════════════════════════════════════
 def _build_grading_js():
     return r"""
 /* ═══════════════════════════════════════════════════════════ */
@@ -1002,11 +1005,11 @@ window.gradeWithAPI = gradeWithAPI;
 
         cells.forEach(function(c) {
             c.innerHTML = '<span class="ai-reason">Đang chấm...</span>';
-       );
+        });
 
- });
+        var result = await gradeWithAPI(val, answer);
 
-        var result = await gradeWithAPI(val, answer        if (!result) {
+        if (!result) {
             if (typeof _origCheckInput === 'function') {
                 return _origCheckInput.call(this, input);
             }
