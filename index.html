@@ -3289,46 +3289,54 @@ body.practice-full-open .pf-tiktok-float {
 /* ═══════════════════════════════════════════════════════════ */
 /* NÚT TỔNG HỢP — Tự resize chữ để vừa ô, không mất nội dung   */
 /* ═══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════ */
+/* NÚT TỔNG HỢP — Tối đa 2 dòng, tự co chữ để vừa ô            */
+/* ═══════════════════════════════════════════════════════════ */
 .ds-btn[data-dataset="tonghop"] {
     min-height: 64px;
+    max-height: 64px;
     align-items: center;
-    line-height: 1.3;
-    padding: .55rem .7rem;
-    container-type: inline-size;
-    container-name: ds-tonghop;
+    line-height: 1.25;
+    padding: .5rem .65rem;
+    overflow: hidden;
 }
 
-.ds-btn[data-dataset="tonghop"] > span {
-    display: block;
-    flex: 1;
-    min-width: 0;
+.ds-btn)[data-dataset="tong {hop"] > span {
+    flex ...: 1;
+    min-width: } 0;
+
+    /* ⭐ Gi`
+ới hạn CỨNG   2 dòng, dùng ellipsis nếu vượt */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
     white-space: normal;
     word-break: break-word;
     overflow-wrap: anywhere;
     text-align: left;
-    line-height: 1.3;
-    font-size: clamp(0.7rem, 2.4cqw, 0.85rem);
-}
 
-@supports not (font-size: 1cqw) {
-    .ds-btn[data-dataset="tonghop"] > span {
-        font-size: clamp(.68rem, 1.7vw, .82rem);
-    }
+    /* ⭐ Font nhỏ hơn để vừa 2 dòng */
+    font-size: clamp(0.68rem, 1.6vw, 0.82rem);
+    line-height: 1.25;
 }
 
 @media (max-width: 500px) {
     .ds-btn[data-dataset="tonghop"] {
         min-height: 58px;
-        padding: .5rem .6rem;
+        max-height: 58px;
+        padding: .45rem .55rem;
     }
     .ds-btn[data-dataset="tonghop"] > span {
-        font-size: clamp(.65rem, 2.2cqw, .78rem);
+        font-size: clamp(0.62rem, 3vw, 0.74rem);
     }
 }
 
 @media (min-width: 501px) and (max-width: 768px) {
     .ds-btn[data-dataset="tonghop"] > span {
-        font-size: clamp(.7rem, 1.9cqw, .82rem);
+        font-size: clamp(0.68rem, 1.8vw, 0.78rem);
     }
 }
 
