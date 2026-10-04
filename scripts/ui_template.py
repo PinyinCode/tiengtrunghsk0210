@@ -3756,13 +3756,13 @@ function initDatasetSelector() {
                  || (DATASET_REGISTRY.tonghop.data || []).length;
         labelEl.innerHTML = count + '+ Câu phản xạ<br>Văn phòng - Công xưởng';
         labelEl.title = 'Văn phòng - Công xưởng';
-        // ⭐ Auto-fit font sau khi DOM render
-        // Đợi 2 frame cho layout ổn định rồi mới đo
-requestAnimationFrame(function() {
-    requestAnimationFrame(function() {
-        autoFitLabel(labelEl);
-    });
-});
+        // ⭐ Auto-fit font sau khi DOM render (đợi 2 frame cho layout ổn định)
+        requestAnimationFrame(function() {
+            requestAnimationFrame(function() {
+                autoFitLabel(labelEl);
+            });
+        });
+    }
 
     var chuyenNganhKeys = Object.keys(DATASET_REGISTRY).filter(function(id) {
         return id !== 'tonghop';
