@@ -27717,45 +27717,28 @@ window.gradeWithAPI = gradeWithAPI;
 
 /* ==== 🎯 GRADING API ==== */
 
-/* ============================================================ */
-/* GRADING API - Cham diem qua Render                           */
-/* ============================================================ */
 var GRADING_API_URL = 'https://chinese-grading.onrender.com/check';
 
-/* ============================================================ */
-/* HELPER: Chuan hoa message tu server ve tieng Viet co dau     */
-/* ============================================================ */
 var _GRADING_FALLBACK_MESSAGES = {
     'correct': 'Dung hoan toan',
     'partial': 'Gan dung',
     'wrong':   'Sai'
 };
 
-var _VIETNAMESE_DIACRITICS_REGEX =
-    /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i;
+var _VIETNAMESE_DIACRITICS_REGEX = /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i;
 
 function _normalizeGradingMessage(result) {
     if (!result) return 'Sai';
-
     var serverMsg = (result.message || '').trim();
     var status = result.status || 'wrong';
     var fallback = _GRADING_FALLBACK_MESSAGES[status] || 'Sai';
-
     if (!serverMsg) return fallback;
-
-    if (_VIETNAMESE_DIACRITICS_REGEX.test(serverMsg)) {
-        return serverMsg;
-    }
-
+    if (_VIETNAMESE_DIACRITICS_REGEX.test(serverMsg)) return serverMsg;
     return fallback;
 }
 
-/* ============================================================ */
-/* HELPER: Chuan hoa chi tiet loi (errors array)                */
-/* =(err=========================================================== */
-function _formatGradingErrorsors) {
+function _formatGradingErrors(errors) {
     if (!errors || !errors.length) return '';
-
     return errors.map(function(e) {
         if (!e) return '';
         if (e.type === 'wrong')   return '"' + (e.user || '') + '" thanh "' + (e.correct || '') + '"';
@@ -27765,14 +27748,10 @@ function _formatGradingErrorsors) {
     }).filter(Boolean).join(' . ');
 }
 
-/* ============================================================ */
-/* HAM CHINH: Goi API cham diem                                 */
-/* ============================================================ */
 async function gradeWithAPI(userAnswer, correctAnswer) {
     try {
         var controller = new AbortController();
         var timeoutId = setTimeout(function() { controller.abort(); }, 15000);
-
         var res = await fetch(GRADING_API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -27782,11 +27761,9 @@ async function gradeWithAPI(userAnswer, correctAnswer) {
             }),
             signal: controller.signal
         });
-
         clearTimeout(timeoutId);
         if (!res.ok) return null;
         return await res.json();
-
     } catch(e) {
         console.warn('[Grading] API error:', e);
         return null;
@@ -27794,51 +27771,31 @@ async function gradeWithAPI(userAnswer, correctAnswer) {
 }
 window.gradeWithAPI = gradeWithAPI;
 
-/* ============================================================ */
-/* OVERRIDE checkInput - Card trang chinh                       */
-/* ============================================================ */
 (function() {
     var _origCheckInput = window.checkInput;
-
     window.checkInput = async function(input) {
         var answer = input.dataset.answer;
         var val = input.value.trim();
-
-        if (typeof updateInlinePreview === 'function') {
-            updateInlinePreview(input, answer);
-        }
-
+        if (typeof updateInlinePreview === 'function') updateInlinePreview(input, answer);
         var wrap = input.closest('.card-practice');
         var btn = wrap ? wrap.querySelector('.toggle-check-btn') : null;
         var isVisible = btn && btn.dataset.visible === '1';
         if (!isVisible) return;
-
         if (!val) {
             var stt0 = input.dataset.stt;
-            document.querySelectorAll('[data-check-stt="' + stt0 + '"]')
-                .forEach(function(c) { c.innerHTML = ''; });
+            document.querySelectorAll('[data-check-stt="' + stt0 + '"]').forEach(function(c) { c.innerHTML = ''; });
             return;
         }
-
         var stt = input.dataset.stt;
         var cells = document.querySelectorAll('[data-check-stt="' + stt + '"]');
-
-        cells.forEach(function(c) {
-            c.innerHTML = '<span class="ai-reason">Dang cham...</span>';
-        });
-
+        cells.forEach(function(c) { c.innerHTML = '<span class="ai-reason">Dang cham...</span>'; });
         var result = await gradeWithAPI(val, answer);
-
         if (!result) {
-            if (typeof _origCheckInput === 'function') {
-                return _origCheckInput.call(this, input);
-            }
+            if (typeof _origCheckInput === 'function') return _origCheckInput.call(this, input);
             return;
         }
-
         var msg = _normalizeGradingMessage(result);
         var html = '';
-
         if (result.status === 'correct') {
             html = '<span class="ai-correct">' + msg + '</span>';
         } else if (result.status === 'partial') {
@@ -27847,72 +27804,49 @@ window.gradeWithAPI = gradeWithAPI;
         } else {
             html = '<span class="ai-wrong">' + msg + '</span>';
         }
-
         var detail = _formatGradingErrors(result.errors);
         if (detail) html += '<span class="ai-reason">' + detail + '</span>';
-
         var answerHtml = '<div class="answer-inline-display">' +
             '<span class="answer-inline-label"><i class="fas fa-check-circle"></i> Dap an:</span>' +
             '<span class="answer-inline-text">' + escapeHtml(answer) + '</span>' +
             '</div>';
-
         cells.forEach(function(c) { c.innerHTML = html + answerHtml; });
     };
-
-    console.log('[Grading] checkInput da override dung API');
+    console.log('[Grading] checkInput da override');
 })();
 
-/* ============================================================ */
-/* OVERRIDE checkFullAnswer - Practice Full mode                */
-/* ============================================================ */
 (function() {
     var _origCheckFullAnswer = window.checkFullAnswer;
     var _pfGradeToken = 0;
     var _pfDebounceTimer = null;
-
     window.checkFullAnswer = function() {
         clearTimeout(_pfDebounceTimer);
-        _pfDebounceTimer = setTimeout(function() {
-            _doCheckFullAnswer();
-        }, 400);
+        _pfDebounceTimer = setTimeout(function() { _doCheckFullAnswer(); }, 400);
     };
-
     async function _doCheckFullAnswer() {
         var input = document.getElementById('pfInput');
         var statusEl = document.getElementById('pfStatus');
         if (!input || !statusEl) return;
-
         var val = input.value.trim();
-
         if (!val) {
             statusEl.innerHTML = '';
             statusEl.className = 'practice-full-status';
             return;
         }
-
         var answer = (typeof pfCurrentAnswer !== 'undefined') ? pfCurrentAnswer : '';
         if (!answer) return;
-
         var myToken = ++_pfGradeToken;
-
         statusEl.innerHTML = '<span class="ai-reason">Dang cham...</span>';
         statusEl.className = 'practice-full-status';
-
         var result = await gradeWithAPI(val, answer);
-
         if (myToken !== _pfGradeToken) return;
         if (input.value.trim() !== val) return;
-
         if (!result) {
-            if (typeof _origCheckFullAnswer === 'function') {
-                return _origCheckFullAnswer.apply(this, arguments);
-            }
+            if (typeof _origCheckFullAnswer === 'function') return _origCheckFullAnswer.apply(this, arguments);
             return;
         }
-
         var msg = _normalizeGradingMessage(result);
         var html = '';
-
         if (result.status === 'correct') {
             html = '<span class="ai-correct">' + msg + '</span>';
             statusEl.className = 'practice-full-status correct';
@@ -27924,14 +27858,11 @@ window.gradeWithAPI = gradeWithAPI;
             html = '<span class="ai-wrong">' + msg + '</span>';
             statusEl.className = 'practice-full-status wrong';
         }
-
         var detail = _formatGradingErrors(result.errors);
         if (detail) html += '<span class="ai-reason">' + detail + '</span>';
-
         statusEl.innerHTML = html;
     }
-
-    console.log('[Grading] checkFullAnswer da override dung API');
+    console.log('[Grading] checkFullAnswer da override');
 })();
 
 
