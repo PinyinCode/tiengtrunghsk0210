@@ -64,7 +64,7 @@ DEFAULT_CONFIG = {
 
 
 # =================================================================
-#  CSS MỚI — 2 HÀNG GỌN + FIX CLICK
+#  CSS MỚI — 2 HÀNG GỌN
 # =================================================================
 BUTTONS_CSS = r"""
 /* ═══════════════════════════════════════════════════════════ */
@@ -90,7 +90,7 @@ BUTTONS_CSS = r"""
     align-items: center;
     gap: .65rem;
     padding: .7rem .8rem;
-    min-height: 68px;
+    min-height: 68px;             /* ⭐ TĂNG TỪ 60 → 68 */
     height: 100%;
     border: 1.5px solid var(--border);
     border-radius: 12px;
@@ -147,6 +147,7 @@ BUTTONS_CSS = r"""
     color: var(--text);
     line-height: 1.2;
     letter-spacing: -.01em;
+    /* ⭐ Cho phép 2 dòng */
     white-space: normal;
     overflow: hidden;
     display: -webkit-box;
@@ -302,6 +303,15 @@ BUTTONS_CSS = r"""
 .ds-btn[data-dataset-group="favorites"].active .ds-btn-title b,
 .ds-btn[data-dataset-group="favorites"].active .ds-btn-sub { color: #fff; }
 
+/* ⭐ NÚT YÊU THÍCH — Đảm bảo click được */
+.ds-btn[data-dataset-group="favorites"] > i,
+.ds-btn[data-dataset-group="favorites"] .ds-fav-badge,
+.ds-btn[data-dataset-group="favorites"] .ds-fav-lock,
+.ds-btn[data-dataset-group="favorites"]::before,
+.ds-btn[data-dataset-group="favorites"]::after {
+    pointer-events: none !important;
+}
+
 /* ═══ DARK MODE ═══ */
 [data-theme="dark"] .ds-btn .ds-btn-icon {
     background: linear-gradient(135deg, rgba(99,102,241,.28), rgba(139,92,246,.18));
@@ -336,79 +346,6 @@ BUTTONS_CSS = r"""
     }
     .ds-btn .ds-btn-title { font-size: .76rem; }
     .ds-btn .ds-btn-sub   { font-size: .6rem; }
-}
-
-/* ═══════════════════════════════════════════════════════════ */
-/* ⭐⭐⭐ FIX CLICK — CHUYÊN NGÀNH + YÊU THÍCH BẤM ĐƯỢC ⭐⭐⭐ */
-/* ═══════════════════════════════════════════════════════════ */
-
-/* ── Nút CHUYÊN NGÀNH — nhận click ── */
-.ds-btn[data-dataset-group="chuyen-nganh"] {
-    pointer-events: auto !important;
-    cursor: pointer !important;
-    z-index: 10 !important;
-}
-.ds-btn[data-dataset-group="chuyen-nganh"] > .ds-btn-text,
-.ds-btn[data-dataset-group="chuyen-nganh"] > span:not(.ds-new-badge) {
-    pointer-events: auto !important;
-    z-index: 20 !important;
-    position: relative !important;
-}
-.ds-btn[data-dataset-group="chuyen-nganh"] > .ds-btn-text * {
-    pointer-events: auto !important;
-}
-.ds-btn[data-dataset-group="chuyen-nganh"] > i,
-.ds-btn[data-dataset-group="chuyen-nganh"] > i.ds-btn-icon,
-.ds-btn[data-dataset-group="chuyen-nganh"] > i.ds-arrow,
-.ds-btn[data-dataset-group="chuyen-nganh"] > .ds-new-badge,
-.ds-btn[data-dataset-group="chuyen-nganh"]::before,
-.ds-btn[data-dataset-group="chuyen-nganh"]::after {
-    pointer-events: none !important;
-}
-
-/* ── Nút YÊU THÍCH — nhận click ── */
-.ds-btn[data-dataset-group="favorites"] {
-    pointer-events: auto !important;
-    cursor: pointer !important;
-    z-index: 10 !important;
-}
-.ds-btn[data-dataset-group="favorites"] > .ds-btn-text,
-.ds-btn[data-dataset-group="favorites"] > span:not(.ds-fav-badge):not(.ds-fav-lock) {
-    pointer-events: auto !important;
-    z-index: 20 !important;
-    position: relative !important;
-}
-.ds-btn[data-dataset-group="favorites"] > .ds-btn-text * {
-    pointer-events: auto !important;
-}
-.ds-btn[data-dataset-group="favorites"] > i,
-.ds-btn[data-dataset-group="favorites"] > i.ds-btn-icon,
-.ds-btn[data-dataset-group="favorites"] > .ds-fav-badge,
-.ds-btn[data-dataset-group="favorites"] > .ds-fav-lock,
-.ds-btn[data-dataset-group="favorites"]::before,
-.ds-btn[data-dataset-group="favorites"]::after {
-    pointer-events: none !important;
-}
-
-/* ── Đảm bảo CHUNG cho mọi nút trong .ds-main-row ── */
-.ds-main-row > .ds-btn {
-    pointer-events: auto !important;
-    cursor: pointer !important;
-}
-.ds-main-row > .ds-btn > .ds-btn-text {
-    pointer-events: auto !important;
-    z-index: 20 !important;
-}
-.ds-main-row > .ds-btn > .ds-btn-text * {
-    pointer-events: auto !important;
-}
-.ds-main-row > .ds-btn > i,
-.ds-main-row > .ds-btn > i.ds-btn-icon,
-.ds-main-row > .ds-btn > .ds-arrow,
-.ds-main-row > .ds-btn > .ds-new-badge,
-.ds-main-row > .ds-btn > .ds-fav-badge,
-.ds-main-row > .ds-btn > .ds-fav-lock {
-    pointer-events: none !important;
 }
 """
 
@@ -460,8 +397,8 @@ def build_button_html(config_key, extra=None):
         data_attr = 'data-dataset="' + cfg["dataset_id"] + '"'
     elif config_key == "chuyen-nganh":
         data_attr = 'data-dataset-group="chuyen-nganh"'
-    elif config_key == ' "favorites":
-        data_attr = '               data-dataset-group="favorites"'
+    elif config_key == "favorites":
+        data_attr = 'data-dataset-group="favorites"'
     else:
         data_attr = 'data-dataset="' + config_key + '"'
 
@@ -479,7 +416,7 @@ def build_button_html(config_key, extra=None):
         + icon_html +
         '            <span class="ds-btn-text">\n'
         '                <span class="ds-btn-title">' + title + '</span>\n'
-        <span class="ds-btn-sub">' + sub + '</span>\n'
+        '                <span class="ds-btn-sub">' + sub + '</span>\n'
         '            </span>\n'
         '            ' + extra_html + '\n'
         '        </button>'
@@ -490,20 +427,13 @@ def build_button_html(config_key, extra=None):
 #  PATCHERS
 # =================================================================
 def patch_css(html):
-    """
-    Chèn CSS mới — LUÔN XÓA CSS CŨ TRƯỚC (không dùng marker check).
-    Đảm bảo chạy nhiều lần vẫn cập nhật CSS mới.
-    """
-    # ⭐ XÓA CSS PATCH_BUTTONS CŨ (nếu có)
-    pat_old = re.compile(
-        r'/\* ═+ \*/\s*/\* PATCH_BUTTONS: DATASET BUTTONS.*?(?=</style>)',
-        re.DOTALL
-    )
-    html, n_removed = pat_old.subn('', html)
-    if n_removed > 0:
-        print("   [clean] Da xoa " + str(n_removed) + " block CSS cu")
+    """Chèn CSS mới vào trước </style> (idempotent)."""
+    MARKER = "/* PATCH_BUTTONS: DATASET BUTTONS — 2 HÀNG GỌN"
 
-    # ⭐ CHÈN CSS MỚI
+    if MARKER in html:
+        print("   [skip CSS] Da co patch_buttons CSS")
+        return html
+
     pat = re.compile(r'(\s*)(</style>)', re.MULTILINE)
     html, n = pat.subn(
         lambda m: m.group(1) + BUTTONS_CSS + m.group(1) + m.group(2),
@@ -512,7 +442,7 @@ def patch_css(html):
     if n == 0:
         print("   [!] Khong tim thay </style>")
     else:
-        print("   [OK CSS] Da chen CSS fix click")
+        print("   [OK CSS] Da chen CSS 2 hang gon")
     return html
 
 
