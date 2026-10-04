@@ -5244,4 +5244,32 @@ window.favFilterCount = favFilterCount;
     window.favResetOnFullClose = favResetOnFullClose;
 
 })();
+
+/* ⭐ FIX CUỐI — Auto-clear active Yêu thích */
+(function() {
+    'use strict';
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.ds-btn, .ds-sub-btn');
+        if (!btn) return;
+
+        if (btn.id === 'dsFavBtn'
+            || btn.getAttribute('data-dataset-group') === 'favorites') {
+            return;
+        }
+
+        var favTab = document.getElementById('dsFavBtn');
+        if (favTab) favTab.classList.remove('active');
+
+        var favDd = document.getElementById('dsFavDropdownItem');
+        if (favDd) favDd.classList.remove('active');
+
+        if (typeof favState !== 'undefined' && favState.currentView) {
+            if (typeof favExitFilterMode === 'function') {
+                favExitFilterMode();
+            }
+        }
+    }, true);
+
+    console.log('✅ [Favorites] Auto-clear active khi bấm nút khác');
+})();
 """
