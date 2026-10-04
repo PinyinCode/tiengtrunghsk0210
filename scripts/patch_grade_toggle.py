@@ -323,49 +323,61 @@ def patch_css(ui_css):
 }
 
 /* ═══════════════════════════════════════════════════════════
-   Nút info ⓘ + Modal mẹo nhớ
+   Nút "Xem" bầu dục + Modal mẹo nhớ
    ═══════════════════════════════════════════════════════════ */
 
-/* Nút ⓘ nhỏ cạnh chữ Hán */
+/* Nút bầu dục đỏ "💡 Xem" */
 .ai-reason .err-info-btn {
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    width: 1.15em !important;
-    height: 1.15em !important;
-    margin: 0 .25em !important;
-    padding: 0 !important;
-    border: 1.5px solid var(--primary, #2563eb) !important;
-    border-radius: 50% !important;
-    background: transparent !important;
-    color: var(--primary, #2563eb) !important;
-    font-size: .65rem !important;
-    font-weight: 900 !important;
+    gap: .25rem !important;
+    padding: .35rem .7rem !important;
+    margin: 0 .35rem !important;
+    border: none !important;
+    border-radius: 50px !important;
+    background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+    color: #fff !important;
+    font-size: .72rem !important;
+    font-weight: 700 !important;
     font-family: inherit !important;
     line-height: 1 !important;
     cursor: pointer !important;
-    transition: all .15s ease !important;
+    transition: all .2s cubic-bezier(.34, 1.56, .64, 1) !important;
     flex-shrink: 0 !important;
     vertical-align: middle !important;
-    position: relative !important;
-    top: -2px !important;
+    box-shadow: 0 3px 10px rgba(220, 38, 38, .4),
+                inset 0 1px 0 rgba(255, 255, 255, .25) !important;
+    white-space: nowrap !important;
+    text-transform: uppercase !important;
+    letter-spacing: .3px !important;
+    min-width: 58px !important;
+    height: 26px !important;
+}
+.ai-reason .err-info-btn i {
+    font-size: .8rem !important;
+    line-height: 1 !important;
 }
 .ai-reason .err-info-btn:hover {
-    background: var(--primary, #2563eb) !important;
-    color: #fff !important;
-    transform: scale(1.15) !important;
-    box-shadow: 0 2px 6px rgba(37, 99, 235, .4) !important;
+    background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+    transform: translateY(-2px) scale(1.05) !important;
+    box-shadow: 0 6px 16px rgba(220, 38, 38, .6),
+                inset 0 1px 0 rgba(255, 255, 255, .3) !important;
 }
 .ai-reason .err-info-btn:active {
-    transform: scale(.95) !important;
+    transform: translateY(0) scale(.97) !important;
+    box-shadow: 0 2px 6px rgba(220, 38, 38, .5) !important;
 }
 [data-theme="dark"] .ai-reason .err-info-btn {
-    border-color: #93c5fd !important;
-    color: #93c5fd !important;
+    background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+    color: #fff !important;
+    box-shadow: 0 3px 12px rgba(239, 68, 68, .55),
+                inset 0 1px 0 rgba(255, 255, 255, .2) !important;
 }
 [data-theme="dark"] .ai-reason .err-info-btn:hover {
-    background: #93c5fd !important;
-    color: #1e293b !important;
+    background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+    box-shadow: 0 6px 18px rgba(239, 68, 68, .75),
+                inset 0 1px 0 rgba(255, 255, 255, .3) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -401,12 +413,13 @@ def patch_css(ui_css):
     overflow-y: auto !important;
     padding: 1.25rem !important;
     box-shadow: 0 24px 70px rgba(0, 0, 0, .4) !important;
-    animation: mnemonicSlideUp .35s cubic-bezier(.34, 1.56, .64, 1) !important;
+    animation: mnemonicSlideUp .35s cubic-bezier(.34, 1.56, .64, 1) ! !important;
     position: relative !important;
 }
-@keyframes mnemonicSlideUp {
-    from { transform: translateY(30px) scale(.95); opacity: 0; }
-    to   { transform: translateY(0) scale(1); opacity: 1; }
+important@keyframes mnemonicSlideUp {
+    from;
+ { transform: translateY(30px   ) scale(.95); opacity: 0 font; }
+    to   { transform: translateY(-style0) scale(1); opacity: 1; }
 }
 
 .mnemonic-loading {
@@ -448,8 +461,7 @@ def patch_css(ui_css):
     flex-shrink: 0 !important;
 }
 .mnemonic-pinyin {
-    font-size: 1rem !important;
-    font-style: italic !important;
+    font-size: 1rem: italic !important;
     color: var(--text-3, #94a3b8) !important;
     font-weight: 500 !important;
 }
@@ -653,6 +665,16 @@ def patch_css(ui_css):
 
 /* Mobile */
 @media (max-width: 500px) {
+    .ai-reason .err-info-btn {
+        padding: .3rem .55rem !important;
+        font-size: .68rem !important;
+        min-width: 50px !important;
+        height: 24px !important;
+        gap: .2rem !important;
+    }
+    .ai-reason .err-info-btn i {
+        font-size: .75rem !important;
+    }
     .mnemonic-box {
         padding: 1rem !important;
         border-radius: 14px !important;
