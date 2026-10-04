@@ -11812,33 +11812,40 @@ function showPracticeFullLockMessage() {
     }
 }
 /* ⭐ Auto-fit font-size cho label — tránh bị cắt nội dung */
+/* ⭐ Auto-fit font-size cho label — thu nhỏ để hiển thị ĐỦ nội dung */
 function autoFitLabel(el) {
     if (!el) return;
     var parent = el.closest('.ds-btn') || el.parentElement;
     if (!parent) return;
 
-    var maxSize = 14;
-    var minSize = 9;
+    // Reset về max trước khi đo
+    var maxSize = 13;
+    var minSize = 8;
     var size = maxSize;
 
-    el.style.fontSize = size + 'px';
+    // Đo bằng cách set font size tăng dần rồi kiểm tra overflow
+    el.style.fontSize = maxSize + 'px';
 
+    // Giảm dần cho đến khi không còn overflow
     var safety = 0;
-    while (safety < 30 && size > minSize) {
-        var overflow = el.scrollHeight > parent.clientHeight - 8
-                    || el.scrollWidth > parent.clientWidth - 8;
-        if (!overflow) break;
-        size -= 0.5;
+    while (safety < 40 && size > minSize) {
+        // Đo chiều cao thực của span so với parent
+        var spanH = el.scrollHeight;
+        var parentH = parent.clientHeight;
+        var padTop = parseFloat(getComputedStyle(parent).paddingTop) || 0;
+        var padBot = parseFloat(getComputedStyle(parent).paddingBottom) || 0;
+        var availableH = parentH - padTop - padBot - 2;
+
+        var overflowH = spanH > availableH;
+        var overflowW = el.scrollWidth > el.clientWidth + 2;
+
+        if (!overflowH && !overflowW) break;
+
+        size -= 0.3;
         el.style.fontSize = size + 'px';
         safety++;
     }
 }
-
-// ⭐ Re-fit khi resize window
-window.addEventListener('resize', function() {
-    var labelEl = document.getElementById('dsTonghopLabel');
-    if (labelEl) autoFitLabel(labelEl);
-});
 /* ============================================================ */
 /* DATASET SWITCHING                                             */
 /* ============================================================ */
@@ -11856,8 +11863,12 @@ function initDatasetSelector() {
         labelEl.innerHTML = count + '+ Câu phản xạ<br>Văn phòng - Công xưởng';
         labelEl.title = 'Văn phòng - Công xưởng';
         // ⭐ Auto-fit font sau khi DOM render
-        setTimeout(function() { autoFitLabel(labelEl); }, 100);
-    }
+        // Đợi 2 frame cho layout ổn định rồi mới đo
+requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+        autoFitLabel(labelEl);
+    });
+});
 
     var chuyenNganhKeys = Object.keys(DATASET_REGISTRY).filter(function(id) {
         return id !== 'tonghop';
