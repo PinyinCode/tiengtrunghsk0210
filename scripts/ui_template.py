@@ -3756,7 +3756,8 @@ function initDatasetSelector() {
                  || (DATASET_REGISTRY.tonghop.data || []).length;
         labelEl.innerHTML = count + '+ Câu phản xạ<br>Văn phòng - Công xưởng';
         labelEl.title = 'Văn phòng - Công xưởng';
-        // ⭐ Auto-fit font sau khi DOM render (đợi 2 frame cho layout ổn định)
+        // ⭐ Auto-fit font sau khi DOM render
+        // Đợi 2 frame cho layout ổn định rồi mới đo
         requestAnimationFrame(function() {
             requestAnimationFrame(function() {
                 autoFitLabel(labelEl);
@@ -3837,7 +3838,6 @@ function initDatasetSelector() {
             var sub = $('dsSubWrap');
             if (sub) sub.style.display = 'none';
 
-            /* Bỏ active TẤT CẢ tab */
             document.querySelectorAll('.ds-btn').forEach(function(b) {
                 b.classList.remove('active');
             });
@@ -3847,7 +3847,6 @@ function initDatasetSelector() {
 
     /* ═══════════════════════════════════════════════════════════
        NÚT CHUYÊN NGÀNH — Click để mở/đóng dropdown
-       Khi mở → bỏ active TẤT CẢ tab khác (Tổng hợp + Yêu thích)
        ═══════════════════════════════════════════════════════════ */
     if (cnBtn && !cnBtn.__boundToggle) {
         cnBtn.__boundToggle = true;
@@ -3856,11 +3855,9 @@ function initDatasetSelector() {
             if (!sub) return;
             var isOpen = sub.style.display !== 'none';
             if (isOpen) {
-                /* Đóng dropdown → bỏ active nút CN */
                 sub.style.display = 'none';
                 cnBtn.classList.remove('active');
             } else {
-                /* Mở dropdown → active nút CN, bỏ active TẤT CẢ tab khác */
                 sub.style.display = 'block';
 
                 document.querySelectorAll('.ds-btn').forEach(function(b) {
@@ -3891,7 +3888,6 @@ function initDatasetSelector() {
             this.classList.add('active');
             switchDataset(id);
 
-            /* Bỏ active TẤT CẢ tab chính, chỉ giữ nút CN active */
             document.querySelectorAll('.ds-btn').forEach(function(b) {
                 b.classList.remove('active');
             });
