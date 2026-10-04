@@ -406,32 +406,31 @@ function _formatGradingErrors(errors) {
         return py ? '<span class="err-pinyin">' + escapeHtml(py) + '</span>' : '';
     };
     var ARROW = '<span class="err-arrow">→</span>';
+    var SEP = '<span class="err-sep">·</span>';
 
     return errors.map(function(e, idx) {
         if (!e) return '';
 
+        /* Ưu tiên input_position (vị trí thật trong câu user gõ) */
         var targetIdx = (typeof e.input_position === 'number')
                         ? e.input_position
                         : idx;
 
-        var inner = '';
-
         if (e.type === 'wrong') {
-            inner = HANZI(e.user || '', targetIdx) + PINYIN(e.user_pinyin) +
-                    ARROW +
-                    HANZI(e.correct || '', targetIdx) + PINYIN(e.correct_pinyin);
-        } else if (e.type === 'missing') {
-            inner = '<span class="err-label">Thiếu</span> ' +
-                    HANZI(e.correct || '', targetIdx) + PINYIN(e.correct_pinyin);
-        } else if (e.type === 'extra') {
-            inner = '<span class="err-label">Thừa</span> ' +
-                    HANZI(e.user || '', targetIdx) + PINYIN(e.user_pinyin);
-        } else {
-            return '';
+            return HANZI(e.user || '', targetIdx) + PINYIN(e.user_pinyin) +
+                   ARROW +
+                   HANZI(e.correct || '', targetIdx) + PINYIN(e.correct_pinyin);
         }
-
-        return '<span class="err-item">' + inner + '</span>';
-    }).filter(Boolean).join('');
+        if (e.type === 'missing') {
+            return '<span class="err-label">Thiếu</span> ' +
+                   HANZI(e.correct || '', targetIdx) + PINYIN(e.correct_pinyin);
+        }
+        if (e.type === 'extra') {
+            return '<span class="err-label">Thừa</span> ' +
+                   HANZI(e.user || '', targetIdx) + PINYIN(e.user_pinyin);
+        }
+        return '';
+    }).filter(Boolean).join(SEP);
 }
 
 async function gradeWithAPI(userAnswer, correctAnswer) {
@@ -609,32 +608,25 @@ window.gradeWithAPI = gradeWithAPI;
         var statusEl = document.getElementById('pfStatus');
         if (!statusEl) return;
 
-        statusEl.querySelectorAll('.err-item.highlight').forEach(function(el) {
-            el.classList.remove('highlight');
-        });
+        statusEl.querySelectorAll('.err-hanzi.highlight, .err-pinyin.highlight')
+            .forEach(function(el) {
+                el.classList.remove('highlight');
+            });
 
         var targets = statusEl.querySelectorAll('.err-hanzi[data-error-idx="' + idx + '"]');
         if (!targets.length) return;
 
-        var itemsToHighlight = new Set();
-        targets.forEach(function(t) {
-            var item = t.closest('.err-item');
-            if (item) itemsToHighlight.add(item);
+        targets.forEach(function(target) {
+            target.classList.add('highlight');
+
+            var next = target.nextElementSibling;
+            if (next && next.classList.contains('err-pinyin')) {
+                next.classList.add('highlight');
+            }
         });
 
-        if (itemsToHighlight.size === 0) return;
-
-        itemsToHighlight.forEach(function(item) {
-            item.classList.add('highlight');
-        });
-
-()        var firstItem = itemsToHighlight.values().next().value {
-;
-        try {
-            firstItem.scrollIntoView           ({ behavior: 'smooth', block: 'ne statusarest' });
-        } catch(e) {}
-
-        setTimeoutEl(function.querySelectorAll('.err-item.highlight').forEach(function(el) {
+        setTimeout(function() {
+            statusEl.querySelectorAll('.highlight').forEach(function(el) {
                 el.classList.remove('highlight');
             });
         }, 2000);
@@ -674,6 +666,10 @@ full_js = (
 full_js = full_js.replace('<script>', '').replace('</script>', '')
 full_js = full_js.replace('<SCRIPT>', '').replace('</SCRIPT>', '')
 
+# Fix: đảm bảo không có thẻ script lồng trong full_js
+full_js = full_js.replace('</script>', '')
+full_js = full_js.replace('</SCRIPT>', '')
+
 
 HTML_SHELL = r'''<!DOCTYPE html>
 <html lang="vi">
@@ -699,6 +695,7 @@ __CSS__
 __BODY__
 
 <script>
+/* ============ DATA + CONFIG ============ */
 var RAW_DATA = __DATA__;
 var DATASET_REGISTRY = __DATASET_REGISTRY__;
 var CURRENT_DATASET = 'tonghop';
@@ -792,17 +789,17 @@ window.__switchRawData = function(datasetId) {
 html_output = (HTML_SHELL
     .replace("__CSS__",  full_css)
     .replace("__BODY__", full_body)
-    .replace("__JS__("",   full_js)
-    .treplace("__DATA__",              json_datarial)
-    .replace("__DATASET_REG_maxISTRY__",  dataset_registry_json_)
-    .replace("__FIREBASE_CONFIG__",  questions firebase_config_json)
+    .replace("__JS__",   full_js)
+    .replace("__DATA__",              json_data)
+    .replace("__DATASET_REGISTRY__",  dataset_registry_json)
+    .replace("__FIREBASE_CONFIG__",   firebase_config_json)
     .replace("__SYNONYMS__",          synonyms_json)
     .replace("__FILLER_WORDS__",      fillers_json)
     .replace("__ONBOARDING_CONFIG__", onboarding_config_json)
     .replace("__DEMO_LIMIT__",            str(int(CONFIG["demo_limit"])))
     .replace("__DEMO_DAILY_LIMIT__",      str(int(CONFIG["demo_daily_limit"])))
     .replace("__DEMO_HSK_MAX__",          str(int(CONFIG["demo_hsk_max"])))
-    .replace("__TRIAL_MAX_QUESTIONS__",   str(int(CONFIG.get", 50))))
+    .replace("__TRIAL_MAX_QUESTIONS__",   str(int(CONFIG.get("trial_max_questions", 50))))
     .replace("__TRIAL_MAX_HSK__",         str(int(CONFIG.get("trial_max_hsk", 5))))
     .replace("__TRIAL_UNLIMITED_WRITING__",
              "true" if CONFIG.get("trial_unlimited_writing", True) else "false")
@@ -830,6 +827,7 @@ print(f"📦 Kích thước: {size_kb:.1f} KB")
 print(f"📚 Datasets: {total_datasets} ({_chuyen_nganh_count} chuyên ngành)")
 print(f"📝 Tổng số câu: {total_questions}")
 
+# ═══ CHECK SỐ THẺ SCRIPT ═══
 _opens = html_output.count('<script')
 _closes = html_output.count('</script>')
 print(f"\n🔍 Check HTML: <script>={_opens}  </script>={_closes}")
