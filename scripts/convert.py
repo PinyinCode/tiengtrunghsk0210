@@ -406,31 +406,32 @@ function _formatGradingErrors(errors) {
         return py ? '<span class="err-pinyin">' + escapeHtml(py) + '</span>' : '';
     };
     var ARROW = '<span class="err-arrow">→</span>';
-    var SEP = '<span class="err-sep">·</span>';
 
     return errors.map(function(e, idx) {
         if (!e) return '';
 
-        /* Ưu tiên input_position (vị trí thật trong câu user gõ) */
         var targetIdx = (typeof e.input_position === 'number')
                         ? e.input_position
                         : idx;
 
+        var inner = '';
+
         if (e.type === 'wrong') {
-            return HANZI(e.user || '', targetIdx) + PINYIN(e.user_pinyin) +
-                   ARROW +
-                   HANZI(e.correct || '', targetIdx) + PINYIN(e.correct_pinyin);
+            inner = HANZI(e.user || '', targetIdx) + PINYIN(e.user_pinyin) +
+                    ARROW +
+                    HANZI(e.correct || '', targetIdx) + PINYIN(e.correct_pinyin);
+        } else if (e.type === 'missing') {
+            inner = '<span class="err-label">Thiếu</span> ' +
+                    HANZI(e.correct || '', targetIdx) + PINYIN(e.correct_pinyin);
+        } else if (e.type === 'extra') {
+            inner = '<span class="err-label">Thừa</span> ' +
+                    HANZI(e.user || '', targetIdx) + PINYIN(e.user_pinyin);
+        } else {
+            return '';
         }
-        if (e.type === 'missing') {
-            return '<span class="err-label">Thiếu</span> ' +
-                   HANZI(e.correct || '', targetIdx) + PINYIN(e.correct_pinyin);
-        }
-        if (e.type === 'extra') {
-            return '<span class="err-label">Thừa</span> ' +
-                   HANZI(e.user || '', targetIdx) + PINYIN(e.user_pinyin);
-        }
-        return '';
-    }).filter(Boolean).join(SEP);
+
+        return '<span class="err-item">' + inner + '</span>';
+    }).filter(Boolean).join('');
 }
 
 async function gradeWithAPI(userAnswer, correctAnswer) {
@@ -608,25 +609,32 @@ window.gradeWithAPI = gradeWithAPI;
         var statusEl = document.getElementById('pfStatus');
         if (!statusEl) return;
 
-        statusEl.querySelectorAll('.err-hanzi.highlight, .err-pinyin.highlight')
-            .forEach(function(el) {
-                el.classList.remove('highlight');
-            });
+        statusEl.querySelectorAll('.err-item.highlight').forEach(function(el) {
+            el.classList.remove('highlight');
+        });
 
         var targets = statusEl.querySelectorAll('.err-hanzi[data-error-idx="' + idx + '"]');
         if (!targets.length) return;
 
-        targets.forEach(function(target) {
-            target.classList.add('highlight');
-
-            var next = target.nextElementSibling;
-            if (next && next.classList.contains('err-pinyin')) {
-                next.classList.add('highlight');
-            }
+        var itemsToHighlight = new Set();
+        targets.forEach(function(t) {
+            var item = t.closest('.err-item');
+            if (item) itemsToHighlight.add(item);
         });
 
+        if (itemsToHighlight.size === 0) return;
+
+        itemsToHighlight.forEach(function(item) {
+            item.classList.add('highlight');
+        });
+
+        var firstItem = itemsToHighlight.values().next().value;
+        try {
+            firstItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } catch(e) {}
+
         setTimeout(function() {
-            statusEl.querySelectorAll('.highlight').forEach(function(el) {
+            statusEl.querySelectorAll('.err-item.highlight').forEach(function(el) {
                 el.classList.remove('highlight');
             });
         }, 2000);
@@ -666,10 +674,6 @@ full_js = (
 full_js = full_js.replace('<script>', '').replace('</script>', '')
 full_js = full_js.replace('<SCRIPT>', '').replace('</SCRIPT>', '')
 
-# Fix: đảm bảo không có thẻ script lồng trong full_js
-full_js = full_js.replace('</script>', '')
-full_js = full_js.replace('</SCRIPT>', '')
-
 
 HTML_SHELL = r'''<!DOCTYPE html>
 <html lang="vi">
@@ -695,7 +699,6 @@ __CSS__
 __BODY__
 
 <script>
-/* ============ DATA + CONFIG ============ */
 var RAW_DATA = __DATA__;
 var DATASET_REGISTRY = __DATASET_REGISTRY__;
 var CURRENT_DATASET = 'tonghop';
@@ -827,7 +830,6 @@ print(f"📦 Kích thước: {size_kb:.1f} KB")
 print(f"📚 Datasets: {total_datasets} ({_chuyen_nganh_count} chuyên ngành)")
 print(f"📝 Tổng số câu: {total_questions}")
 
-# ═══ CHECK SỐ THẺ SCRIPT ═══
 _opens = html_output.count('<script')
 _closes = html_output.count('</script>')
 print(f"\n🔍 Check HTML: <script>={_opens}  </script>={_closes}")
