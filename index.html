@@ -10295,7 +10295,7 @@ body[data-vocab-mode="1"] .mobile-view {
     color: #fff;
 }
 
-/* ⭐ NÚT CHUYÊN NGÀNH — Badge NEW hiện rõ */
+/* ⭐ Badge NEW */
 .ds-btn[data-dataset-group="chuyen-nganh"] .ds-new-badge {
     position: absolute;
     top: -8px;
@@ -10338,13 +10338,23 @@ body[data-vocab-mode="1"] .mobile-view {
 .ds-btn[data-dataset="tu-vung"].active .ds-btn-title b { color: #fff; }
 .ds-btn[data-dataset="tu-vung"].active .ds-btn-sub { color: rgba(255,255,255,.85); }
 
-/* ⭐ NÚT TỪ VỰNG — Ẩn icon vương miện */
+/* ⭐ NÚT TỪ VỰNG — Ẩn icon vương miện (mọi loại) */
+.ds-btn[data-dataset="tu-vung"] > i,
+.ds-btn[data-dataset="tu-vung"] > i.fas,
+.ds-btn[data-dataset="tu-vung"] > i[class*="fa-"],
 .ds-btn[data-dataset="tu-vung"] .ds-btn-icon,
-.ds-btn[data-dataset="tu-vung"] > i.ds-btn-icon {
+.ds-btn[data-dataset="tu-vung"] .vocab-icon,
+.ds-btn[data-dataset="tu-vung"] .vocab-crown {
     display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    opacity: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
-/* ⭐ NÚT TỪ VỰNG — Badge PREMIUM hiện rõ */
+/* ⭐ NÚT TỪ VỰNG — Badge PREMIUM */
 .ds-btn[data-dataset="tu-vung"] .ds-vocab-badge {
     position: absolute;
     top: -8px;
@@ -10370,10 +10380,6 @@ body[data-vocab-mode="1"] .mobile-view {
     pointer-events: auto;
     cursor: pointer;
     z-index: 10;
-}
-.ds-btn[data-dataset-group="favorites"] .ds-btn-icon {
-    background: linear-gradient(135deg, rgba(239,68,68,.2), rgba(220,38,38,.1));
-    color: #ef4444;
 }
 .ds-btn[data-dataset-group="favorites"] .ds-btn-title,
 .ds-btn[data-dataset-group="favorites"] .ds-btn-title b { color: #991b1b; }
@@ -10423,7 +10429,7 @@ body[data-vocab-mode="1"] .mobile-view {
 }
 
 /* ═══════════════════════════════════════════════════════════ */
-/* ⭐⭐⭐ FIX CLICK — CHUYÊN NGÀNH + YÊU THÍCH BẤM ĐƯỢC ⭐⭐⭐ */
+/* ⭐ FIX CLICK — CHUYÊN NGÀNH + YÊU THÍCH BẤM ĐƯỢC            */
 /* ═══════════════════════════════════════════════════════════ */
 
 /* ── Nút CHUYÊN NGÀNH ── */
@@ -10437,9 +10443,6 @@ body[data-vocab-mode="1"] .mobile-view {
     pointer-events: auto !important;
     z-index: 20 !important;
     position: relative !important;
-}
-.ds-btn[data-dataset-group="chuyen-nganh"] > .ds-btn-text * {
-    pointer-events: auto !important;
 }
 .ds-btn[data-dataset-group="chuyen-nganh"] > i,
 .ds-btn[data-dataset-group="chuyen-nganh"] > i.ds-btn-icon,
@@ -10462,36 +10465,12 @@ body[data-vocab-mode="1"] .mobile-view {
     z-index: 20 !important;
     position: relative !important;
 }
-.ds-btn[data-dataset-group="favorites"] > .ds-btn-text * {
-    pointer-events: auto !important;
-}
 .ds-btn[data-dataset-group="favorites"] > i,
 .ds-btn[data-dataset-group="favorites"] > i.ds-btn-icon,
 .ds-btn[data-dataset-group="favorites"] > .ds-fav-badge,
 .ds-btn[data-dataset-group="favorites"] > .ds-fav-lock,
 .ds-btn[data-dataset-group="favorites"]::before,
 .ds-btn[data-dataset-group="favorites"]::after {
-    pointer-events: none !important;
-}
-
-/* ── Đảm bảo CHUNG cho mọi nút trong .ds-main-row ── */
-.ds-main-row > .ds-btn {
-    pointer-events: auto !important;
-    cursor: pointer !important;
-}
-.ds-main-row > .ds-btn > .ds-btn-text {
-    pointer-events: auto !important;
-    z-index: 20 !important;
-}
-.ds-main-row > .ds-btn > .ds-btn-text * {
-    pointer-events: auto !important;
-}
-.ds-main-row > .ds-btn > i,
-.ds-main-row > .ds-btn > i.ds-btn-icon,
-.ds-main-row > .ds-btn > .ds-arrow,
-.ds-main-row > .ds-btn > .ds-new-badge,
-.ds-main-row > .ds-btn > .ds-fav-badge,
-.ds-main-row > .ds-btn > .ds-fav-lock {
     pointer-events: none !important;
 }
 
@@ -10584,21 +10563,17 @@ body[data-vocab-mode="1"] .mobile-view {
             </span>
             
         </button>
-        <button class="ds-btn ds-btn-primary" data-dataset-group="chuyen-nganh" data-dataset-group="chuyen-nganh">
-            <i class="fas fa-industry ds-btn-icon"></i>
-            <span class="ds-btn-text">
-                <span class="ds-btn-title"><b>Chuyên ngành</b></span>
-                <span class="ds-btn-sub">Theo lĩnh vực</span>
-            </span>
-            <i class="fas fa-chevron-down ds-arrow"></i><span class="ds-new-badge">NEW</span>
+        <button class="ds-btn ds-btn-primary" data-dataset-group="chuyen-nganh" id="dsChuyenNganhBtn">
+            <i class="fas fa-industry"></i>
+            <span>Chuyên ngành</span>
+            <i class="fas fa-chevron-down ds-arrow"></i>
+            <span class="ds-new-badge" id="dsNewBadge">NEW</span>
         </button>
-        <button class="ds-btn ds-btn-primary" data-dataset-group="favorites" data-dataset-group="favorites">
-            <i class="fas fa-heart ds-btn-icon"></i>
-            <span class="ds-btn-text">
-                <span class="ds-btn-title"><b>Yêu thích</b></span>
-                <span class="ds-btn-sub">Câu đã lưu</span>
-            </span>
-            
+        <button class="ds-btn ds-btn-primary" data-dataset-group="favorites" id="dsFavBtn">
+            <i class="far fa-heart"></i>
+            <span>Yêu thích</span>
+            <span class="ds-fav-badge" id="favTabBadge" data-count="0"></span>
+            <i class="fas fa-lock ds-fav-lock" id="favTabLock" style="display:none;"></i>
         </button>
     </div>
     <div class="ds-sub-wrap" id="dsSubWrap" style="display:none">
