@@ -2,8 +2,21 @@
 r"""
 fix.py - Auto-scan data/ và thêm MỌI file Excel thành tab riêng.
 + TỰ ĐỘNG thêm tab TỪ VỰNG PREMIUM từ data/tu_vung_hsk.xlsx
-+ COVER LẠI TOÀN BỘ NÚT DATASET SANG LAYOUT 2 HÀNG GỌN
-+ ICON WATERMARK CHÌM GÓC PHẢI
+
+ĐẶC ĐIỂM:
+  - Đọc HẾT mọi file .xlsx/.xls/.csv trong data/ (TRỪ input.xlsx)
+  - Tên tab = TÊN FILE (normalize NFC - hiển thị đúng dấu tiếng Việt)
+  - Label tab = CHỈ tên file, KHÔNG thêm số câu
+  - TIER LOCK + ONBOARDING giống tab tổng hợp
+  - Clone nút để XÓA event listener cũ - không còn popup
+  - CHỈ 1 TAB ACTIVE tại một thời điểm
+  - KHÔNG inject vào DATASET_REGISTRY
+
+  TỪ VỰNG PREMIUM (mới):
+  - Đọc file data/tu_vung_hsk.xlsx (11 cột A-K)
+  - Tự sinh mẹo nhớ + bộ thủ từ vocab_data/
+  - CHỈ mở cho Admin + Premium (isPermanent)
+  - Modal upgrade khi không có quyền
 
 Cách chạy:
     python scripts/convert.py
@@ -31,308 +44,9 @@ SKIP_FILES = {"input.xlsx", "input.xls", "input.csv"}
 VOCAB_FILE = os.path.join(DATA_DIR, "tu_vung_hsk.xlsx")
 VOCAB_ID = "tu-vung"
 VOCAB_LABEL = "11000+ Từ vựng HSK"
-
-
-# =================================================================
-#  CSS: BUTTONS 2 ROWS — ICON WATERMARK CHÌM
-# =================================================================
-BUTTONS_2ROWS_CSS = r"""
-/* ═══════════════════════════════════════════════════════════ */
-/* FIX.PY: DATASET BUTTONS — 2 HÀNG + ICON WATERMARK CHÌM      */
-/* ═══════════════════════════════════════════════════════════ */
-
-.ds-main-row {
-    display: grid !important;
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    gap: .55rem !important;
-    align-items: stretch !important;
-}
-@media (max-width: 1100px) {
-    .ds-main-row { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-}
-@media (max-width: 420px) {
-    .ds-main-row { grid-template-columns: 1fr !important; }
-}
-
-/* ── Nút cơ bản ── */
-.ds-btn {
-    display: flex !important;
-    align-items: center !important;
-    gap: 0 !important;
-    padding: .65rem .85rem !important;
-    min-height: 60px !important;
-    height: 100% !important;
-    border: 1.5px solid var(--border) !important;
-    border-radius: 12px !important;
-    background: var(--surface) !important;
-    color: var(--text) !important;
-    font-family: inherit !important;
-    text-align: left !important;
-    cursor: pointer !important;
-    transition: all .2s ease !important;
-    position: relative !important;
-    overflow: visible !important;
-}
-.ds-btn:hover {
-    border-color: var(--primary) !important;
-    background: var(--surface-2) !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 6px 16px -6px rgba(15,23,42,.15) !important;
-}
-
-/* ICON — WATERMARK CHÌM Ở GÓC PHẢI */
-.ds-btn .ds-btn-icon,
-.ds-btn > i.ds-btn-icon {
-    position: absolute !important;
-    right: .5rem !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    width: 52px !important;
-    height: 52px !important;
-    border-radius: 0 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    font-size: 2.6rem !important;
-    background: none !important;
-    background-color: transparent !important;
-    color: currentColor !important;
-    opacity: .08 !important;
-    pointer-events: none !important;
-    z-index: 0 !important;
-    transition: opacity .2s !important;
-    box-shadow: none !important;
-    border: none !important;
-}
-.ds-btn:hover .ds-btn-icon,
-.ds-btn:hover > i.ds-btn-icon {
-    opacity: .15 !important;
-}
-
-/* KHỐI TEXT — FULL WIDTH */
-.ds-btn .ds-btn-text {
-    position: relative !important;
-    z-index: 1 !important;
-    flex: 1 1 auto !important;
-    min-width: 0 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: .12rem !important;
-    padding-right: 2.6rem !important;
-}
-.ds-btn .ds-btn-title {
-    font-size: clamp(.82rem, 1.05vw, .95rem) !important;
-    font-weight: 700 !important;
-    color: var(--text) !important;
-    line-height: 1.2 !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    letter-spacing: -.01em !important;
-    display: block !important;
-}
-.ds-btn .ds-btn-title b {
-    font-weight: 900 !important;
-    color: var(--text) !important;
-    margin-right: .15rem !important;
-}
-.ds-btn .ds-btn-sub {
-    font-size: clamp(.65rem, .82vw, .75rem) !important;
-    font-weight: 600 !important;
-    color: var(--text-3) !important;
-    line-height: 1.25 !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    display: block !important;
-    font-style: normal !important;
-}
-
-/* ── Active ── */
-.ds-btn.active {
-    background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
-    border-color: transparent !important;
-    box-shadow: 0 6px 18px -4px rgba(124,58,237,.45) !important;
-    transform: translateY(-2px) !important;
-}
-.ds-btn.active .ds-btn-icon,
-.ds-btn.active > i.ds-btn-icon {
-    opacity: .18 !important;
-    color: #fff !important;
-    background: none !important;
-}
-.ds-btn.active .ds-btn-title,
-.ds-btn.active .ds-btn-title b { color: #fff !important; }
-.ds-btn.active .ds-btn-sub { color: rgba(255,255,255,.82) !important; }
-
-/* ═══ CHUYÊN NGÀNH ═══ */
-.ds-btn[data-dataset-group="chuyen-nganh"] {
-    padding-right: 2.2rem !important;
-}
-.ds-btn[data-dataset-group="chuyen-nganh"] .ds-arrow {
-    position: absolute !important;
-    right: .75rem !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    font-size: .7rem !important;
-    color: var(--text-3) !important;
-    transition: transform .25s !important;
-    pointer-events: none !important;
-    z-index: 2 !important;
-}
-.ds-btn[data-dataset-group="chuyen-nganh"] .ds-btn-text {
-    padding-right: 1.8rem !important;
-}
-.ds-btn[data-dataset-group="chuyen-nganh"].active .ds-arrow {
-    transform: translateY(-50%) rotate(180deg) !important;
-    color: #fff !important;
-}
-
-.ds-new-badge {
-    position: absolute !important;
-    top: -7px !important;
-    right: -7px !important;
-    padding: .15rem .5rem !important;
-    border-radius: 50px !important;
-    background: linear-gradient(135deg, #ef4444, #dc2626) !important;
-    color: #fff !important;
-    font-size: .56rem !important;
-    font-weight: 900 !important;
-    letter-spacing: .5px !important;
-    box-shadow: 0 2px 8px rgba(220,38,38,.5), 0 0 0 2px var(--surface) !important;
-    animation: dsNewPulse 1.6s ease-in-out infinite !important;
-    z-index: 100 !important;
-    pointer-events: none !important;
-}
-@keyframes dsNewPulse {
-    0%,100% { transform: scale(1); }
-    50%     { transform: scale(1.1); }
-}
-
-/* ═══ TỪ VỰNG PREMIUM ═══ */
-.ds-btn[data-dataset="tu-vung"] {
-    background: linear-gradient(135deg, #fffbeb, #fef3c7) !important;
-    border-color: rgba(245,158,11,.5) !important;
-}
-.ds-btn[data-dataset="tu-vung"] .ds-btn-title,
-.ds-btn[data-dataset="tu-vung"] .ds-btn-title b { color: #92400e !important; }
-.ds-btn[data-dataset="tu-vung"] .ds-btn-sub { color: #b45309 !important; }
-.ds-btn[data-dataset="tu-vung"]:hover {
-    border-color: #f59e0b !important;
-    background: linear-gradient(135deg, #fef3c7, #fde68a) !important;
-}
-.ds-btn[data-dataset="tu-vung"].active {
-    background: linear-gradient(135deg, #f59e0b, #d97706) !important;
-    border-color: transparent !important;
-}
-.ds-btn[data-dataset="tu-vung"].active .ds-btn-title,
-.ds-btn[data-dataset="tu-vung"].active .ds-btn-title b { color: #fff !important; }
-.ds-btn[data-dataset="tu-vung"].active .ds-btn-sub { color: rgba(255,255,255,.85) !important; }
-
-/* ⭐ NÚT TỪ VỰNG — Ẩn icon vương miện watermark */
-.ds-btn[data-dataset="tu-vung"] .ds-btn-icon,
-.ds-btn[data-dataset="tu-vung"] > i.ds-btn-icon {
-    display: none !important;
-}
-
-/* ⭐ NÚT TỪ VỰNG — Badge PREMIUM nổi rõ, không bị che */
-.ds-btn[data-dataset="tu-vung"] .ds-vocab-badge {
-    position: absolute !important;
-    top: -8px !important;
-    right: -8px !important;
-    z-index: 100 !important;
-    background: linear-gradient(135deg, #7c3aed, #a855f7) !important;
-    color: #fff !important;
-    font-size: .58rem !important;
-    font-weight: 900 !important;
-    padding: .18rem .55rem !important;
-    border-radius: 50px !important;
-    letter-spacing: .5px !important;
-    text-transform: uppercase !important;
-    box-shadow: 0 2px 8px rgba(124,58,237,.5), 0 0 0 2px var(--surface) !important;
-    pointer-events: none !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: .2rem !important;
-    white-space: nowrap !important;
-}
-
-/* ⭐ NÚT CHUYÊN NGÀNH — Badge NEW nổi rõ, không bị che */
-.ds-btn[data-dataset-group="chuyen-nganh"] .ds-new-badge {
-    z-index: 100 !important;
-    position: absolute !important;
-    top: -8px !important;
-    right: -8px !important;
-}
-
-/* ═══ YÊU THÍCH ═══ */
-.ds-btn[data-dataset-group="favorites"] {
-    background: linear-gradient(135deg, #fef2f2, #fee2e2) !important;
-    border-color: rgba(239,68,68,.35) !important;
-}
-.ds-btn[data-dataset-group="favorites"] .ds-btn-icon,
-.ds-btn[data-dataset-group="favorites"] > i.ds-btn-icon {
-    color: #ef4444 !important;
-    opacity: .12 !important;
-    background: none !important;
-}
-.ds-btn[data-dataset-group="favorites"] .ds-btn-title,
-.ds-btn[data-dataset-group="favorites"] .ds-btn-title b { color: #991b1b !important; }
-.ds-btn[data-dataset-group="favorites"] .ds-btn-sub { color: #b91c1c !important; }
-.ds-btn[data-dataset-group="favorites"].active {
-    background: linear-gradient(135deg, #ef4444, #dc2626) !important;
-    border-color: transparent !important;
-}
-.ds-btn[data-dataset-group="favorites"].active .ds-btn-title,
-.ds-btn[data-dataset-group="favorites"].active .ds-btn-title b,
-.ds-btn[data-dataset-group="favorites"].active .ds-btn-sub { color: #fff !important; }
-.ds-btn[data-dataset-group="favorites"].active .ds-btn-icon,
-.ds-btn[data-dataset-group="favorites"].active > i.ds-btn-icon {
-    color: #fff !important;
-    opacity: .25 !important;
-}
-
-/* ═══ DARK MODE ═══ */
-[data-theme="dark"] .ds-btn[data-dataset="tu-vung"] {
-    background: linear-gradient(135deg, rgba(245,158,11,.18), rgba(217,119,6,.12)) !important;
-    border-color: rgba(245,158,11,.45) !important;
-}
-[data-theme="dark"] .ds-btn[data-dataset="tu-vung"] .ds-btn-title,
-[data-theme="dark"] .ds-btn[data-dataset="tu-vung"] .ds-btn-title b { color: #fcd34d !important; }
-[data-theme="dark"] .ds-btn[data-dataset="tu-vung"] .ds-btn-sub { color: #fbbf24 !important; }
-[data-theme="dark"] .ds-btn[data-dataset-group="favorites"] {
-    background: linear-gradient(135deg, rgba(239,68,68,.18), rgba(220,38,38,.1)) !important;
-    border-color: rgba(239,68,68,.4) !important;
-}
-[data-theme="dark"] .ds-btn[data-dataset-group="favorites"] .ds-btn-title,
-[data-theme="dark"] .ds-btn[data-dataset-group="favorites"] .ds-btn-title b { color: #fca5a5 !important; }
-[data-theme="dark"] .ds-btn[data-dataset-group="favorites"] .ds-btn-sub { color: #f87171 !important; }
-
-/* ═══ MOBILE ═══ */
-@media (max-width: 500px) {
-    .ds-btn {
-        min-height: 56px !important;
-        padding: .55rem .7rem !important;
-    }
-    .ds-btn .ds-btn-icon,
-    .ds-btn > i.ds-btn-icon {
-        width: 44px !important;
-        height: 44px !important;
-        font-size: 2.2rem !important;
-        right: .35rem !important;
-    }
-    .ds-btn .ds-btn-text {
-        padding-right: 2.2rem !important;
-    }
-    .ds-btn .ds-btn-title { font-size: .78rem !important; }
-    .ds-btn .ds-btn-sub   { font-size: .62rem !important; }
-}
-"""
-
-
-# =================================================================
-#  VOCAB WARNING CSS
-# =================================================================
+# ═══════════════════════════════════════════════════════════════════
+#  VOCAB WARNING CSS (banner cảnh báo + gợi ý gia hạn)
+# ═══════════════════════════════════════════════════════════════════
 VOCAB_WARNING_CSS = r"""
 /* ═══ BANNER CẢNH BÁO TỪ VỰNG ═══ */
 .vocab-warning-banner {
@@ -413,9 +127,6 @@ VOCAB_WARNING_CSS = r"""
 """
 
 
-# =================================================================
-#  VOCAB JS PATCH
-# =================================================================
 def build_vocab_js_patch():
     """JS phân quyền + giới hạn HSK + số câu + banner cho vocab."""
     return r"""
@@ -429,26 +140,32 @@ def build_vocab_js_patch():
     function getVocabAccess() {
     var cfg = (typeof ONBOARDING_CONFIG !== 'undefined' && ONBOARDING_CONFIG) || {};
 
+    // ⭐ ĐỌC TIER TỪ window.APP_TIER (chính xác nhất — do auth module set)
     var appTier = (typeof window.APP_TIER !== 'undefined') ? window.APP_TIER : null;
 
+    // ⭐ Fallback: đọc currentUser nếu APP_TIER chưa set
     var u = null;
     try {
         if (typeof window.currentUser !== 'undefined' && window.currentUser) u = window.currentUser;
         else if (typeof currentUser !== 'undefined' && currentUser) u = currentUser;
     } catch(e) {}
 
+    // ═══ Admin → full ═══
     if (u && u.role === 'admin') {
         return { allowed: true, tier: 'admin',
             hskAllowed: [1,2,3,4,5,6,7,8,9], maxQuestions: -1,
             label: 'Admin — Toàn bộ HSK', warning: null };
     }
 
+    // ═══ Premium (isPermanent) → full ═══
     if (u && u.isPermanent === true) {
         return { allowed: true, tier: 'premium',
             hskAllowed: [1,2,3,4,5,6,7,8,9], maxQuestions: -1,
             label: 'Premium — Toàn bộ HSK', warning: null };
     }
 
+    // ═══ Xác định tier ═══
+    // Ưu tiên window.APP_TIER → fallback về currentUser
     var tier = 'demo';
     if (appTier === 'active') tier = 'active';
     else if (appTier === 'trial') tier = 'trial';
@@ -498,6 +215,7 @@ def build_vocab_js_patch():
                      ' — nâng cấp Premium để mở toàn bộ.' };
     }
 
+    // ═══ Active ═══
     if (isUnlimited) {
         return { allowed: true, tier: 'active',
             hskAllowed: hskArr.length ? hskArr : [1,2,3,4,5,6,7,8,9],
@@ -523,10 +241,12 @@ def build_vocab_js_patch():
                 var h = (r.hsk || '').toString().toUpperCase().trim();
                 if (!h) return true;
 
-                if (h === 'HSK7-9') {
+                // ⭐ Check HSK7-9 trực tiếp
+                if (h === 'HSK7-9' || h === 'HSK7-9') {
                     return allowSet['HSK7-9'] === true;
                 }
 
+                // ⭐ Extract số cho HSK1-6
                 var num = h.replace(/[^0-9]/g, '');
                 if (!num) return true;
                 return allowSet['HSK' + num] === true || allowSet[num] === true;
@@ -630,6 +350,11 @@ def build_vocab_js_patch():
         main.insertBefore(banner, main.firstChild);
     }
 
+    // ⭐ bindVocabPatch ĐÃ BỎ — vocab_premium.py tự xử lý click
+    function bindVocabPatch() {
+        return;   // no-op
+    }
+    /* ⭐ LOCK ô Chủ đề khi ở tab Từ vựng */
     function patchSubjectLock() {
         if (window.__vocabSubjectLockPatched) return;
         if (typeof window.buildFilters !== 'function') {
@@ -645,12 +370,14 @@ def build_vocab_js_patch():
                 if (!sf) return result;
 
                 if (_isVocabMode()) {
+                    // Vocab mode → LOCK ô chủ đề
                     sf.disabled = true;
                     sf.value = '';
                     sf.style.opacity = '0.5';
                     sf.style.cursor = 'not-allowed';
                     sf.title = 'Không khả dụng cho Từ vựng';
                 } else {
+                    // Tab khác → mở lại
                     sf.disabled = false;
                     sf.style.opacity = '';
                     sf.style.cursor = '';
@@ -664,15 +391,20 @@ def build_vocab_js_patch():
         console.log('[vocab-patch] subject lock patched');
     }
 
+   /* ⭐ Watch đổi tab — tự động lock/unlock + thêm HSK7-9 khi vocab */
     function watchVocabMode() {
         var isVocab = (typeof CURRENT_DATASET !== 'undefined') && CURRENT_DATASET === VOCAB_ID;
 
+        // ⭐ SET cờ body
         if (isVocab) {
             document.body.setAttribute('data-vocab-mode', '1');
         } else {
             document.body.removeAttribute('data-vocab-mode');
         }
 
+        // ═══════════════════════════════════════════════════════════
+        //  ⭐ LOCK ô Chủ đề (main + full)
+        // ═══════════════════════════════════════════════════════════
         var selects = [
             document.getElementById('subjectFilter'),
             document.getElementById('pfSubjectFilter')
@@ -695,9 +427,12 @@ def build_vocab_js_patch():
             }
         });
 
+        // ═══════════════════════════════════════════════════════════
+        //  ⭐ THÊM/XÓA option HSK7-9 ở ô HSK
+        // ═══════════════════════════════════════════════════════════
         var hskSelects = [
-            document.getElementById('hskFilter'),
-            document.getElementById('pfHskFilter')
+            document.getElementById('hskFilter'),      // main
+            document.getElementById('pfHskFilter')      // practice full
         ];
 
         hskSelects.forEach(function(hf) {
@@ -707,11 +442,14 @@ def build_vocab_js_patch():
             var has79 = !!hsk79;
 
             if (isVocab && !has79) {
+                // ⭐ THÊM option HSK7-9
                 var opt = document.createElement('option');
                 opt.value = 'HSK7-9';
                 opt.textContent = 'HSK7-9';
                 hf.appendChild(opt);
             } else if (!isVocab && has79) {
+                // ⭐ XÓA option HSK7-9 khi rời vocab
+                // Nhưng chỉ xóa nếu nó đang không được chọn
                 if (hf.value === 'HSK7-9') {
                     hf.value = '';
                 }
@@ -724,6 +462,7 @@ def build_vocab_js_patch():
     window.vocabInjectWarning = injectVocabWarningBanner;
 
     function patchLoop() {
+        // ⭐ Chỉ cần DOM ready + tab vocab tồn tại là đủ
         var vocabBtn = document.querySelector('.ds-btn[data-dataset="' + VOCAB_ID + '"]');
         if (!vocabBtn) {
             setTimeout(patchLoop, 300);
@@ -732,12 +471,16 @@ def build_vocab_js_patch():
 
         window.vocabUpdateLockState = updateTabLockState;
 
+        // ═══════════════════════════════════════════════════════════
+        //  ⭐ OVERRIDE buildFilters — thêm HSK7-9 khi vocab
+        // ═══════════════════════════════════════════════════════════
         if (!window.__vocabBuildFiltersPatched && typeof window.buildFilters === 'function') {
             window.__vocabBuildFiltersPatched = true;
             var origBuildFilters = window.buildFilters;
             window.buildFilters = function() {
                 var result = origBuildFilters.apply(this, arguments);
 
+                // Sau khi build xong → thêm HSK7-9 nếu vocab mode
                 if (_isVocabMode()) {
                     var hf = document.getElementById('hskFilter');
                     if (hf && !hf.querySelector('option[value="HSK7-9"]')) {
@@ -753,6 +496,9 @@ def build_vocab_js_patch():
             console.log('[vocab-patch] buildFilters patched');
         }
 
+        // ═══════════════════════════════════════════════════════════
+        //  ⭐ OVERRIDE pfBuildFilterOptions — thêm HSK7-9 + lock subject
+        // ═══════════════════════════════════════════════════════════
         if (!window.__vocabPfFilterPatched && typeof window.pfBuildFilterOptions === 'function') {
             window.__vocabPfFilterPatched = true;
             var origPfBuild = window.pfBuildFilterOptions;
@@ -760,6 +506,7 @@ def build_vocab_js_patch():
                 var result = origPfBuild.apply(this, arguments);
 
                 if (_isVocabMode()) {
+                    // Thêm HSK7-9
                     var pfHf = document.getElementById('pfHskFilter');
                     if (pfHf && !pfHf.querySelector('option[value="HSK7-9"]')) {
                         var opt = document.createElement('option');
@@ -768,6 +515,7 @@ def build_vocab_js_patch():
                         pfHf.appendChild(opt);
                     }
 
+                    // Lock subject
                     var pfSubj = document.getElementById('pfSubjectFilter');
                     if (pfSubj) {
                         pfSubj.disabled = true;
@@ -783,6 +531,9 @@ def build_vocab_js_patch():
             console.log('[vocab-patch] pfBuildFilterOptions patched');
         }
 
+        // ═══════════════════════════════════════════════════════════
+        //  Hook click tab vocab — apply giới hạn HSK + số câu
+        // ═══════════════════════════════════════════════════════════
         if (!vocabBtn.__vocabLimitHooked) {
             vocabBtn.__vocabLimitHooked = true;
             vocabBtn.addEventListener('click', function() {
@@ -808,11 +559,13 @@ def build_vocab_js_patch():
 
         updateTabLockState();
 
+       // ⭐ Refresh badge + banner mỗi 2s (fix race condition + auto-update)
         setInterval(function() {
-            updateTabLockState();
+            updateTabLockState();   // ⬅️ THÊM — refresh badge
             if (_isVocabMode()) injectVocabWarningBanner();
         }, 2000);
 
+        // ⭐ Watch mode chạy liên tục
         watchVocabMode();
         setInterval(watchVocabMode, 800);
 
@@ -821,8 +574,6 @@ def build_vocab_js_patch():
     setTimeout(patchLoop, 800);
 })();
 """
-
-
 if not os.path.isfile(CONFIG_JSON) and os.path.isfile(os.path.join("..", CONFIG_JSON)):
     os.chdir("..")
     print("[fix.py] Phat hien chay tu scripts/ -> chuyen ve root")
@@ -986,17 +737,6 @@ def _js_str(s):
             .replace("\n", "\\n")
             .replace("\r", "\\r")
             .replace("</", "<\\/"))
-
-
-def _html_escape(s):
-    """Escape cho HTML text (khác _js_str)."""
-    if s is None:
-        return ""
-    return (str(s)
-            .replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace('"', "&quot;"))
 
 
 def _find_file_safe(filepath):
@@ -1498,50 +1238,38 @@ def build_js_override(ids_js, datasets_json):
 
 
 # =================================================================
-#  BUILD HTML BUTTON 2-ROWS
-# =================================================================
-def _build_button_2rows(data_attr, icon, title_html, sub,
-                        extra_cls="", extra_html="", extra_attrs=""):
-    """Sinh HTML nút 2 hàng: icon | (title + sub)."""
-    icon_html = ''
-    if icon:
-        icon_html = '<i class="fas ' + icon + ' ds-btn-icon"></i>\n'
-    return (
-        '<button class="ds-btn ds-btn-primary' + extra_cls + '" '
-        + data_attr + ' ' + extra_attrs + '>\n'
-        '            ' + icon_html +
-        '            <span class="ds-btn-text">\n'
-        '                <span class="ds-btn-title">' + title_html + '</span>\n'
-        '                <span class="ds-btn-sub">' + sub + '</span>\n'
-        '            </span>\n'
-        '            ' + extra_html + '\n'
-        '        </button>'
-    )
-
-
-# =================================================================
 #  BUILD CSS LAYOUT
 # =================================================================
 def build_layout_css(new_datasets, add_vocab):
     css_lines = []
+    css_lines.append("")
+    css_lines.append("/* FIX.PY: AUTO-FIT LAYOUT */")
+    css_lines.append("@media (max-width: 768px) {")
+    css_lines.append("    .ds-main-row {")
+    css_lines.append("        grid-template-columns: repeat(2, minmax(0, 1fr) ) !important;")
+    css_lines.append("        gap: .5rem !important;")
+    css_lines.append("    }")
+    css_lines.append("}")
+    css_lines.append("@media (min-width: 769px) {")
+    css_lines.append("    .ds-main-row {")
+    css_lines.append("        grid-template-columns: repeat(4, minmax(0, 1fr) ) !important;")
+    css_lines.append("        gap: .55rem !important;")
+    css_lines.append("    }")
+    css_lines.append("}")
 
-    # CSS BUTTONS 2 HÀNG (COVER TOÀN BỘ NÚT)
-    css_lines.append(BUTTONS_2ROWS_CSS)
-
-    # GRID cho CHUYÊN NGÀNH sub-buttons
     css_lines.append("")
     css_lines.append("/* GRID DEU CHO TAB CON CHUYEN NGANH */")
     css_lines.append(".ds-sub-grid {")
     css_lines.append("    display: grid !important;")
-    css_lines.append("    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;")
+    css_lines.append("    grid-template-columns: repeat(2, minmax(0, 1fr) ) !important;")
     css_lines.append("    gap: .55rem !important;")
     css_lines.append("    align-items: stretch !important;")
     css_lines.append("}")
     css_lines.append("@media (min-width: 600px) {")
-    css_lines.append("    .ds-sub-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }")
+    css_lines.append("    .ds-sub-grid { grid-template-columns: repeat(3, minmax(0, 1fr) ) !important; }")
     css_lines.append("}")
     css_lines.append("@media (min-width: 900px) {")
-    css_lines.append("    .ds-sub-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }")
+    css_lines.append("    .ds-sub-grid { grid-template-columns: repeat(4, minmax(0, 1fr) ) !important; }")
     css_lines.append("}")
     css_lines.append(".ds-sub-btn {")
     css_lines.append("    width: 100% !important;")
@@ -1568,93 +1296,45 @@ def build_layout_css(new_datasets, add_vocab):
     css_lines.append("    overflow: hidden !important;")
     css_lines.append("}")
 
-    # Style riêng cho tab mới sinh
     for ds in new_datasets:
         i = ds["id"]
         sel = '.ds-btn[data-dataset="' + i + '"]'
         css_lines.append("")
         css_lines.append("/* Style cho tab " + i + " */")
+        css_lines.append(sel + " {")
+        css_lines.append("    background: var(--surface) !important;")
+        css_lines.append("    border-color: var(--border) !important;")
+        css_lines.append("    color: var(--text) !important;")
+        css_lines.append("}")
+        css_lines.append(sel + " i:first-child { color: var(--primary) !important; }")
+        css_lines.append(sel + ":hover {")
+        css_lines.append("    border-color: var(--primary) !important;")
+        css_lines.append("    background: var(--primary-light) !important;")
+        css_lines.append("}")
         css_lines.append(sel + ".active {")
         css_lines.append("    background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;")
         css_lines.append("    color: #fff !important;")
         css_lines.append("    border-color: transparent !important;")
         css_lines.append("    box-shadow: 0 4px 12px rgba(124, 58, 237, .35) !important;")
         css_lines.append("}")
+        css_lines.append(sel + ".active i:first-child { color: #fff !important; }")
+        css_lines.append('[data-theme="dark"] ' + sel + " {")
+        css_lines.append("    background: var(--surface) !important;")
+        css_lines.append("    border-color: var(--border) !important;")
+        css_lines.append("}")
+        css_lines.append('[data-theme="dark"] ' + sel + ".active {")
+        css_lines.append("    background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;")
+        css_lines.append("    border-color: transparent !important;")
+        css_lines.append("}")
 
-    # VOCAB CSS + WARNING BANNER
+    # ⭐ VOCAB CSS + WARNING BANNER CSS
     if add_vocab:
         css_lines.append("")
         css_lines.append("/* VOCAB PREMIUM CSS */")
         css_lines.append(build_vocab_css(VOCAB_ID))
-        css_lines.append(VOCAB_WARNING_CSS)
+        css_lines.append(VOCAB_WARNING_CSS)   # ⭐ THÊM DÒNG NÀY
 
     return "\n".join(css_lines) + "\n"
-
-
-# =================================================================
-#  PATCH BUTTONS — REWRITE CÁC NÚT CỨNG SANG 2 HÀNG
-# =================================================================
-def patch_existing_buttons(html):
-    """Rewrite 3 nút cứng (tonghop, chuyen-nganh, favorites) sang 2 hàng."""
-    print("")
-    print("[PATCH 2.5] Rewrite nut co san -> layout 2 hang gon...")
-
-    # Nút TỔNG HỢP
-    new_tonghop = _build_button_2rows(
-        data_attr='data-dataset="tonghop"',
-        icon="fa-book-open",
-        title_html="<b>1750+</b> Câu phản xạ",
-        sub="Văn phòng · Công xưởng",
-        extra_cls=" active",
-    )
-    pat_th = re.compile(
-        r'<button[^>]*class="[^"]*ds-btn[^"]*"[^>]*data-dataset="tonghop"[^>]*>.*?</button>',
-        re.MULTILINE | re.DOTALL
-    )
-    html, n = pat_th.subn(new_tonghop, html, count=1)
-    if n:
-        print("   [OK] Rewrite nut Tong hop")
-
-    # Nút CHUYÊN NGÀNH
-    new_cn = _build_button_2rows(
-        data_attr='data-dataset-group="chuyen-nganh"',
-        icon="fa-industry",
-        title_html="<b>Chuyên ngành</b>",
-        sub="Theo lĩnh vực",
-        extra_html=(
-            '<i class="fas fa-chevron-down ds-arrow"></i>\n'
-            '            <span class="ds-new-badge" id="dsNewBadge">NEW</span>'
-        ),
-        extra_attrs='id="dsChuyenNganhBtn"',
-    )
-    pat_cn = re.compile(
-        r'<button[^>]*class="[^"]*ds-btn[^"]*"[^>]*data-dataset-group="chuyen-nganh"[^>]*>.*?</button>',
-        re.MULTILINE | re.DOTALL
-    )
-    html, n = pat_cn.subn(new_cn, html, count=1)
-    if n:
-        print("   [OK] Rewrite nut Chuyen nganh")
-
-    # Nút YÊU THÍCH (nếu có)
-    new_fav = _build_button_2rows(
-        data_attr='data-dataset-group="favorites"',
-        icon="fa-heart",
-        title_html="<b>Yêu thích</b>",
-        sub="Câu đã lưu",
-    )
-    pat_fav = re.compile(
-        r'<button[^>]*class="[^"]*ds-btn[^"]*"[^>]*data-dataset-group="favorites"[^>]*>.*?</button>',
-        re.MULTILINE | re.DOTALL
-    )
-    if pat_fav.search(html):
-        html, n = pat_fav.subn(new_fav, html, count=1)
-        if n:
-            print("   [OK] Rewrite nut Yeu thich")
-    else:
-        print("   [skip] Khong co nut Yeu thich")
-
-    return html
-
 
 # =================================================================
 #  MAIN
@@ -1671,10 +1351,10 @@ def main():
     with open(INDEX_HTML, "r", encoding="utf-8") as f:
         html = f.read()
 
-    # SCAN tab thường
+    # ═══ SCAN tab thường ═══
     datasets = scan_data_dir()
 
-    # ĐỌC FILE TỪ VỰNG PREMIUM
+    # ═══ ĐỌC FILE TỪ VỰNG PREMIUM ═══
     vocab_data = []
     vocab_real_path = None
     if HAS_VOCAB_MODULE:
@@ -1689,7 +1369,7 @@ def main():
         else:
             print("[VOCAB] Khong co file tu vung - bo qua")
 
-    # KIỂM TRA CÓ GÌ MỚI
+    # ═══ KIỂM TRA CÓ GÌ MỚI ═══
     all_new = []
     for ds in datasets:
         marker = 'data-dataset="' + ds["id"] + '"'
@@ -1701,77 +1381,68 @@ def main():
     vocab_exists_in_html = 'data-dataset="' + VOCAB_ID + '"' in html
     add_vocab = bool(vocab_data) and not vocab_exists_in_html
 
-    # =============================================================
-    #  PATCH 2: BUTTONS MỚI (2 HÀNG)
-    # =============================================================
+    if not all_new and not add_vocab:
+        print("")
+        print("[fix.py] Tat ca da co - khong can patch.")
+        return
+
     print("")
-    print("[PATCH 2] Them button tabs moi (2 hang gon)...")
+    print("[fix.py] Se them:")
+    for ds in all_new:
+        print("   - [tab] " + ds["name"] + " (" + str(ds["count"]) + " cau)")
+    if add_vocab:
+        print("   - [PREMIUM] " + VOCAB_LABEL + " (" + str(len(vocab_data)) + " tu)")
+
+    # ═══════════════════════════════════════════════════════════
+    #  PATCH 2: BUTTONS
+    # ═══════════════════════════════════════════════════════════
+    print("")
+    print("[PATCH 2] Them button tabs...")
     new_btns = ""
     for ds in all_new:
         label = ds["name"]
-        count = ds["count"]
-
-        m = re.match(r'^(\d+\+?)\s+(.+)$', label)
-        if m:
-            title_html = '<b>' + m.group(1) + '</b> ' + _html_escape(m.group(2))
-            sub = "Câu giao tiếp"
-        else:
-            title_html = '<b>' + str(count) + '</b> ' + _html_escape(label)
-            sub = "Bộ dữ liệu"
-
         new_btns += (
             '\n        <button class="ds-btn ds-btn-primary" '
             'data-dataset="' + ds["id"] + '">\n'
-            '            <i class="fas ' + ds["icon"] + ' ds-btn-icon"></i>\n'
-            '            <span class="ds-btn-text">\n'
-            '                <span class="ds-btn-title">' + title_html + '</span>\n'
-            '                <span class="ds-btn-sub">' + sub + '</span>\n'
-            '            </span>\n'
+            '            <i class="fas ' + ds["icon"] + '"></i>\n'
+            '            <span>' + _js_str(label) + '</span>\n'
             '        </button>'
         )
 
     if add_vocab:
         new_btns += build_vocab_tab_html(VOCAB_ID, VOCAB_LABEL)
 
-    if new_btns:
-        pat_after_tonghop = re.compile(
-            r'(<button[^>]*class="[^"]*ds-btn[^"]*"[^>]*data-dataset="tonghop"[^>]*>.*?</button>)',
-            re.MULTILINE | re.DOTALL
+    pat_after_tonghop = re.compile(
+        r'(<button[^>]*class="[^"]*ds-btn[^"]*"[^>]*data-dataset="tonghop"[^>]*>.*?</button>)',
+        re.MULTILINE | re.DOTALL
+    )
+    html, n = pat_after_tonghop.subn(
+        lambda m: m.group(1) + new_btns,
+        html, count=1
+    )
+
+    if n > 0:
+        print("   [OK] Da chen button (sau 'Tong hop')")
+    else:
+        print("   [!] Khong thay nut 'tonghop' -> fallback truoc 'chuyen-nganh'")
+        pat_before_cn = re.compile(
+            r'(\s*)(<button\s+class="[^"]*ds-btn[^"]*"\s+[^>]*data-dataset-group="chuyen-nganh")',
+            re.MULTILINE
         )
-        html, n = pat_after_tonghop.subn(
-            lambda m: m.group(1) + new_btns,
+        html, n = pat_before_cn.subn(
+            lambda m: m.group(1) + new_btns + '\n        ' + m.group(2),
             html, count=1
         )
+        if n == 0:
+            print("[X] Khong tim thay ca nut 'tonghop' lan 'chuyen-nganh'")
+            sys.exit(1)
+        print("   [OK] Da chen button (fallback)")
 
-        if n > 0:
-            print("   [OK] Da chen button moi (sau 'Tong hop')")
-        else:
-            print("   [!] Khong thay nut 'tonghop' -> fallback truoc 'chuyen-nganh'")
-            pat_before_cn = re.compile(
-                r'(\s*)(<button\s+class="[^"]*ds-btn[^"]*"\s+[^>]*data-dataset-group="chuyen-nganh")',
-                re.MULTILINE
-            )
-            html, n = pat_before_cn.subn(
-                lambda m: m.group(1) + new_btns + '\n        ' + m.group(2),
-                html, count=1
-            )
-            if n == 0:
-                print("[X] Khong tim thay ca nut 'tonghop' lan 'chuyen-nganh'")
-                sys.exit(1)
-            print("   [OK] Da chen button moi (fallback)")
-    else:
-        print("   [skip] Khong co nut moi can them")
-
-    # =============================================================
-    #  PATCH 2.5: REWRITE NÚT CỨNG SANG 2 HÀNG
-    # =============================================================
-    html = patch_existing_buttons(html)
-
-    # =============================================================
+    # ═══════════════════════════════════════════════════════════
     #  PATCH 3: CSS
-    # =============================================================
+    # ═══════════════════════════════════════════════════════════
     print("")
-    print("[PATCH 3] CSS layout + buttons 2 hang...")
+    print("[PATCH 3] CSS layout...")
 
     css = build_layout_css(all_new, add_vocab)
 
@@ -1785,9 +1456,9 @@ def main():
     else:
         print("   [OK] Da inject CSS")
 
-    # =============================================================
+    # ═══════════════════════════════════════════════════════════
     #  PATCH 4: JS
-    # =============================================================
+    # ═══════════════════════════════════════════════════════════
     print("")
     print("[PATCH 4] JS binding...")
 
@@ -1812,18 +1483,23 @@ def main():
 
     datasets_json = _escape_json_for_script(datasets_dict)
 
+    # ═══ Module fix.py chính (đã có <script> bên trong) ═══
     js = build_js_override(ids_js, datasets_json)
 
+    # ═══ Module vocab_premium (JS thuần - PHẢI wrap <script> riêng) ═══
+    # ═══ Module vocab_premium (JS thuần - PHẢI wrap <script> riêng) ═══
     if add_vocab:
         js += '\n<script>\n'
         js += build_vocab_js_override(VOCAB_ID)
-        js += '\n' + build_vocab_js_patch()
+        js += '\n' + build_vocab_js_patch()   # ⭐ THÊM DÒNG NÀY
         js += '\n</script>\n'
 
+    # ═══ Modal HTML cho vocab (chèn trước JS) ═══
     modal_html = ""
     if add_vocab:
         modal_html = build_vocab_modal_html()
 
+    # ═══ Inject vào HTML trước </body> ═══
     pat_body = re.compile(r'(\s*)(</body>)', re.MULTILINE)
     html, n = pat_body.subn(
         lambda m: m.group(1) + modal_html + '\n' + js + m.group(1) + m.group(2),
@@ -1833,8 +1509,7 @@ def main():
         print("[X] Khong tim thay </body>")
         sys.exit(1)
     print("   [OK] Da inject JS + modal")
-
-    # GHI FILE
+    # ═══ GHI FILE ═══
     with open(INDEX_HTML, "w", encoding="utf-8") as f:
         f.write(html)
 
@@ -1855,7 +1530,6 @@ def main():
         print("[fix.py]    (chi Admin + Premium moi mo duoc)")
 
     print("[fix.py] Layout: PC 4 cot - Mobile 2 cot")
-    print("[fix.py] Buttons: 2 hang + icon watermark chim")
     print("[fix.py] CHI 1 TAB ACTIVE tai mot thoi diem")
     print("=" * 62)
 
