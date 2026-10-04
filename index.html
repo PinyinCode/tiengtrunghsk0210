@@ -10430,6 +10430,64 @@ body[data-vocab-mode="1"] .mobile-view {
     .ds-btn .ds-btn-title { font-size: .76rem; }
     .ds-btn .ds-btn-sub   { font-size: .6rem; }
 }
+/* ═══════════════════════════════════════════════════════════ */
+/* ⭐ FIX CLICK — CHUYÊN NGÀNH + YÊU THÍCH BẤM ĐƯỢC            */
+/* ═══════════════════════════════════════════════════════════ */
+
+/* ── Nút CHUYÊN NGÀNH — nhận click ── */
+.ds-btn[data-dataset-group="chuyen-nganh"] {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    z-index: 10 !important;
+}
+.ds-btn[data-dataset-group="chuyen-nganh"] > .ds-btn-text {
+    pointer-events: auto !important;
+    z-index: 20 !important;
+    position: relative !important;
+}
+.ds-btn[data-dataset-group="chuyen-nganh"] > .ds-btn-text * {
+    pointer-events: auto !important;
+}
+.ds-btn[data-dataset-group="chuyen-nganh"] > i,
+.ds-btn[data-dataset-group="chuyen-nganh"] > i.ds-btn-icon,
+.ds-btn[data-dataset-group="chuyen-nganh"] > i.ds-arrow,
+.ds-btn[data-dataset-group="chuyen-nganh"] > .ds-new-badge,
+.ds-btn[data-dataset-group="chuyen-nganh"]::before,
+.ds-btn[data-dataset-group="chuyen-nganh"]::after {
+    pointer-events: none !important;
+}
+
+/* ── Nút YÊU THÍCH — nhận click ── */
+.ds-btn[data-dataset-group="favorites"] {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    z-index: 10 !important;
+}
+.ds-btn[data-dataset-group="favorites"] > .ds-btn-text {
+    pointer-events: auto !important;
+    z-index: 20 !important;
+    position: relative !important;
+}
+.ds-btn[data-dataset-group="favorites"] > .ds-btn-text * {
+    pointer-events: auto !important;
+}
+.ds-btn[data-dataset-group="favorites"] > i,
+.ds-btn[data-dataset-group="favorites"] > i.ds-btn-icon,
+.ds-btn[data-dataset-group="favorites"] > .ds-fav-badge,
+.ds-btn[data-dataset-group="favorites"] > .ds-fav-lock,
+.ds-btn[data-dataset-group="favorites"]::before,
+.ds-btn[data-dataset-group="favorites"]::after {
+    pointer-events: none !important;
+}
+
+/* ── Đảm bảo chung mọi nút con trong .ds-main-row ── */
+.ds-main-row > .ds-btn > .ds-btn-text {
+    pointer-events: auto !important;
+    z-index: 20 !important;
+}
+.ds-main-row > .ds-btn > .ds-btn-text * {
+    pointer-events: auto !important;
+}
 
 
 
