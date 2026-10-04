@@ -89,8 +89,8 @@ BUTTONS_CSS = r"""
     display: flex;
     align-items: center;
     gap: .65rem;
-    padding: .7rem .8rem;
-    min-height: 68px;             /* ⭐ TĂNG TỪ 60 → 68 */
+    padding: .65rem .8rem;
+    min-height: 60px;
     height: 100%;
     border: 1.5px solid var(--border);
     border-radius: 12px;
@@ -134,47 +134,34 @@ BUTTONS_CSS = r"""
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: .18rem;
+    gap: .12rem;
     pointer-events: auto;
     z-index: 2;
     position: relative;
 }
-
-/* ⭐ TITLE — cho phép xuống 2 dòng */
 .ds-btn .ds-btn-title {
     font-size: clamp(.78rem, 1vw, .9rem);
     font-weight: 700;
     color: var(--text);
     line-height: 1.2;
-    letter-spacing: -.01em;
-    /* ⭐ Cho phép 2 dòng */
-    white-space: normal;
+    white-space: nowrap;
     overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
     text-overflow: ellipsis;
-    word-break: break-word;
+    letter-spacing: -.01em;
 }
 .ds-btn .ds-btn-title b {
     font-weight: 900;
     color: var(--text);
     margin-right: .15rem;
 }
-
-/* ⭐ SUB — cũng cho phép 2 dòng */
 .ds-btn .ds-btn-sub {
     font-size: clamp(.62rem, .78vw, .72rem);
     font-weight: 600;
     color: var(--text-3);
     line-height: 1.25;
-    white-space: normal;
+    white-space: nowrap;
     overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
     text-overflow: ellipsis;
-    word-break: break-word;
 }
 
 /* ── Active ── */
@@ -334,8 +321,8 @@ BUTTONS_CSS = r"""
 /* ═══ MOBILE ═══ */
 @media (max-width: 500px) {
     .ds-btn {
-        min-height: 64px;
-        padding: .6rem .7rem;
+        min-height: 56px;
+        padding: .55rem .7rem;
         gap: .5rem;
     }
     .ds-btn .ds-btn-icon {
@@ -537,16 +524,6 @@ def patch_other_buttons(html):
             count = ""
             name = text
 
-        # ⭐ Rút gọn tên: bỏ chữ "Câu" ở đầu nếu có
-        # VD: "Câu giao tiếp" → "Giao tiếp"
-        short_name = name
-        if short_name.lower().startswith("câu "):
-            short_name = short_name[4:].strip()
-        # Capitalize chữ đầu
-        if short_name:
-            short_name = short_name[0].upper() + short_name[1:]
-
-        # ⭐ Nếu có <br> → lấy phần đầu làm title, phần sau làm sub
         if '<br' in inner.lower():
             parts = re.split(r'<br\s*/?>', inner)
             if len(parts) >= 2:
@@ -558,21 +535,14 @@ def patch_other_buttons(html):
                 m2 = re.match(r'^([\d\+]+)\s+(.+)$', first)
                 if m2:
                     count = m2.group(1)
-                    name_part = m2.group(2)
-                    # Rút gọn tên
-                    short_name = name_part
-                    if short_name.lower().startswith("câu "):
-                        short_name = short_name[4:].strip()
-                    if short_name:
-                        short_name = short_name[0].upper() + short_name[1:]
+                    name = m2.group(2)
                 sub = re.sub(r'\s+', ' ', rest).strip()
             else:
                 sub = DEFAULT_CONFIG["sub_template"]
         else:
             sub = DEFAULT_CONFIG["sub_template"]
 
-        # ⭐ Title rút gọn: "<b>1000+</b> Giao tiếp"
-        title_html = "<b>" + count + "</b> " + short_name if count else short_name
+        title_html = "<b>" + count + "</b> " + name if count else name
 
         return build_button_html(
             "giao-tiep",
