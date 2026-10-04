@@ -1637,16 +1637,27 @@ function stopRTDBPresence() {
 }
 
 /* ============ AUTH STATE ============ */
+/* ============ AUTH STATE ============ */
 async function handleAuthChange(user) {
     if (!user) {
-        /* ═══ Logout → hủy watcher + presence ═══ */
-        if (userWatcher) { try { userWatcher(); } catch(e) {} userWatcher = null; }
-        stopRTDBPresence();
-        currentUser = null;
-        isDemo = true;
+        /* ═══════════════════════════════════════════════════════════
+           ⭐ LOGOUT → RESET TOÀN BỘ STATE + VỀ DEMO MODE
+           ═══════════════════════════════════════════════════════════ */
+        resetAppState();
+
         publishTierState();
         applyUserUI();
         enterDemoMode();
+
+        /* Cập nhật lại bộ lọc + dataset theo tier mới (demo) */
+        if (typeof buildFilters === 'function') buildFilters();
+        if (typeof applyFilter === 'function') applyFilter();
+        if (typeof updateResultCount === 'function') updateResultCount();
+        if (typeof markCurrentDatasetActive === 'function') markCurrentDatasetActive();
+        if (typeof maybeShowOnboarding === 'function') {
+            setTimeout(maybeShowOnboarding, 300);
+        }
+        if (typeof favUpdateLockState === 'function') favUpdateLockState();
         return;
     }
 
@@ -1656,19 +1667,45 @@ async function handleAuthChange(user) {
     try { cached = JSON.parse(localStorage.getItem(cacheKey) || 'null'); } catch(e) {}
 
     if (cached && cached.expires > Date.now() && cached.data) {
+        /* ═══ DÙNG CACHE — NHƯNG VẪN PHẢI REFRESH UI ═══ */
         currentUser = cached.data;
         isDemo = false;
+
+        /* ⭐ Re-check expired từ cache (phòng cache cũ sai) */
+        if (currentUser.role !== 'admin' && !currentUser.isPermanent && currentUser.expiresAt) {
+            var expDate = getExpiryDate(currentUser.expiresAt);
+            if (expDate && !isNaN(expDate.getTime())) {
+                var isExpired = expDate.getTime() < Date.now();
+                currentUser.isExpiredOnly = isExpired;
+                if (isExpired) currentUser.tier = 'expired';
+            }
+        }
+
         publishTierState();
         applyUserUI();
         logLogin(currentUser);
-        if (!appInitialized) { initApp(); appInitialized = true; }
-        else { if (typeof refreshApp === 'function') refreshApp(); }
+
+        if (!appInitialized) {
+            initApp();
+            appInitialized = true;
+        } else {
+            if (typeof refreshApp === 'function') refreshApp();
+        }
+
+        /* ⭐ Refresh lại toàn bộ UI theo tier mới */
+        if (typeof buildFilters === 'function') buildFilters();
+        if (typeof applyFilter === 'function') applyFilter();
+        if (typeof updateResultCount === 'function') updateResultCount();
+        if (typeof markCurrentDatasetActive === 'function') markCurrentDatasetActive();
+        if (typeof favUpdateLockState === 'function') favUpdateLockState();
+
         watchCurrentUser();
         startRTDBPresence();
         setTimeout(function() { verifyCurrentUserBackground(); }, 2000);
         return;
     }
 
+    /* ═══ FETCH TỪ SERVER ═══ */
     try {
         var docRef = db.collection('allowed_users').doc(email);
         var doc = await docRef.get({ source: 'server' });
@@ -1723,20 +1760,15 @@ async function handleAuthChange(user) {
 
         currentUser = userData;
 
-        /* ═══════════════════════════════════════════════════════════
-           ⭐ CHECK EXPIRED — Đặc biệt chú ý trial
-           - Nếu trial hết hạn → KHÔNG cho login lại, force tier expired
-           - Nếu active hết hạn → vẫn giữ currentUser (KHÔNG set isDemo = true)
-           ═══════════════════════════════════════════════════════════ */
+        /* ═══ CHECK EXPIRED ═══ */
         var isExpiredUser = false;
 
         if (currentUser.role !== 'admin' && !currentUser.isPermanent) {
             if (currentUser.expiresAt) {
-                var expDate = getExpiryDate(currentUser.expiresAt);
-                if (expDate && !isNaN(expDate.getTime())) {
-                    isExpiredUser = expDate.getTime() < Date.now();
+                var expDate2 = getExpiryDate(currentUser.expiresAt);
+                if (expDate2 && !isNaN(expDate2.getTime())) {
+                    isExpiredUser = expDate2.getTime() < Date.now();
 
-                    /* ⭐ Trial hết hạn → update Firestore để không reset */
                     if (isExpiredUser && (currentUser.isTrial || currentUser.tier === 'trial')) {
                         console.log('⚠️ Trial user expired → chuyển sang tier expired');
                         try {
@@ -1754,7 +1786,6 @@ async function handleAuthChange(user) {
         }
 
         if (isExpiredUser) {
-            /* ⭐ QUAN TRỌNG: KHÔNG set isDemo = true — vẫn giữ currentUser */
             isDemo = false;
             currentUser.isExpiredOnly = true;
             currentUser.tier = 'expired';
@@ -1771,13 +1802,34 @@ async function handleAuthChange(user) {
             }));
         } catch(e) {}
 
+        /* ═══════════════════════════════════════════════════════════
+           ⭐ REFRESH TOÀN BỘ UI THEO TIER MỚI SAU KHI LOGIN
+           ═══════════════════════════════════════════════════════════ */
         publishTierState();
         applyUserUI();
         logLogin(currentUser);
-        if (!appInitialized) { initApp(); appInitialized = true; }
-        else { if (typeof refreshApp === 'function') refreshApp(); }
+
+        if (!appInitialized) {
+            initApp();
+            appInitialized = true;
+        } else {
+            if (typeof refreshApp === 'function') refreshApp();
+        }
+
+        if (typeof buildFilters === 'function') buildFilters();
+        if (typeof applyFilter === 'function') applyFilter();
+        if (typeof updateResultCount === 'function') updateResultCount();
+        if (typeof markCurrentDatasetActive === 'function') markCurrentDatasetActive();
+
+        if (typeof maybeShowOnboarding === 'function') {
+            setTimeout(maybeShowOnboarding, 500);
+        }
+        if (typeof favUpdateLockState === 'function') favUpdateLockState();
+        if (typeof favRefreshUI === 'function') favRefreshUI();
+
         watchCurrentUser();
         startRTDBPresence();
+
     } catch(e) {
         console.error('Auth check error:', e);
         isDemo = true;
@@ -2353,9 +2405,22 @@ function applyUserUI() {
 
     if (typeof window.favUpdateLockState === 'function') window.favUpdateLockState();
 
-    /* ⭐ Update banner theo tier (demo / expired) */
+/* ⭐ Update banner theo tier (demo / expired) */
     if (typeof updateDemoBannerByTier === 'function') {
         updateDemoBannerByTier();
+    }
+
+    /* ⭐ Refresh lại filter HSK/Subject theo tier mới */
+    if (typeof buildFilters === 'function') {
+        try { buildFilters(); } catch(e) {}
+    }
+    if (typeof pfBuildFilterOptions === 'function') {
+        try { pfBuildFilterOptions(); } catch(e) {}
+    }
+
+    /* ⭐ Refresh lock state cho dataset tabs */
+    if (typeof markCurrentDatasetActive === 'function') {
+        try { markCurrentDatasetActive(); } catch(e) {}
     }
 }
 
@@ -4262,7 +4327,117 @@ function formatTimeDiff(ms) {
     if (ms < 2592000000) return Math.floor(ms / 86400000) + ' ngày trước';
     return Math.floor(ms / 2592000000) + ' tháng trước';
 }
+/* ═══════════════════════════════════════════════════════════════
+   🔄 RESET APP STATE — Gọi khi logout để xóa sạch state cũ
+   ═══════════════════════════════════════════════════════════════ */
+function resetAppState() {
+    console.log('🔄 [resetAppState] Đang reset state sau logout...');
 
+    /* 1. Reset biến toàn cục */
+    currentUser = null;
+    isDemo = true;
+    usersCache = [];
+    lastLoginMap = [];
+    importRows = [];
+    editingEmail = null;
+    editingExpiryEmail = null;
+    renewalSelectedPkg = null;
+    renewalCurrentReq = null;
+    renewalTab = 'pending';
+    pendingRenewalsData = [];
+    confirmedRenewalsData = [];
+    adminSearchQuery = '';
+    adminCurrentFilter = 'all';
+    editingPermissionEmail = null;
+
+    /* 2. Hủy watchers & listeners */
+    if (userWatcher) {
+        try { userWatcher(); } catch(e) {}
+        userWatcher = null;
+    }
+    if (renewalListener) {
+        try { renewalListener(); } catch(e) {}
+        renewalListener = null;
+    }
+    stopRTDBPresence();
+
+    /* 3. Xóa override onboarding */
+    window.__onboardingOverride = null;
+    window.__onboardingAutoPicked = false;
+
+    /* 4. Xóa các banner động */
+    var bannersToRemove = [
+        'vocabWarningBanner',
+        'onboardingActiveBanner',
+        'userChangedToast',
+        'tagToast'
+    ];
+    bannersToRemove.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.remove();
+    });
+
+    /* 5. Ẩn tất cả banner chính */
+    ['demoBanner', 'expiryBanner'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+
+    /* 6. Reset APP_TIER / APP_LIMITS về demo */
+    window.APP_TIER = 'demo';
+    window.APP_LIMITS = {
+        maxQuestions: (typeof DEMO_LIMIT === 'number') ? DEMO_LIMIT : 25,
+        maxHSK: (typeof DEMO_HSK_MAX === 'number') ? DEMO_HSK_MAX : 3,
+        unlimitedWriting: false,
+        isTrial: false,
+        email: null
+    };
+
+    /* 7. Reset dropdown user về trạng thái mặc định */
+    try {
+        sessionStorage.removeItem('userDropdownClosed');
+        sessionStorage.removeItem('fabClosed');
+        sessionStorage.removeItem('session_start');
+    } catch(e) {}
+
+    /* 8. Reset bộ lọc & search */
+    try {
+        if (typeof state !== 'undefined' && state) {
+            state.search = '';
+            state.hsk = '';
+            state.subject = '';
+        }
+        var si = document.getElementById('searchInput');
+        var hf = document.getElementById('hskFilter');
+        var sf = document.getElementById('subjectFilter');
+        if (si) si.value = '';
+        if (hf) hf.value = '';
+        if (sf) sf.value = '';
+        var cb = document.getElementById('clearSearchBtn');
+        if (cb) cb.classList.remove('show');
+    } catch(e) {}
+
+    /* 9. Đóng tất cả modal đang mở */
+    var modals = document.querySelectorAll(
+        '.admin-modal, .edit-modal, .renewal-modal, .import-modal, ' +
+        '.permission-modal, .voice-modal, .writer-modal, .practice-full-modal, ' +
+        '.onboarding-modal, .login-modal'
+    );
+    modals.forEach(function(m) { m.classList.remove('show'); });
+
+    document.body.classList.remove('practice-full-open');
+    document.body.style.overflow = '';
+
+    /* 10. Ẩn user menu, hiện nút login */
+    var userMenu = document.getElementById('userMenu');
+    var headerLoginBtn = document.getElementById('headerLoginBtn');
+    var demoBadge = document.getElementById('demoBadge');
+    if (userMenu) userMenu.style.display = 'none';
+    if (headerLoginBtn) headerLoginBtn.style.display = 'flex';
+    if (demoBadge) demoBadge.style.display = 'flex';
+
+    console.log('✅ [resetAppState] Hoàn tất reset');
+}
 /* ============ INIT AUTH UI ============ */
 function initAuthUI() {
     if ($('headerLoginBtn')) $('headerLoginBtn').addEventListener('click', showLoginModal);
@@ -4323,21 +4498,24 @@ function initAuthUI() {
     /* ═══════════════════════════════════════════════════════════
        🔥 LOGOUT — XÓA TOÀN BỘ CACHE + STOP PRESENCE
        ═══════════════════════════════════════════════════════════ */
+    /* ═══════════════════════════════════════════════════════════
+       🔥 LOGOUT — RESET STATE + XÓA CACHE + STOP PRESENCE
+       ═══════════════════════════════════════════════════════════ */
     if ($('logoutBtn')) {
         $('logoutBtn').addEventListener('click', function() {
             if (!confirm('Đăng xuất?')) return;
 
             try {
-                if (userWatcher) {
-                    try { userWatcher(); } catch(e) {}
-                    userWatcher = null;
-                }
-                stopRTDBPresence();
+                /* ⭐ BƯỚC 1: Reset toàn bộ state */
+                resetAppState();
 
-                if (currentUser && currentUser.email) {
-                    localStorage.removeItem('user_cache_' + currentUser.email);
+                /* ⭐ BƯỚC 2: Xóa cache user hiện tại */
+                var oldEmail = currentUser && currentUser.email;
+                if (oldEmail) {
+                    localStorage.removeItem('user_cache_' + oldEmail);
                 }
 
+                /* ⭐ BƯỚC 3: Xóa TẤT CẢ cache user_cache_* và admin_users_cache */
                 var keysToRemove = [];
                 for (var i = 0; i < localStorage.length; i++) {
                     var k = localStorage.key(i);
@@ -4349,19 +4527,17 @@ function initAuthUI() {
                     try { localStorage.removeItem(k); } catch(e) {}
                 });
 
-                if (currentUser && currentUser.email) {
-                    try { localStorage.removeItem('login_log_' + currentUser.email); } catch(e) {}
+                /* ⭐ BƯỚC 4: Xóa login log */
+                if (oldEmail) {
+                    try { localStorage.removeItem('login_log_' + oldEmail); } catch(e) {}
                 }
-
-                sessionStorage.removeItem('userDropdownClosed');
-                sessionStorage.removeItem('fabClosed');
-                sessionStorage.removeItem('session_start');
 
                 console.log('✅ Đã xóa', keysToRemove.length, 'cache keys khi đăng xuất');
             } catch(e) {
                 console.warn('Lỗi khi xóa cache:', e);
             }
 
+            /* ⭐ BƯỚC 5: Sign out Firebase → trigger handleAuthChange(null) */
             auth.signOut();
         });
     }
