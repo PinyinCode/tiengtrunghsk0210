@@ -3284,10 +3284,8 @@ body.practice-full-open .pf-tiktok-float {
     }
 }
 /* ═══════════════════════════════════════════════════════════ */
-/* NÚT TỔNG HỢP — Hiển thị ĐỦ nội dung, tự co chữ để vừa       */
-/* ═══════════════════════════════════════════════════════════ */
-/* ═══════════════════════════════════════════════════════════ */
-/* NÚT TỔNG HỢP — Tối đa 2 dòng, tự co chữ để vừa ô             */
+/* NÚT TỔNG HỢP — Hiển thị ĐỦ nội dung, tự co chữ để /* ═══════════════════════════════════════════════════════════ */
+/* NÚT TỔNG HỢP — Auto resize font theo kích thước nút         */
 /* ═══════════════════════════════════════════════════════════ */
 .ds-btn[data-dataset="tonghop"] {
     min-height: 68px;
@@ -3296,6 +3294,10 @@ body.practice-full-open .pf-tiktok-float {
     line-height: 1.2;
     padding: .45rem .6rem;
     overflow: hidden;
+
+    /* ⭐ Cho phép dùng đơn vị cqw (container query width) */
+    container-type: inline-size;
+    container-name: tonghopbtn;
 }
 
 .ds-btn[data-dataset="tonghop"] > span {
@@ -3308,31 +3310,15 @@ body.practice-full-open .pf-tiktok-float {
     text-align: left;
     line-height: 1.15;
 
-    /* ⭐ Font nhỏ hơn để 2 dòng đầy đủ, không bị wrap */
-    font-size: clamp(0.56rem, 1.3vw, 0.72rem);
+    /* ⭐ Font tự tính theo % chiều rộng nút (container query) */
+    /* 4.5cqw = 4.5% width của nút → tự co khi nút nhỏ */
+    font-size: clamp(0.6rem, 4.5cqw, 0.85rem);
 }
 
-@media (max-width: 500px) {
-    .ds-btn[data-dataset="tonghop"] {
-        min-height: 62px;
-        max-height: 62px;
-        padding: .35rem .5rem;
-    }
+/* Fallback nếu trình duyệt cũ không hỗ trợ container query */
+@supports not (font-size: 1cqw) {
     .ds-btn[data-dataset="tonghop"] > span {
-        font-size: clamp(0.54rem, 2.4vw, 0.66rem);
-        line-height: 1.1;
-    }
-}
-
-@media (min-width: 501px) and (max-width: 768px) {
-    .ds-btn[data-dataset="tonghop"] > span {
-        font-size: clamp(0.56rem, 1.4vw, 0.68rem);
-    }
-}
-
-@media (min-width: 1200px) {
-    .ds-btn[data-dataset="tonghop"] > span {
-        font-size: clamp(0.66rem, 1vw, 0.78rem);
+        font-size: clamp(0.6rem, 1.4vw, 0.78rem);
     }
 }
 
