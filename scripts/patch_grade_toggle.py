@@ -255,7 +255,12 @@ def patch_css(ui_css):
 }
 
 /* Mobile — mỗi lỗi 1 dòng */
-@media (max-width: 600px) {
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE — Số cột theo độ rộng màn hình
+   ═══════════════════════════════════════════════════════════ */
+
+/* Mobile NHỎ (< 500px) — 1 cột, mỗi lỗi 1 dòng */
+@media (max-width: 499px) {
     #pfGradeToggleBtn,
     #pfRevealBtn {
         padding: .55rem .75rem !important;
@@ -266,9 +271,10 @@ def patch_css(ui_css):
         font-size: .82rem !important;
     }
     .ai-reason {
-        flex-direction: column !important;
-        align-items: stretch !important;
+        display: grid !important;
+        grid-template-columns: 1fr !important;
         gap: .35rem !important;
+        align-items: stretch !important;
     }
     .ai-reason .err-item {
         width: 100% !important;
@@ -283,6 +289,36 @@ def patch_css(ui_css):
     }
     .ai-reason .err-arrow {
         font-size: 1rem !important;
+    }
+}
+
+/* Mobile LỚN / Tablet (500px – 899px) — 2 cột */
+@media (min-width: 500px) and (max-width: 899px) {
+    .ai-reason {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: .35rem .5rem !important;
+        align-items: stretch !important;
+    }
+    .ai-reason .err-item {
+        width: 100% !important;
+        justify-content: flex-start !important;
+        padding: .35rem .6rem !important;
+    }
+}
+
+/* Desktop (>= 900px) — 3 cột */
+@media (min-width: 900px) {
+    .ai-reason {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: .4rem .55rem !important;
+        align-items: stretch !important;
+    }
+    .ai-reason .err-item {
+        width: 100% !important;
+        justify-content: flex-start !important;
+        padding: .35rem .6rem !important;
     }
 }
 """
