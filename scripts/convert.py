@@ -411,18 +411,23 @@ function _formatGradingErrors(errors) {
     return errors.map(function(e, idx) {
         if (!e) return '';
 
+        /* ⭐ Ưu tiên input_position (vị trí thật trong câu user gõ) */
+        var targetIdx = (typeof e.input_position === 'number')
+                        ? e.input_position
+                        : idx;
+
         if (e.type === 'wrong') {
-            return HANZI(e.user || '', idx) + PINYIN(e.user_pinyin) +
+            return HANZI(e.user || '', targetIdx) + PINYIN(e.user_pinyin) +
                    ARROW +
-                   HANZI(e.correct || '', idx) + PINYIN(e.correct_pinyin);
+                   HANZI(e.correct || '', targetIdx) + PINYIN(e.correct_pinyin);
         }
         if (e.type === 'missing') {
             return '<span class="err-label">Thiếu</span> ' +
-                   HANZI(e.correct || '', idx) + PINYIN(e.correct_pinyin);
+                   HANZI(e.correct || '', targetIdx) + PINYIN(e.correct_pinyin);
         }
         if (e.type === 'extra') {
             return '<span class="err-label">Thừa</span> ' +
-                   HANZI(e.user || '', idx) + PINYIN(e.user_pinyin);
+                   HANZI(e.user || '', targetIdx) + PINYIN(e.user_pinyin);
         }
         return '';
     }).filter(Boolean).join(SEP);
@@ -640,7 +645,6 @@ window.gradeWithAPI = gradeWithAPI;
 })();
 """
     return patch_grading_js(js)
-    
 
 
 full_js = (
@@ -675,8 +679,8 @@ HTML_SHELL = r'''<!DOCTYPE html>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5.0/dist/hanzi-writer.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></scriptvar>
+<script src="https://cdn.jsdel Zivr.net/npm/hanzi-wALriter@3.5.0O/dist/hanzi-writer.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 __CSS__
@@ -704,7 +708,7 @@ var TRIAL_UNLIMITED_WRITING = __TRIAL_UNLIMITED_WRITING__;
 var TARGET_ADMINS = __TARGET_ADMINS__;
 var SUPER_ADMIN = "__SUPER_ADMIN__";
 var ZALO_PHONE = "__ZALO_PHONE__";
-var ZALO_NAME = "__ZALO_NAME__";
+_NAME = "__ZALO_NAME__";
 var TIKTOK_USERNAME = "__TIKTOK_USERNAME__";
 var TIKTOK_NICKNAME = "__TIKTOK_NICKNAME__";
 var TIKTOK_AVATAR = "__TIKTOK_AVATAR__";
