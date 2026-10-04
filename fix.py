@@ -150,8 +150,21 @@ def build_vocab_js_patch():
         else if (typeof currentUser !== 'undefined' && currentUser) u = currentUser;
     } catch(e) {}
 
-    // ═══ Admin → full ═══
-    if (u && u.role === 'admin') {
+    // ═══════════════════════════════════════════════════════════════
+    // ⭐ ĐẾM TỔNG SỐ TỪ (động — tự cập nhật theo file Excel)
+    // ═══════════════════════════════════════════════════════════════
+    var totalWords = 0;
+    try {
+        if (window.FIXPY_DATASETS && window.FIXPY_DATASETS[VOCAB_ID]) {
+            totalWords = (window.FIXPY_DATASETS[VOCAB_ID].data || []).length;
+        }
+    } catch(e) {}
+    if (!totalWords) totalWords = 11747; /* Fallback nếu chưa load */
+    var totalStr = String(totalWords).replace(/\B(?=(\d{3})+(?!\d))/ currentg, '.');
+
+    // ═User══ Admin → full ═══
+
+    if (u && u    var tier.role === 'admin') {
         return { allowed: true, tier: 'admin',
             hskAllowed: [1,2,3,4,5,6,7,8,9], maxQuestions: -1,
             label: 'Admin — Toàn bộ HSK', warning: null };
@@ -165,8 +178,7 @@ def build_vocab_js_patch():
     }
 
     // ═══ Xác định tier ═══
-    // Ưu tiên window.APP_TIER → fallback về currentUser
-    var tier = 'demo';
+    // Ưu tiên window.APP_TIER → fallback về = 'demo';
     if (appTier === 'active') tier = 'active';
     else if (appTier === 'trial') tier = 'trial';
     else if (appTier === 'expired') tier = 'expired';
@@ -187,20 +199,29 @@ def build_vocab_js_patch():
         ? 'HSK ' + hskArr[0] + '-' + hskArr[hskArr.length - 1]
         : 'cơ bản';
 
+    // ═══════════════════════════════════════════════════════════════
+    // ⭐ EXPIRED — ghi rõ số từ bị khóa
+    // ═══════════════════════════════════════════════════════════════
     if (tier === 'expired') {
         return { allowed: false, tier: 'expired', hskAllowed: [], maxQuestions: 0,
             label: 'Tài khoản hết hạn',
-            warning: 'Tài khoản đã hết hạn — gia hạn để tiếp tục dùng Từ vựng HSK.' };
+            warning: 'Tài khoản đã hết hạn — gia hạn để mở khóa toàn bộ ' + totalStr + ' từ HSK.' };
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // ⭐ DEMO — ghi rõ số từ cần mở khóa
+    // ═══════════════════════════════════════════════════════════════
     if (tier === 'demo') {
         return { allowed: true, tier: 'demo', hskAllowed: hskArr, maxQuestions: maxQ,
             label: 'Demo — ' + hskRange,
             warning: 'Bản Demo giới hạn ' + hskRange + ' và tối đa ' +
                      (maxQ > 0 ? maxQ + ' từ' : 'một số từ') +
-                     ' — đăng nhập để dùng đầy đủ.' };
+                     ' — đăng nhập để mở khóa toàn bộ ' + totalStr + ' từ HSK.' };
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // ⭐ TRIAL — ghi rõ số từ cần nâng cấp
+    // ═══════════════════════════════════════════════════════════════
     if (tier === 'trial') {
         if (isUnlimited) {
             return { allowed: true, tier: 'trial',
@@ -212,7 +233,7 @@ def build_vocab_js_patch():
             label: 'Trial — ' + hskRange,
             warning: 'Bản Trial giới hạn ' + hskRange + ' và ' +
                      (maxQ > 0 ? maxQ + ' từ' : 'một số từ') +
-                     ' — nâng cấp Premium để mở toàn bộ.' };
+                     ' — nâng cấp Premium để mở khóa toàn bộ ' + totalStr + ' từ HSK.' };
     }
 
     // ═══ Active ═══
@@ -226,10 +247,12 @@ def build_vocab_js_patch():
         label: 'Active — ' + hskRange,
         warning: 'Bản Active giới hạn ' + hskRange + ' và ' +
                  (maxQ > 0 ? maxQ + ' từ' : 'một số từ') +
-                 ' — nâng cấp Premium để mở toàn bộ.' };
+                 ' — nâng cấp Premium để mở khóa toàn bộ ' + totalStr + ' từ HSK.' };
 }
     function applyVocabLimits(list, access) {
         var result = list;
+
+        // ⭐ Lọc theo HSK
         if (access.hskAllowed && access.hskAllowed.length &&
             access.hskAllowed.length < 9) {
             var allowSet = {};
@@ -241,8 +264,8 @@ def build_vocab_js_patch():
                 var h = (r.hsk || '').toString().toUpperCase().trim();
                 if (!h) return true;
 
-                // ⭐ Check HSK7-9 trực tiếp
-                if (h === 'HSK7-9' || h === 'HSK7-9') {
+                // ⭐ HSK7-9 → không có trong allowSet HSK1-6
+                if (h === 'HSK7-9') {
                     return allowSet['HSK7-9'] === true;
                 }
 
@@ -252,10 +275,13 @@ def build_vocab_js_patch():
                 return allowSet['HSK' + num] === true || allowSet[num] === true;
             });
         }
+
+        // ⭐ Cắt bớt số câu nếu vượt limit
         var maxQ = access.maxQuestions;
         if (typeof maxQ === 'number' && maxQ > 0 && result.length > maxQ) {
             result = result.slice(0, maxQ);
         }
+
         return result;
     }
 
@@ -306,6 +332,7 @@ def build_vocab_js_patch():
         var main = document.getElementById('mainContent');
         if (!main) return;
 
+        // ⭐ Đếm số từ hiện có / tổng
         var limitedCount = 0, totalCount = 0;
         try {
             if (window.FIXPY_DATASETS && window.FIXPY_DATASETS[VOCAB_ID]) {
@@ -317,8 +344,10 @@ def build_vocab_js_patch():
 
         var limitInfo = '';
         if (acc.maxQuestions > 0 && limitedCount > 0 && totalCount > limitedCount) {
+            var limitedStr = String(limitedCount).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            var totalStr2 = String(totalCount).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
             limitInfo = ' <span style="opacity:.75">(' +
-                        limitedCount + '/' + totalCount + ' từ)</span>';
+                        limitedStr + '/' + totalStr2 + ' từ)</span>';
         }
 
         var icon = acc.tier === 'expired' ? 'fa-exclamation-triangle'
