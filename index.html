@@ -30085,5 +30085,55 @@ window.vocabShowCharInfo = function(btn, evt) {
 
 </script>
 
+
+<script>
+/* PATCH_BUTTONS: FIX ACTIVE TAB */
+(function() {
+    'use strict';
+    console.log('[patch_buttons] Fix active tab ready');
+
+    function clearOthers(except) {
+        document.querySelectorAll('.ds-btn, .ds-sub-btn').forEach(function(b) {
+            if (b !== except) b.classList.remove('active');
+        });
+    }
+
+    // Bấm bất kỳ nút dataset nào → clear Yêu thích ngay
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.ds-btn, .ds-sub-btn');
+        if (!btn) return;
+
+        // Nút Chuyên ngành (mở dropdown) → clear Yêu thích + Từ vựng
+        if (btn.id === 'dsChuyenNganhBtn' ||
+            btn.getAttribute('data-dataset-group') === 'chuyen-nganh') {
+
+            var fav = document.querySelector('.ds-btn[data-dataset-group="favorites"]');
+            if (fav) fav.classList.remove('active');
+            var tv = document.querySelector('.ds-btn[data-dataset="tu-vung"]');
+            if (tv) tv.classList.remove('active');
+            return;
+        }
+
+        // Sub-ngành → clear Yêu thích + Từ vựng, active Chuyên ngành
+        if (btn.classList.contains('ds-sub-btn')) {
+            var fav2 = document.querySelector('.ds-btn[data-dataset-group="favorites"]');
+            if (fav2) fav2.classList.remove('active');
+            var tv2 = document.querySelector('.ds-btn[data-dataset="tu-vung"]');
+            if (tv2) tv2.classList.remove('active');
+            var cn = document.querySelector('.ds-btn[data-dataset-group="chuyen-nganh"]');
+            if (cn) cn.classList.add('active');
+            return;
+        }
+
+        // Các tab khác (Từ vựng, Tổng hợp, Giao tiếp...) → clear Yêu thích
+        var favBtn = document.querySelector('.ds-btn[data-dataset-group="favorites"]');
+        if (favBtn && btn !== favBtn) {
+            favBtn.classList.remove('active');
+        }
+    }, true);
+})();
+</script>
+
+
 </body>
 </html>
