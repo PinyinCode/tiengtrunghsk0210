@@ -27722,6 +27722,52 @@ window.gradeWithAPI = gradeWithAPI;
 /* ═══════════════════════════════════════════════════════════ */
 var GRADING_API_URL = 'https://chinese-grading.onrender.com/check';
 
+/* ═══════════════════════════════════════════════════════════ */
+/* HELPER: Chuẩn hoá message từ server về tiếng Việt có dấu    */
+/* - Ưu tiên message của server NẾU có dấu tiếng Việt          */
+/* - Nếu message trống hoặc không có dấu → tự map theo status  */
+/* ═══════════════════════════════════════════════════════════ */
+var _GRADING_FALLBACK_MESSAGES = {
+    'correct': 'Đúng hoàn toàn',
+    'partial': 'Gần đúng',
+    'wrong':   'Sai'
+};
+
+var _VIETNAMESE_DIACRITICS_REGEX =
+    /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i;
+
+function _normalizeGradingMessage(result) {
+    if (!result) return 'Sai';
+
+    var serverMsg = (result.message || '').trim();
+    var status = result.status || 'wrong';
+    var fallback = _GRADING_FALLBACK_MESSAGES[status] || 'Sai';
+
+    if (!serverMsg) return fallback;
+
+    if (_VIETNAMESE_DIACRITICS_REGEX.test(serverMsg)) {
+        return serverMsg;
+    }
+
+    return fallback;
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* HELPER: Chuẩn hoá chi tiết lỗi (errors array)               */
+/* ═══════════════════════════════════════════════════════════ */
+function _formatGradingErrors(errors) {
+    if (!errors || !errors.length) return '';
+
+    return errors.map(function(e) {
+        if (!e) return '';
+        if (e.type ===-check 'wrong')   return '"' +-st (e.user || '') + '" → "'t + (e.correct || '') +=" '"';
+        if (e.type ===' 'missing') return 'Thiếu "' + + (e.correct || '') + '"';
+        if (e.type === 'extra')   return 'Thừa "' + (e.user || '') + '"';
+        return '';
+    }).filter(Boolean).join(' · ');
+}
+
+
 async function gradeWithAPI(userAnswer, correctAnswer) {
     try {
         var controller = new AbortController();
@@ -27776,7 +27822,7 @@ window.gradeWithAPI = gradeWithAPI;
         }
 
         var stt = input.dataset.stt;
-        var cells = document.querySelectorAll('[data-check-stt="' + stt + '"]');
+        var cells = document.querySelectorAll('[data stt + '"]');
 
         cells.forEach(function(c) {
             c.innerHTML = '<span class="ai-reason">Đang chấm...</span>';
@@ -27791,24 +27837,20 @@ window.gradeWithAPI = gradeWithAPI;
             return;
         }
 
+        var msg = _normalizeGradingMessage(result);
         var html = '';
+
         if (result.status === 'correct') {
-            html = '<span class="ai-correct">' + (result.message || 'ĐÚNG') + '</span>';
+            html = '<span class="ai-correct">' + msg + '</span>';
         } else if (result.status === 'partial') {
-            html = '<span class="ai-partial">' + (result.message || 'GẦN ĐÚNG') + '</span>';
+            var pct = result.score ? ' (' + result.score + '%)' : '';
+            html = '<span class="ai-partial">' + msg + pct + '</span>';
         } else {
-            html = '<span class="ai-wrong">' + (result.message || 'SAI') + '</span>';
+            html = '<span class="ai-wrong">' + msg + '</span>';
         }
 
-        if (result.errors && result.errors.length > 0) {
-            var detail = result.errors.map(function(e) {
-                if (e.type === 'wrong')   return '"' + e.user + '" -> "' + e.correct + '"';
-                if (e.type === 'missing') return 'Thiếu "' + e.correct + '"';
-                if (e.type === 'extra')   return 'Thừa "' + e.user + '"';
-                return '';
-            }).filter(Boolean).join(' · ');
-            if (detail) html += '<span class="ai-reason">' + detail + '</span>';
-        }
+        var detail = _formatGradingErrors(result.errors);
+        if (detail) html += '<span class="ai-reason">' + detail + '</span>';
 
         var answerHtml = '<div class="answer-inline-display">' +
             '<span class="answer-inline-label"><i class="fas fa-check-circle"></i> Đáp án:</span>' +
@@ -27870,30 +27912,23 @@ window.gradeWithAPI = gradeWithAPI;
             return;
         }
 
+        var msg = _normalizeGradingMessage(result);
         var html = '';
+
         if (result.status === 'correct') {
-            html = '<span class="ai-correct">' + (result.message || 'ĐÚNG') + '</span>';
+            html = '<span class="ai-correct">' + msg + '</span>';
             statusEl.className = 'practice-full-status correct';
         } else if (result.status === 'partial') {
-            html = '<span class="ai-partial">' +
-                   (result.message || 'GẦN ĐÚNG') +
-                   (result.score ? ' (' + result.score + '%)' : '') +
-                   '</span>';
+            var pct = result.score ? ' (' + result.score + '%)' : '';
+            html = '<span class="ai-partial">' + msg + pct + '</span>';
             statusEl.className = 'practice-full-status partial';
         } else {
-            html = '<span class="ai-wrong">' + (result.message || 'SAI') + '</span>';
+            html = '<span class="ai-wrong">' + msg + '</span>';
             statusEl.className = 'practice-full-status wrong';
         }
 
-        if (result.errors && result.errors.length > 0) {
-            var detail = result.errors.map(function(e) {
-                if (e.type === 'wrong')   return '"' + e.user + '" -> "' + e.correct + '"';
-                if (e.type === 'missing') return 'Thiếu "' + e.correct + '"';
-                if (e.type === 'extra')   return 'Thừa "' + e.user + '"';
-                return '';
-            }).filter(Boolean).join(' · ');
-            if (detail) html += '<span class="ai-reason">' + detail + '</span>';
-        }
+        var detail = _formatGradingErrors(result.errors);
+        if (detail) html += '<span class="ai-reason">' + detail + '</span>';
 
         statusEl.innerHTML = html;
     }
