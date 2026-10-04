@@ -411,18 +411,23 @@ function _formatGradingErrors(errors) {
     return errors.map(function(e, idx) {
         if (!e) return '';
 
+        /* Ưu tiên input_position (vị trí thật trong câu user gõ) */
+        var targetIdx = (typeof e.input_position === 'number')
+                        ? e.input_position
+                        : idx;
+
         if (e.type === 'wrong') {
-            return HANZI(e.user || '', idx) + PINYIN(e.user_pinyin) +
+            return HANZI(e.user || '', targetIdx) + PINYIN(e.user_pinyin) +
                    ARROW +
-                   HANZI(e.correct || '', idx) + PINYIN(e.correct_pinyin);
+                   HANZI(e.correct || '', targetIdx) + PINYIN(e.correct_pinyin);
         }
         if (e.type === 'missing') {
             return '<span class="err-label">Thiếu</span> ' +
-                   HANZI(e.correct || '', idx) + PINYIN(e.correct_pinyin);
+                   HANZI(e.correct || '', targetIdx) + PINYIN(e.correct_pinyin);
         }
         if (e.type === 'extra') {
             return '<span class="err-label">Thừa</span> ' +
-                   HANZI(e.user || '', idx) + PINYIN(e.user_pinyin);
+                   HANZI(e.user || '', targetIdx) + PINYIN(e.user_pinyin);
         }
         return '';
     }).filter(Boolean).join(SEP);
@@ -640,7 +645,6 @@ window.gradeWithAPI = gradeWithAPI;
 })();
 """
     return patch_grading_js(js)
-    
 
 
 full_js = (
@@ -661,6 +665,10 @@ full_js = (
 
 full_js = full_js.replace('<script>', '').replace('</script>', '')
 full_js = full_js.replace('<SCRIPT>', '').replace('</SCRIPT>', '')
+
+# Fix: đảm bảo không có thẻ script lồng trong full_js
+full_js = full_js.replace('</script>', '')
+full_js = full_js.replace('</SCRIPT>', '')
 
 
 HTML_SHELL = r'''<!DOCTYPE html>
@@ -687,6 +695,7 @@ __CSS__
 __BODY__
 
 <script>
+/* ============ DATA + CONFIG ============ */
 var RAW_DATA = __DATA__;
 var DATASET_REGISTRY = __DATASET_REGISTRY__;
 var CURRENT_DATASET = 'tonghop';
@@ -817,3 +826,13 @@ print(f"\n🎉 Đã tạo: {OUTPUT_HTML}")
 print(f"📦 Kích thước: {size_kb:.1f} KB")
 print(f"📚 Datasets: {total_datasets} ({_chuyen_nganh_count} chuyên ngành)")
 print(f"📝 Tổng số câu: {total_questions}")
+
+# ═══ CHECK SỐ THẺ SCRIPT ═══
+_opens = html_output.count('<script')
+_closes = html_output.count('</script>')
+print(f"\n🔍 Check HTML: <script>={_opens}  </script>={_closes}")
+
+if _opens != _closes:
+    print(f"❌ Số thẻ script KHÔNG khớp! Lệch {abs(_opens - _closes)}")
+else:
+    print(f"✅ Số thẻ script khớp ({_opens})")
