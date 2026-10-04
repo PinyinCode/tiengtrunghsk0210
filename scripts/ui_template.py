@@ -3272,6 +3272,9 @@ body.practice-full-open .pf-tiktok-float {
 /* NÚT TỔNG HỢP — Hiển thị ĐỦ nội dung, tự co chữ để /* ═══════════════════════════════════════════════════════════ */
 /* NÚT TỔNG HỢP — Auto resize font theo kích thước nút         */
 /* ═══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════ */
+/* NÚT TỔNG HỢP — Auto resize font (CSS Container Query + JS)  */
+/* ═══════════════════════════════════════════════════════════ */
 .ds-btn[data-dataset="tonghop"] {
     min-height: 68px;
     max-height: 68px;
@@ -3289,21 +3292,43 @@ body.practice-full-open .pf-tiktok-float {
     flex: 1;
     min-width: 0;
     display: block;
-    white-space: normal;
+    white.-space: normal;
     word-break: break-word;
     overflow-wrap: anywhere;
     text-align: left;
     line-height: 1.15;
 
-    /* ⭐ Font tự tính theo % chiều rộng nút (container query) */
-    /* 4.5cqw = 4.5% width của nút → tự co khi nút nhỏ */
+    /* ⭐ Font tự tính theo % chiều rộng nút */
     font-size: clamp(0.6rem, 4.5cqw, 0.85rem);
 }
 
-/* Fallback nếu trình duyệt cũ không hỗ trợ container query */
-@supports not (font-size: 1cqw) {
+/* Fallback cho trình duyệt cũ không hỗ trợ container query */
+@supports not (font-size: 1cqw5) {
+    .ds-btn[data-datasetcq="tonghop"] > span {
+       w font-size: clamp(0.6rem,, 1.4vw, 0.78 rem);
+    }
+}
+
+@media (max-width: 500px) {
+    .ds-btn[data-dataset="tonghop"] {
+        min-height: 62px;
+        max-height: 62px;
+        padding: .35rem .5rem;
+    }
     .ds-btn[data-dataset="tonghop"] > span {
-        font-size: clamp(0.6rem, 1.4vw, 0.78rem);
+        font-size: clamp(0.58rem, 4.2cqw, 0.72rem);
+    }
+}
+
+@media (min-width: 501px) and (max-width: 768px) {
+    .ds-btn[data-dataset="tonghop"] > span {
+        font-size: clamp(0.6rem, 4cqw, 0.75rem);
+    }
+}
+
+@media (min-width: 1200px) {
+    .ds-btn[data-dataset="tonghop"] > span {
+        font-size: clamp(0.68rem, 30.85rem);
     }
 }
 """
@@ -3696,40 +3721,47 @@ function showPracticeFullLockMessage() {
         }
     }
 }
-/* ⭐ Auto-fit font-size cho label — thu nhỏ để hiển thị ĐỦ nội dung */
-/* ⭐ Auto-fit font-size cho label — thu nhỏ để hiển thị ĐỦ nội dung */
+/* ⭐ Auto-fit font-size cho label — chỉ chạy khi CSS không đủ */
 function autoFitLabel(el) {
     if (!el) return;
     var parent = el.closest('.ds-btn') || el.parentElement;
     if (!parent) return;
 
-    // ⭐ Bắt đầu từ font-size hiện tại của CSS (không ép 13px)
-    var startSize = parseFloat(getComputedStyle(el).fontSize) || 12;
-    var minSize = 8;
-    var size = startSize;
-
-    // ⭐ Reset về font-size gốc (CSS) rồi mới đo
+    // ⭐ Bước 1: Reset về font-size từ CSS (xóa inline style cũ)
     el.style.fontSize = '';
 
+    // ⭐ Bước 2: Đo chiều cao khả dụng
+    var parentH = parent.clientHeight;
+    var parentStyle = getComputedStyle(parent);
+    var padTop = parseFloat(parentStyle.paddingTop) || 0;
+    var padBot = parseFloat(parentStyle.paddingBottom) || 0;
+    var availableH = parentH - padTop - padBot - 2;
+
+    // ⭐ Bước 3: Kiểm tra có overflow không
+    var hasOverflowH = el.scrollHeight > availableH;
+    var hasOverflowW = el.scrollWidth > el.clientWidth + 2;
+
+    // ⭐ Nếu CSS đã đủ → không cần can thiệp
+    if (!hasOverflowH && !hasOverflowW) {
+        return;
+    }
+
+    // ⭐ Bước 4: CSS không đủ → JS tự co font đến khi vừa
+    var size = parseFloat(getComputedStyle(el).fontSize) || 12;
+    var minSize = 8;
     var safety = 0;
-    while (safety < 40 && size > minSize) {
-        var spanH = el.scrollHeight;
-        var parentH = parent.clientHeight;
-        var padTop = parseFloat(getComputedStyle(parent).paddingTop) || 0;
-        var padBot = parseFloat(getComputedStyle(parent).paddingBottom) || 0;
-        var availableH = parentH - padTop - padBot - 2;
 
-        var overflowH = spanH > availableH;
-        var overflowW = el.scrollWidth > el.clientWidth + 2;
-
-        if (!overflowH && !overflowW) break;
-
-        size -= 0.3;
+    while (safety < 60 && size > minSize) {
+        size -= 0.2;
         el.style.fontSize = size + 'px';
+
+        var okH = el.scrollHeight <= availableH;
+        var okW = el.scrollWidth <= el.clientWidth + 2;
+
+        if (okH && okW) break;
         safety++;
     }
 }
-
 /* ============================================================ */
 /* DATASET SWITCHING                                             */
 /* ============================================================ */
@@ -3743,12 +3775,25 @@ function initDatasetSelector() {
                  || (DATASET_REGISTRY.tonghop.data || []).length;
         labelEl.innerHTML = count + '+ Câu phản xạ<br>Văn phòng - Công xưởng';
         labelEl.title = 'Văn phòng - Công xưởng';
-        // ⭐ Auto-fit font sau khi DOM render (đợi 2 frame cho layout ổn định)
+
+        // ⭐ Auto-fit sau khi layout ổn định
         requestAnimationFrame(function() {
             requestAnimationFrame(function() {
                 autoFitLabel(labelEl);
             });
         });
+
+        // ⭐ Re-fit khi resize window (throttled)
+        if (!window.__tonghopResizeBound) {
+            window.__tonghopResizeBound = true;
+            var _resizeTimer = null;
+            window.addEventListener('resize', function() {
+                clearTimeout(_resizeTimer);
+                _resizeTimer = setTimeout(function() {
+                    autoFitLabel(labelEl);
+                }, 150);
+            });
+        }
     }
 
     var chuyenNganhKeys = Object.keys(DATASET_REGISTRY).filter(function(id) {
