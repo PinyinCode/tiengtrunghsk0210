@@ -698,6 +698,22 @@ def patch_css(ui_css):
         padding: .6rem .75rem !important;
     }
 }
+.mnemonic-meaning {
+    font-size: .9rem !important;
+    font-weight: 700 !important;
+    color: #15803d !important;
+    background: linear-gradient(135deg, #f0fdf4, #dcfce7) !important;
+    padding: .25rem .7rem !important;
+    border-radius: 8px !important;
+    border: 1.5px solid rgba(22, 163, 74, .4) !important;
+    margin-left: .5rem !important;
+    white-space: nowrap !important;
+}
+[data-theme="dark"] .mnemonic-meaning {
+    background: linear-gradient(135deg, rgba(22, 163, 74, .25), rgba(21, 128, 61, .15)) !important;
+    color: #86efac !important;
+    border-color: rgba(34, 197, 94, .5) !important;
+}
 """
     return ui_css + extra_css
 
