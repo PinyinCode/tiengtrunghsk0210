@@ -3283,6 +3283,24 @@ body.practice-full-open .pf-tiktok-float {
         min-width: 2.5em;
     }
 }
+/* ═══════════════════════════════════════════════════════════ */
+/* NÚT TỔNG HỢP — Cho phép hiển thị 2 dòng                     */
+/* ═══════════════════════════════════════════════════════════ */
+.ds-btn[data-dataset="tonghop"] {
+    min-height: 64px;
+    align-items: center;
+    line-height: 1.3;
+}
+.ds-btn[data-dataset="tonghop"] > span {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    white-space: normal;
+    word-break: break-word;
+    text-align: left;
+    line-height: 1.35;
+}
 
 /* ==== SOCIAL CSS ==== */
 
@@ -10164,7 +10182,7 @@ body[data-vocab-mode="1"] .mobile-view {
     <div class="ds-main-row">
         <button class="ds-btn ds-btn-primary active" data-dataset="tonghop">
             <i class="fas fa-book-open"></i>
-            <span id="dsTonghopLabel">1700 câu phản xạ tổng hợp VPCX</span>
+            <span id="dsTonghopLabel">1700+ Câu phản xạ<br>Văn phòng - Công xưởng</span>
         </button>
         <button class="ds-btn ds-btn-primary" data-dataset="1000-cau-giao-tiep">
             <i class="fas fa-comments"></i>
@@ -11776,7 +11794,8 @@ function initDatasetSelector() {
     if (labelEl) {
         var count = DATASET_REGISTRY.tonghop.count
                  || (DATASET_REGISTRY.tonghop.data || []).length;
-        labelEl.textContent = count + ' câu phản xạ tổng hợp VPCX';
+        // ⭐ ĐỔI textContent → innerHTML để render thẻ <br>
+        labelEl.innerHTML = count + '+ Câu phản xạ<br>Văn phòng - Công xưởng';
     }
 
     var chuyenNganhKeys = Object.keys(DATASET_REGISTRY).filter(function(id) {
