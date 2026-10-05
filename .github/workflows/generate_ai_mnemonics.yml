@@ -1,16 +1,21 @@
 name: Generate AI Mnemonics
 
 on:
+  # Chạy thủ công từ tab Actions
   workflow_dispatch:
     inputs:
       limit:
         description: "Số từ cần sinh (0 = tất cả)"
         required: true
-        default: "20"
+        default: "500"
       resume:
         description: "Bỏ qua từ đã có? (1=on, 0=off)"
         required: true
         default: "1"
+
+  # Chạy tự động mỗi ngày lúc 2h sáng UTC (= 9h sáng VN)
+  schedule:
+    - cron: '0 2 * * *'
 
 permissions:
   contents: write
@@ -20,21 +25,33 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # ═══════════════════════════════════════════════════════════
+      #  1. CHECKOUT
+      # ═══════════════════════════════════════════════════════════
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # ═══════════════════════════════════════════════════════════
+      #  2. SETUP PYTHON
+      # ═══════════════════════════════════════════════════════════
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
+      # ═══════════════════════════════════════════════════════════
+      #  3. INSTALL DEPENDENCIES
+      # ═══════════════════════════════════════════════════════════
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install openai openpyxl
+          pip install openai openpyxl cn2an jieba
 
+      # ═══════════════════════════════════════════════════════════
+      #  4. VERIFY API KEY
+      # ═══════════════════════════════════════════════════════════
       - name: Verify API key
         env:
           DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
@@ -45,15 +62,25 @@ jobs:
           fi
           echo "✅ DASHSCOPE_API_KEY đã set (độ dài: ${#DASHSCOPE_API_KEY})"
 
-      - name: Check Excel file
+      # ═══════════════════════════════════════════════════════════
+      #  5. CHECK FILES
+      # ═══════════════════════════════════════════════════════════
+      - name: Check required files
         run: |
           if [ ! -f "data/tu_vung_hsk.xlsx" ]; then
             echo "❌ Không có file data/tu_vung_hsk.xlsx"
             exit 1
           fi
-          echo "✅ File Excel tồn tại"
+          if [ ! -f "fix.py" ]; then
+            echo "❌ Không có file fix.py"
+            exit 1
+          fi
+          echo "✅ Đủ file cần thiết"
           ls -la data/
 
+      # ═══════════════════════════════════════════════════════════
+      #  6. CHẠY SCRIPT SINH MẸO NHỚ AI
+      # ═══════════════════════════════════════════════════════════
       - name: Run AI generator
         id: gen
         continue-on-error: true
@@ -61,30 +88,109 @@ jobs:
           DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
           QWEN_BASE_URL: ${{ secrets.QWEN_BASE_URL }}
           QWEN_MODEL: ${{ secrets.QWEN_MODEL }}
-          DEMO_LIMIT: ${{ github.event.inputs.limit }}
-          RESUME: ${{ github.event.inputs.resume }}
-        run: python vocab_data/ai_mnemonic_generator.py
+          DEMO_LIMIT: ${{ github.event.inputs.limit || '500' }}
+          RESUME: ${{ github.event.inputs.resume || '1' }}
+        run: |
+         / echo "════════════════════════════════════════"
+          echo "🚀 Chạy sinh mẹo nhớ"
+          echo "   DEMO_LIMIT = $DEMO_LIMIT"
+          echo "   RESUME     = $RESUME"
+          echo "   QWEN_MODEL = $QWEN_MODEL"
+          echo "════════════════════════════════════════"
+          python vocab_dataai_mnemonic_generator.py
 
-      - name: Commit output
+      # ═══════════════════════════════════════════════════════════
+      #  7. REBUILD INDEX.HTML VỚI JSON MỚI
+      #  ⭐ BƯỚC QUAN TRỌNG — Chạy dù script sinh có lỗi hay không
+      # ═══════════════════════════════════════════════════════════
+      - name: Rebuild index.html
+        if: always()
+        continue-on-error: true
+        env:
+          DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+          QWEN_BASE_URL: ${{ secrets.QWEN_BASE_URL }}
+          QWEN_MODEL: ${{ secrets.QWEN_MODEL }}
+        run: |
+          echo "════════════════════════════════════════"
+          echo "🔨 Rebuild index.html"
+          echo "════════════════════════════════════════"
+
+          # Kiểm tra file JSON có tồn tại không
+          if [ ! -f "data/ai_mnemonics.json" ]; then
+            echo "⚠️ Không có ai_mnemonics.json — bỏ qua rebuild"
+            exit 0
+          fi
+
+          # Đếm số từ trong JSON
+          COUNT=$(python -c "import json; print(len(json.load(open('data/ai_mnemonics.json', encoding='utf-8'))))" 2>/dev/null || echo "?")
+          echo "📊 Số từ trong JSON: $COUNT"
+
+          # Chạy fix.py để rebuild
+          python fix.py
+
+          # Kiểm tra index.html đã được cập nhật
+          SIZE=$(stat -c%s index.html)
+          echo "📦 index.html mới: $SIZE bytes"
+
+      # ═══════════════════════════════════════════════════════════
+      #  8. VERIFY OUTPUT
+      # ═══════════════════════════════════════════════════════════
+      - name: Verify output
+        if: always()
+        run: |
+          echo "════════════════════════════════════════"
+          echo "🔍 Kiểm tra output"
+          echo "════════════════════════════════════════"
+
+          if [ -f "data/ai_mnemonics.json" ]; then
+            SIZE=$(stat -c%s data/ai_mnemonics.json)
+            echo "📦 ai_mnemonics.json: $SIZE bytes"
+            COUNT=$(python -c "import json; print(len(json.load(open('data/ai_mnemonics.json', encoding='utf-8'))))" 2>/dev/null || echo "?")
+            echo "📊 Số từ có mẹo AI: $COUNT"
+          else
+            echo "⚠️ Không có ai_mnemonics.json"
+          fi
+
+          if [ -f "index.html" ]; then
+            SIZE=$(stat -c%s index.html)
+            echo "📦 index.html: $SIZE bytes"
+          fi
+
+      # ═══════════════════════════════════════════════════════════
+      #  9. COMMIT + PUSH (CẢ JSON VÀ INDEX.HTML)
+      #  ⭐ Chạy dù các bước trước có lỗi hay không
+      # ═══════════════════════════════════════════════════════════
+      - name: Commit and push
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          if [ ! -f "data/ai_mnemonics.json" ]; then
-            echo "⚠️ Không có file output để commit"
+          # Add tất cả file thay đổi
+          git add -A
+
+          # Kiểm tra có gì thay đổi không
+          if git diff --cached --quiet; then
+            echo "✅ Không có thay đổi để commit"
             exit 0
           fi
 
-          COUNT=$(python -c "import json; print(len(json.load(open('data/ai_mnemonics.json', encoding='utf-8'))))" 2>/dev/null || echo "?")
-          echo "📊 Tổng số từ: $COUNT"
-
-          git add data/ai_mnemonics.json
-          if git diff --cached --quiet; then
-            echo "✅ Không có thay đổi"
-          else
-            git commit -m "🤖 Update AI mnemonics: ${COUNT} từ [skip ci]"
-            git pull --rebase origin ${{ github.ref_name }} || true
-            git push origin HEAD:${{ github.ref_name }}
-            echo "✅ Đã push thành công"
+          # Đếm số từ để đưa vào commit message
+          COUNT="?"
+          if [ -f "data/ai_mnemonics.json" ]; then
+            COUNT=$(python -c "import json; print(len(json.load(open('data/ai_mnemonics.json', encoding='utf-8'))))" 2>/dev/null || echo "?")
           fi
+
+          # Xem file nào thay đổi
+          echo "📋 Files changed:"
+          git diff --cached --name-only
+
+          # Commit
+          git commit -m "🤖 AI mnemonics + rebuild: ${COUNT} từ [skip ci]"
+
+          # Pull rebase để tránh conflict
+          git pull --rebase origin ${{ github.ref_name }} || true
+
+          # Push
+          git push origin HEAD:${{ github.ref_name }}
+          echo "✅ Đã push thành công"
