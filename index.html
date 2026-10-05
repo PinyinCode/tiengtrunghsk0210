@@ -31763,24 +31763,51 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
         }
         QS.inited = true;
 
+        // ─── Nut toggle: mo/dong panel ───
         toggle.addEventListener('click', function(e){
             e.stopPropagation();
             if(QS.open) closePanel(); else openPanel();
         });
+
+        // ─── Input: hien nut clear/go khi co chu ───
         input.addEventListener('input', function(){
             panel.classList.toggle('has-value', !!this.value.trim());
         });
+
+        // ─── ENTER = TIM KIEM, ESC = XOA/DONG ───
         input.addEventListener('keydown', function(e){
-            if(e.key === 'Enter'){ e.preventDefault(); doSearch(); }
-            else if(e.key === 'Escape'){
+            if(e.key === 'Enter' || e.keyCode === 13){
                 e.preventDefault();
-                if(this.value.trim()){ this.value=''; panel.classList.remove('has-value'); }
-                else closePanel();
+                e.stopPropagation();
+                doSearch();
+                return false;
+            }
+            if(e.key === 'Escape' || e.keyCode === 27){
+                e.preventDefault();
+                if(this.value.trim()){
+                    this.value = '';
+                    panel.classList.remove('has-value');
+                } else {
+                    closePanel();
+                }
             }
         });
-        clearB.addEventListener('click', function(e){ e.stopPropagation(); clearPanel(); });
-        goB.addEventListener('click', function(e){ e.stopPropagation(); doSearch(); });
 
+        // ─── Nut X: xoa input ───
+        clearB.addEventListener('click', function(e){
+            e.stopPropagation();
+            e.preventDefault();
+            clearPanel();
+        });
+
+        // ─── Nut mui ten: TIM KIEM (giong Enter) ───
+        goB.addEventListener('click', function(e){
+            e.stopPropagation();
+            e.preventDefault();
+            doSearch();
+        });
+
+        // ─── Click ra ngoai: dong panel neu input trong ───
         document.addEventListener('click', function(e){
             if(!QS.open) return;
             if(e.target.closest('#' + QS.MOUNT_ID)) return;
@@ -31789,9 +31816,16 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
             closePanel();
         });
 
+        // ─── ESC cap document (neu focus ngoai input) ───
+        document.addEventListener('keydown', function(e){
+            if(!QS.open) return;
+            if(e.key === 'Escape' || e.keyCode === 27){
+                closePanel();
+            }
+        });
+
         console.log('[quick-search] Da bind events');
     }
-
     function init(){
         if(mount()){
             bind();
