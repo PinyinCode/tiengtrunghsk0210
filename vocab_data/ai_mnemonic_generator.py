@@ -134,6 +134,25 @@ def generate_one(zh, pinyin, vi, hsk, nhan_vat):
 
         except Exception as e:
             err = str(e)
+
+            # ⭐ PHÁT HIỆN QUOTA EXHAUSTED → DỪNG HẲN
+            if "quota" in err.lower() and ("exhaust" in err.lower() or "403" in err):
+                print("\n" + "=" * 62)
+                print("🛑 QUOTA ĐÃ HẾT — DỪNG SCRIPT")
+                print(f"   Model: {MODEL_ID}")
+                print(f"   Vào Model Studio để nạp thêm tiền hoặc đổi model.")
+                print("=" * 62 + "\n")
+                raise RuntimeError("QUOTA_EXHAUSTED")
+
+            # ⭐ LỖI 401/403 KHÁC (API key sai) → DỪNG LUÔN
+            if "401" in err or "invalid_api_key" in err.lower() or "unauthorized" in err.lower():
+                print("\n" + "=" * 62)
+                print("🛑 API KEY KHÔNG HỢP LỆ — DỪNG SCRIPT")
+                print(f"   Kiểm tra secret DASHSCOPE_API_KEY trên GitHub.")
+                print("=" * 62 + "\n")
+                raise RuntimeError("INVALID_API_KEY")
+
+            # ⭐ 429 rate limit → chờ rồi thử lại
             if "429" in err or "rate" in err.lower():
                 wait = 15 * (attempt + 1)
                 print(f"      ⏳ Rate limit, chờ {wait}s...")
@@ -143,7 +162,6 @@ def generate_one(zh, pinyin, vi, hsk, nhan_vat):
                 time.sleep(3)
 
     return ""
-
 
 # ═══════════════════════════════════════════════════════════════════
 #  LOAD EXCEL
@@ -246,31 +264,36 @@ def main():
     skipped = 0
     failed = 0
 
-    for i, w in enumerate(samples, 1):
-        key = w["key"]
+    try:
+        for i, w in enumerate(samples, 1):
+            key = w["key"]
 
-        if RESUME and key in results and results[key]:
-            skipped += 1
-            print(f"[{i}/{len(samples)}] {w['zh']} ({w['pinyin']}) — ⏭️  SKIP")
-            continue
+            if RESUME and key in results and results[key]:
+                skipped += 1
+                print(f"[{i}/{len(samples)}] {w['zh']} ({w['pinyin']}) — ⏭️  SKIP")
+                continue
 
-        nhan_vat = NHAN_VAT[(i - 1) % len(NHAN_VAT)]
-        preview = w["vi"][:40] + ("..." if len(w["vi"]) > 40 else "")
-        print(f"[{i}/{len(samples)}] {w['zh']} ({w['pinyin']}) - {preview}")
-        print(f"      👤 Nhân vật: {nhan_vat}")
+            nhan_vat = NHAN_VAT[(i - 1) % len(NHAN_VAT)]
+            preview = w["vi"][:40] + ("..." if len(w["vi"]) > 40 else "")
+            print(f"[{i}/{len(samples)}] {w['zh']} ({w['pinyin']}) - {preview}")
+            print(f"      👤 Nhân vật: {nhan_vat}")
 
-        mnemonic = generate_one(w["zh"], w["pinyin"], w["vi"], w["hsk"], nhan_vat)
+            mnemonic = generate_one(w["zh"], w["pinyin"], w["vi"], w["hsk"], nhan_vat)
 
-        if mnemonic:
-            results[key] = mnemonic
-            success += 1
-            print(f"      ✅ OK")
-        else:
-            failed += 1
-            print(f"      ❌ FAIL")
+            if mnemonic:
+                results[key] = mnemonic
+                success += 1
+                print(f"      ✅ OK")
+            else:
+                failed += 1
+                print(f"      ❌ FAIL")
 
-        save_output(results)
-        time.sleep(DELAY_BETWEEN)
+            save_output(results)
+            time.sleep(DELAY_BETWEEN)
+
+    except RuntimeError as e:
+        print(f"\n⚠️ Dừng do: {e}")
+        print(f"   Đã lưu {len(results)} từ vào output.")
 
     print("\n" + "=" * 62)
     print(f"✅ HOÀN TẤT")
@@ -280,7 +303,6 @@ def main():
     print(f"   Tổng output: {len(results)} từ")
     print(f"📁 File: {OUTPUT_FILE}")
     print("=" * 62)
-
 
 if __name__ == "__main__":
     main()
