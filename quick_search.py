@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 quick_search.py - O TIM KIEM NHANH CO CHON PHAM VI
-
-- Scope = "current": chi tim trong tab hien tai (RAW_DATA)
-- Scope = "all": tim trong TAT CA tab (DATASET_REGISTRY + FIXPY_DATASETS)
 """
 
 import os
@@ -28,16 +25,10 @@ def build_quick_search_css():
     align-items:flex-start;
     gap:.5rem;
     pointer-events:none;
-    transition:bottom .35s cubic-bezier(.34,1.56,.64,1),
-               opacity .25s ease,
-               transform .25s ease;
+    transition:bottom .35s cubic-bezier(.34,1.56,.64,1);
 }
 #quickSearchRoot > *{ pointer-events:auto; }
-#quickSearchRoot.hidden{
-    opacity:0;
-    transform:translateY(10px);
-    pointer-events:none;
-}
+#quickSearchRoot.hidden{ opacity:0; pointer-events:none; }
 body.has-floating-group #quickSearchRoot{
     bottom:calc(260px + env(safe-area-inset-bottom));
 }
@@ -121,9 +112,7 @@ body.has-floating-group #quickSearchRoot{
     font-size:.75rem;flex-shrink:0;
     transition:.15s;font-family:inherit;padding:0;
 }
-.quick-search-clear{
-    background:#f1f5f9;color:#475569;
-}
+.quick-search-clear{ background:#f1f5f9;color:#475569; }
 .quick-search-clear:hover{background:#fee2e2;color:#dc2626;}
 .quick-search-go{
     background:linear-gradient(135deg,#0891b2,#0e7490);
@@ -241,19 +230,7 @@ def build_quick_search_js():
             .replace(/"/g,'&quot;')
             .replace(/'/g,'&#39;');
     }
-    function escJs(s){
-        if(s == null) return '';
-        return String(s)
-            .replace(/\\/g,'\\\\')
-            .replace(/'/g,"\\'")
-            .replace(/"/g,'\\"')
-            .replace(/\n/g,'\\n')
-            .replace(/\r/g,'');
-    }
 
-    /* =======================================================
-       0. AUTO EXPOSE
-       ======================================================= */
     (function autoExpose(){
         var tries = 0;
         var timer = setInterval(function(){
@@ -276,9 +253,6 @@ def build_quick_search_js():
         }, 250);
     })();
 
-    /* =======================================================
-       1. MOUNT DOM
-       ======================================================= */
     function buildDOM(){
         var root = document.createElement('div');
         root.id = QS.MOUNT_ID;
@@ -314,13 +288,10 @@ def build_quick_search_js():
         }
         var root = buildDOM();
         document.body.appendChild(root);
-        console.log('[quick-search] Mount vao body thanh cong');
+        console.log('[quick-search] Mount OK');
         return true;
     }
 
-    /* =======================================================
-       2. PARSE cu phap
-       ======================================================= */
     function parseQuery(raw){
         if(typeof window.parseSearchQuery === 'function'){
             try{
@@ -351,9 +322,6 @@ def build_quick_search_js():
         };
     }
 
-    /* =======================================================
-       3. LAY DU LIEU — THEO SCOPE
-       ======================================================= */
     function getBaseData(){
         var scopeEl = $id('quickSearchScope');
         var scope = scopeEl ? scopeEl.value : 'current';
@@ -392,7 +360,7 @@ def build_quick_search_js():
                     });
                 }
             }catch(e){
-                console.warn('[quick-search] Loi gop du lieu:', e);
+                console.warn('[quick-search] Loi gop:', e);
             }
             if(all.length > 0){
                 console.log('[quick-search] Scope ALL: ' + all.length + ' cau');
@@ -411,9 +379,6 @@ def build_quick_search_js():
         return [];
     }
 
-    /* =======================================================
-       4. LOC DU LIEU
-       ======================================================= */
     function filterData(raw, parsed){
         var baseData = getBaseData();
         if(baseData.length === 0) return null;
@@ -439,13 +404,64 @@ def build_quick_search_js():
         });
     }
 
-    /* =======================================================
-       5. RENDER KET QUA
-       ======================================================= */
+    function bindResultEvents(wrapper, result){
+        wrapper.querySelectorAll('.qs-card').forEach(function(card){
+            var idx = parseInt(card.dataset.qsIdx, 10);
+            var r = result[idx];
+            if(!r) return;
+
+            card.addEventListener('click', function(e){
+                if(e.target.closest('.action-group')) return;
+                if(typeof toggleFocus === 'function'){
+                    toggleFocus(r.stt, card);
+                }
+            });
+        });
+
+        wrapper.querySelectorAll('.qs-audio-btn').forEach(function(btn){
+            btn.addEventListener('click', function(e){
+                e.stopPropagation();
+                var card = btn.closest('.qs-card');
+                if(!card) return;
+                var r = result[parseInt(card.dataset.qsIdx, 10)];
+                if(!r || !r.zh) return;
+                if(typeof speakText === 'function'){
+                    speakText(r.zh, btn, e);
+                }
+            });
+        });
+
+        wrapper.querySelectorAll('.qs-write-btn').forEach(function(btn){
+            btn.addEventListener('click', function(e){
+                e.stopPropagation();
+                var card = btn.closest('.qs-card');
+                if(!card) return;
+                var r = result[parseInt(card.dataset.qsIdx, 10)];
+                if(!r || !r.zh) return;
+                if(typeof openWriter === 'function'){
+                    openWriter(r.zh, r.vi || '', r.pinyin || '', e);
+                }
+            });
+        });
+
+        wrapper.querySelectorAll('.qs-full-btn').forEach(function(btn){
+            btn.addEventListener('click', function(e){
+                e.stopPropagation();
+                var card = btn.closest('.qs-card');
+                if(!card) return;
+                var r = result[parseInt(card.dataset.qsIdx, 10)];
+                if(!r) return;
+                if(typeof openPracticeFull === 'function'){
+                    openPracticeFull(r.stt, e);
+                }
+            });
+        });
+    }
+
     function renderResults(result, raw, parsed){
         var wrapper = $id('mobileWrapper');
         if(!wrapper){
-            console.warn('[quick-search] Khong tim thay #mobileWrapper');
+            console.warn('[quick-search] Khong co #mobileWrapper');
             return false;
         }
 
@@ -466,17 +482,10 @@ def build_quick_search_js():
         var maxShow = Math.min(result.length, 300);
         for(var i = 0; i < maxShow; i++){
             var r = result[i];
+            var idx = i;
             var zhHtml = escHtml(r.zh);
             var viHtml = escHtml(r.vi);
             var sttSafe = escHtml(r.stt);
-            var sttJs = escJs(r.stt);
-            var zhJs = escJs(r.zh);
-            var viJs = escJs(r.vi);
-            var pinyinJs = escJs(r.pinyin);
-
-            var audio = r.zh ? '<button class="audio-btn" onclick="speakText(\'' + zhJs + '\', this, event)" title="Nghe"><i class="fas fa-volume-up"></i></button>' : '';
-            var writeBtn = r.zh ? '<button class="write-btn" onclick="openWriter(\'' + zhJs + '\', \'' + viJs + '\', \'' + pinyinJs + '\', event)" title="Luyen viet"><i class="fas fa-pen-fancy"></i></button>' : '';
-            var fullBtn = r.zh ? '<button class="practice-full-btn" onclick="openPracticeFull(\'' + sttJs + '\', event)" title="Luyen tap full"><i class="fas fa-expand"></i></button>' : '';
 
             var topicTag = r.topic ? '<span class="card-tag topic">' + escHtml(r.topic) + '</span>' : '';
             var subjectTag = r.subject ? '<span class="card-tag subject">' + escHtml(r.subject) + '</span>' : '';
@@ -486,10 +495,12 @@ def build_quick_search_js():
                 dsTag = '<span class="quick-search-dataset-tag">' + escHtml(r._datasetName) + '</span>';
             }
 
-            var favBtn = (typeof favBuildFavButton === 'function')
-                ? favBuildFavButton(r.stt) : '';
+            var favBtn = '';
+            if(typeof favBuildFavButton === 'function'){
+                try{ favBtn = favBuildFavButton(r.stt); }catch(e){ favBtn = ''; }
+            }
 
-            cardsHtml += '<div class="card" data-hsk="' + escHtml(r.hsk || '') + '" onclick="toggleFocus(\'' + sttJs + '\', this)" data-stt="' + sttSafe + '" style="position:relative">' +
+            cardsHtml += '<div class="card qs-card" data-qs-idx="' + idx + '" data-hsk="' + escHtml(r.hsk || '') + '" data-stt="' + sttSafe + '" style="position:relative">' +
                 dsTag +
                 '<div class="card-header">' +
                     '<div class="card-stt">' + sttSafe + '</div>' +
@@ -498,8 +509,11 @@ def build_quick_search_js():
                         topicTag +
                         subjectTag +
                     '</div>' +
-                    '<div onclick="event.stopPropagation()" class="action-group">' +
-                        audio + writeBtn + fullBtn + favBtn +
+                    '<div class="action-group">' +
+                        '<button class="audio-btn qs-audio-btn" title="Nghe"><i class="fas fa-volume-up"></i></button>' +
+                        '<button class="write-btn qs-write-btn" title="Luyen viet"><i class="fas fa-pen-fancy"></i></button>' +
+                        '<button class="practice-full-btn qs-full-btn" title="Luyen tap full"><i class="fas fa-expand"></i></button>' +
+                        favBtn +
                     '</div>' +
                 '</div>' +
                 '<div class="card-body">' +
@@ -517,22 +531,20 @@ def build_quick_search_js():
         }
 
         wrapper.innerHTML = headerHtml + cardsHtml;
+        bindResultEvents(wrapper, result);
 
         var mainEl = $id('mainContent');
         if(mainEl){
-            var y = mainEl.getBoundingClientRect().top + window.scrollY -(' 100;
-            window.scrollsearchTo({ top:y, behavior:'smooth' });
-Input        }
+            var y = mainEl.getBoundingClientRect().top + window.scrollY - 100;
+            window.scrollTo({ top:y, behavior:'smooth' });
+        }
 
         return true;
     }
 
-    /* =================================================');
-======
-       6. XOA KET QUA
-              ======================================================= */
     function clearResult(){
- if        var si = $id(si) si.value = '';
+        var si = $id('searchInput');
+        if(si) si.value = '';
         try{
             if(typeof window.state !== 'undefined' && window.state){
                 window.state.search = '';
@@ -557,9 +569,6 @@ Input        }
         }
     }
 
-    /* =======================================================
-       7. TOAST
-       ======================================================= */
     function showToast(msg, isError){
         var old = $id('quickSearchToast');
         if(old) old.remove();
@@ -575,9 +584,6 @@ Input        }
         }, 2400);
     }
 
-    /* =======================================================
-       8. TIM KIEM
-       ======================================================= */
     function doSearch(){
         var input = $id('quickSearchInput');
         if(!input) return;
@@ -637,9 +643,6 @@ Input        }
         closePanel();
     }
 
-    /* =======================================================
-       9. MO / DONG PANEL
-       ======================================================= */
     function openPanel(){
         QS.open = true;
         var p = $id('quickSearchPanel');
@@ -662,9 +665,6 @@ Input        }
         if(i){ i.value = ''; i.focus(); }
     }
 
-    /* =======================================================
-       10. BIND EVENTS
-       ======================================================= */
     function bind(){
         if(QS.inited) return;
         var toggle = $id('quickSearchToggle');
@@ -731,12 +731,9 @@ Input        }
             closePanel();
         });
 
-        console.log('[quick-search] Da bind events');
+        console.log('[quick-search] Bind OK');
     }
 
-    /* =======================================================
-       11. INIT
-       ======================================================= */
     function init(){
         if(mount()){
             bind();
@@ -795,14 +792,13 @@ def patch_quick_search(html_path="index.html"):
 
     js_block = "\n<script>\n" + js + "\n</script>\n"
     pat_body = re.compile(r'(\s*)(</body>)', re.MULTILINE)
-    n = 0
+    n = [0]
     def _repl(m):
-        nonlocal n
-        n += 1
+        n[0] += 1
         return m.group(1) + js_block + m.group(1) + m.group(2)
     html = pat_body.sub(_repl, html, count=1)
 
-    if n == 0:
+    if n[0] == 0:
         print("[quick_search] Khong tim thay body - bo qua")
         return False
 
