@@ -20,6 +20,15 @@ on:
       # Workflow tự nó
       - '.github/workflows/convert.yml'
   workflow_dispatch:
+    inputs:
+      ai_limit:
+        description: "Số từ AI cần sinh (0 = bỏ qua AI, chỉ dùng mẹo tĩnh)"
+        required: false
+        default: "50"
+      ai_resume:
+        description: "Bỏ qua từ AI đã có? (1=on, 0=off)"
+        required: false
+        default: "1"
 
 permissions:
   contents: write
@@ -44,10 +53,13 @@ jobs:
         with:
           python-version: '3.11'
 
+      # ═══════════════════════════════════════════════════════════════
+      #  INSTALL DEPENDENCIES (thêm openai)
+      # ═══════════════════════════════════════════════════════════════
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install openpyxl cn2an pypinyin jieba pandas hanzidentifier cjkradlib
+          pip install openpyxl cn2an pypinyin jieba pandas hanzidentifier cjkradlib openai
 
       - name: Verify dependencies
         run: |
@@ -56,8 +68,9 @@ jobs:
           python -c "import pypinyin; print('✅ pypinyin', pypinyin.__version__)"
           python -c "import jieba;   print('✅ jieba OK')"
           python -c "import pandas;  print('✅ pandas', pandas.__version__)"
+          python -c "import openai;  print('✅ openai', openai.__version__)"
 
-      # ⭐ VERIFY MODULE TỪ VỰNG
+      # ⭐ VERIFY MODULE TỪ VỰNG (tĩnh + AI)
       - name: Verify vocab modules
         run: |
           echo "=== Kiểm tra module từ vựng ==="
@@ -78,6 +91,14 @@ jobs:
             python -c "from vocab_data.radicals_db import RADICALS; print('✅ radicals_db OK (' + str(len(RADICALS)) + ' bộ thủ)')" || echo "⚠️ radicals_db lỗi"
             python -c "from vocab_data.radical_analyzer import get_radical_for_word; print('✅ radical_analyzer OK')" || echo "⚠️ radical_analyzer lỗi"
             python -c "from vocab_data.mnemonic_generator import generate_mnemonic; print('✅ mnemonic_generator OK')" || echo "⚠️ mnemonic_generator lỗi"
+            
+            # ⭐ Kiểm tra module AI (không bắt buộc)
+            if [ -f vocab_data/ai_mnemonic_generator.py ]; then
+              echo "✅ Có file vocab_data/ai_mnemonic_generator.py"
+              python -c "from vocab_data.ai_mnemonic_generator import generate_one, load_vocab; print('✅ ai_mnemonic_generator imports OK')" || echo "⚠️ ai_mnemonic_generator lỗi (không ảnh hưởng build)"
+            else
+              echo "ℹ️  Không có ai_mnemonic_generator.py — chỉ dùng mẹo tĩnh"
+            fi
           else
             echo "⚠️  Không có vocab_data/ — tab Từ vựng sẽ không có mẹo nhớ/bộ thủ"
           fi
@@ -110,6 +131,67 @@ jobs:
 
       - name: Pre-flight check
         run: python scripts/check.py
+
+      # ═══════════════════════════════════════════════════════════════
+      #  BƯỚC 0: SINH AI MNEMONICS (chỉ chạy nếu có API key + limit > 0)
+      # ═══════════════════════════════════════════════════════════════
+      - name: Generate AI mnemonics
+        id: ai_gen
+        env:
+          DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+          DEMO_LIMIT: ${{ github.event.inputs.ai_limit || '50' }}
+          RESUME: ${{ github.event.inputs.ai_resume || '1' }}
+        run: |
+          echo "=== Kiểm tra điều kiện sinh AI ==="
+          
+          # Kiểm tra API key
+          if [ -z "$DASHSCOPE_API_KEY" ]; then
+            echo "ℹ️  Không có DASHSCOPE_API_KEY — bỏ qua sinh AI"
+            echo "ai_ran=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          echo "✅ DASHSCOPE_API_KEY có sẵn (độ dài: ${#DASHSCOPE_API_KEY})"
+          
+          # Kiểm tra module AI
+          if [ ! -f "vocab_data/ai_mnemonic_generator.py" ]; then
+            echo "ℹ️  Không có vocab_data/ai_mnemonic_generator.py — bỏ qua"
+            echo "ai_ran=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Kiểm tra limit
+          if [ "$DEMO_LIMIT" = "0" ]; then
+            echo "ℹ️  ai_limit=0 — bỏ qua sinh AI (chỉ dùng mẹo tĩnh)"
+            echo "ai_ran=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Kiểm tra file Excel
+          if [ ! -f "data/tu_vung_hsk.xlsx" ]; then
+            echo "⚠️  Không có data/tu_vung_hsk.xlsx — bỏ qua sinh AI"
+            echo "ai_ran=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo ""
+          echo "🚀 Bắt đầu sinh AI mnemonics (limit=$DEMO_LIMIT, resume=$RESUME)"
+          echo "-----------------------------------------------"
+          python vocab_data/ai_mnemonic_generator.py
+          echo "-----------------------------------------------"
+          
+          # Verify output
+          if [ ! -f "data/ai_mnemonics.json" ]; then
+            echo "⚠️  Không tạo được data/ai_mnemonics.json — tiếp tục không có AI"
+            echo "ai_ran=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          SIZE=$(stat -c%s data/ai_mnemonics.json)
+          COUNT=$(python -c "import json; print(len(json.load(open('data/ai_mnemonics.json'))))" 2>/dev/null || echo 0)
+          echo "📦 File size: $SIZE bytes"
+          echo "📊 Tổng số từ có AI mnemonic: $COUNT"
+          echo "ai_ran=true" >> $GITHUB_OUTPUT
+          echo "ai_count=$COUNT" >> $GITHUB_OUTPUT
 
       # ═══════════════════════════════════════════════════════════════
       #  BƯỚC 1: Build index.html gốc (tổng hợp + chuyên ngành)
@@ -280,14 +362,46 @@ jobs:
             echo "⚠️  Không tìm thấy '四百八十'"
           fi
 
+      # ⭐ KIỂM TRA AI MNEMONICS ĐÃ NHÚNG VÀO HTML CHƯA
+      - name: Verify AI mnemonics trong index.html
+        run: |
+          echo "=== Kiểm tra AI mnemonics trong index.html ==="
+          
+          if [ "${{ steps.ai_gen.outputs.ai_ran }}" = "true" ]; then
+            echo "🤖 AI đã chạy — kiểm tra nhúng vào HTML"
+            
+            if [ -f "data/ai_mnemonics.json" ]; then
+              COUNT=$(python -c "import json; print(len(json.load(open('data/ai_mnemonics.json'))))")
+              echo "  📊 Số từ có AI mnemonic: $COUNT"
+            fi
+            
+            # Kiểm tra HTML có chứa marker AI không (tùy vào vocab_premium.py)
+            if grep -q 'ai-mnemonic' index.html; then
+              echo "  ✅ Marker 'ai-mnemonic' found trong HTML"
+            else
+              echo "  ℹ️  Không có marker 'ai-mnemonic' — có thể vocab_premium.py chưa đọc file JSON"
+            fi
+          else
+            echo "ℹ️  AI không chạy trong lần build này — chỉ dùng mẹo tĩnh"
+          fi
+
       # ═══════════════════════════════════════════════════════════════
-      #  COMMIT & PUSH
+      #  COMMIT & PUSH (cả index.html lẫn ai_mnemonics.json)
       # ═══════════════════════════════════════════════════════════════
-      - name: Commit & push index.html
+      - name: Commit & push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Add index.html
           git add index.html
+          
+          # ⭐ Add AI mnemonics nếu có
+          if [ -f "data/ai_mnemonics.json" ]; then
+            git add data/ai_mnemonics.json
+            echo "📦 Sẽ commit data/ai_mnemonics.json"
+          fi
+          
           if git diff --quiet && git diff --staged --quiet; then
             echo "✅ Không có thay đổi để commit"
           else
@@ -306,6 +420,14 @@ jobs:
           [ -d "assets" ] && cp -r assets _site/ || true
           [ -d "static" ] && cp -r static _site/ || true
           [ -f "404.html" ] && cp 404.html _site/ || true
+          
+          # ⭐ Copy AI mnemonics JSON vào artifact (nếu cần load qua fetch)
+          if [ -f "data/ai_mnemonics.json" ]; then
+            mkdir -p _site/data
+            cp data/ai_mnemonics.json _site/data/
+            echo "📦 Đã copy ai_mnemonics.json vào artifact"
+          fi
+          
           echo "=== Artifact contents ==="
           ls -la _site/
 
