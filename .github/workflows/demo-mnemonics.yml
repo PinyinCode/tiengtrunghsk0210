@@ -6,8 +6,8 @@ on:
       demo_limit:
         description: 'Số từ test'
         required: false
-        default: '20'
-      model:
+        default: '10'
+      tmodel:
         description: 'Model AI'
         required: false
         default: 'qwen-plus'
