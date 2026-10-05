@@ -12,6 +12,55 @@ import openpyxl
 
 from vocab_data.mnemonic_generator import generate_mnemonic
 from vocab_data.radical_analyzer import get_radical_for_word
+# ═══════════════════════════════════════════════════════════════════
+#  ⭐ AI MNEMONICS CACHE — đọc 1 lần, dùng cho mọi sheet
+# ═══════════════════════════════════════════════════════════════════
+_AI_MNEMONICS = {}
+_AI_MNEMONICS_LOADED = False
+
+
+def _find_ai_mnemonics_file():
+    candidates = [
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "ai_mnemonics.json"),
+        os.path.join(os.getcwd(), "data", "ai_mnemonics.json"),
+        "data/ai_mnemonics.json",
+    ]
+    for p in candidates:
+        if os.path.exists(p):
+            return p
+    return None
+
+
+def load_ai_mnemonics():
+    global _AI_MNEMONICS, _AI_MNEMONICS_LOADED
+    if _AI_MNEMONICS_LOADED:
+        return _AI_MNEMONICS
+    _AI_MNEMONICS_LOADED = True
+
+    path = _find_ai_mnemonics_file()
+    if not path:
+        print("[VOCAB] [INFO] Khong co ai_mnemonics.json - dung meo tinh")
+        return {}
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            _AI_MNEMONICS = data
+            print("[VOCAB] [OK] Da load " + str(len(data)) + " meo nho AI tu: " + path)
+    except Exception as e:
+        print("[VOCAB] [WARN] Loi doc ai_mnemonics.json: " + str(e))
+    return _AI_MNEMONICS
+
+
+def _get_ai_mnemonic(hsk, stt, zh):
+    """Key format: '{hsk}|{stt}|{zh}' — vd: 'HSK1|1|爱'"""
+    if not _AI_MNEMONICS:
+        return ""
+    key = (str(hsk or "").strip() + "|"
+           + str(stt or "").strip() + "|"
+           + str(zh or "").strip())
+    return _AI_MNEMONICS.get(key, "")
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -180,6 +229,9 @@ def read_vocab_excel(excel_file, start_row=3):
         print("   [X] Khong tim thay file")
         return []
 
+    # ⭐ Load AI mnemonics 1 lần
+    load_ai_mnemonics()
+
     try:
         wb = openpyxl.load_workbook(excel_file, data_only=True, read_only=True)
     except Exception as e:
@@ -197,7 +249,8 @@ def read_vocab_excel(excel_file, start_row=3):
           + ", ".join(target_sheets))
 
     all_data = []
-    total_mnemonic_generated = 0
+    total_mnemonic_ai = 0
+    total_mnemonic_static = 0
     total_radical_generated = 0
 
     for sheet_name in target_sheets:
@@ -208,16 +261,19 @@ def read_vocab_excel(excel_file, start_row=3):
             # ⭐ TỰ ĐỘNG PHÁT HIỆN ROW DATA BẮT ĐẦU
             actual_start_row = _detect_data_start_row(ws, start_row)
 
-            rows, n_mn, n_rd = _read_vocab_sheet(
+            rows, n_ai, n_static, n_rd = _read_vocab_sheet(
                 ws, hsk, sheet_name, actual_start_row
             )
             all_data.extend(rows)
-            total_mnemonic_generated += n_mn
+            total_mnemonic_ai += n_ai
+            total_mnemonic_static += n_static
             total_radical_generated += n_rd
 
             msg = "      " + sheet_name + ": " + str(len(rows)) + " tu"
-            if n_mn > 0:
-                msg += " (" + str(n_mn) + " meo)"
+            if n_ai > 0:
+                msg += " (" + str(n_ai) + " meo AI)"
+            if n_static > 0:
+                msg += " (" + str(n_static) + " meo tinh)"
             if n_rd > 0:
                 msg += " (" + str(n_rd) + " bo thu)"
             print(msg)
@@ -226,8 +282,10 @@ def read_vocab_excel(excel_file, start_row=3):
 
     wb.close()
     print("   [OK] Tong: " + str(len(all_data)) + " tu vung")
-    if total_mnemonic_generated > 0:
-        print("   Tu sinh meo nho: " + str(total_mnemonic_generated) + " tu")
+    if total_mnemonic_ai > 0:
+        print("   Meo nho AI: " + str(total_mnemonic_ai) + " tu")
+    if total_mnemonic_static > 0:
+        print("   Meo nho tinh (fallback): " + str(total_mnemonic_static) + " tu")
     if total_radical_generated > 0:
         print("   Tu tim bo thu: " + str(total_radical_generated) + " tu")
 
@@ -275,7 +333,8 @@ def _read_vocab_sheet(ws, hsk, sheet_name, start_row):
 
     data = []
     empty_count = 0
-    n_mnemonic_generated = 0
+    n_mnemonic_ai = 0
+    n_mnemonic_static = 0
     n_radical_generated = 0
 
     # ⭐ PREFIX SHEET NAME
@@ -312,15 +371,31 @@ def _read_vocab_sheet(ws, hsk, sheet_name, start_row):
         pinyin = _clean_pinyin(row[COL_PINYIN]) if COL_PINYIN >= 0 and COL_PINYIN < len(row) else ""
         vi = _clean(row[COL_VI]) if COL_VI >= 0 and COL_VI < len(row) else ""
 
-        # ⭐ MẸO NHỚ
+        # ⭐ MẸO NHỚ — 3 bước ưu tiên: Excel → AI JSON → Tĩnh
         mnemonic = ""
+        source = "none"
+
+        # 1. Cột mnemonic trong Excel (nếu có điền tay)
         if COL_MNEMONIC >= 0 and COL_MNEMONIC < len(row):
             mnemonic = _clean(row[COL_MNEMONIC])
+            if mnemonic:
+                source = "excel"
+
+        # 2. ⭐ AI mnemonic từ data/ai_mnemonics.json
+        if not mnemonic:
+            ai_text = _get_ai_mnemonic(hsk, stt_str, zh)
+            if ai_text:
+                mnemonic = ai_text
+                source = "ai"
+                n_mnemonic_ai += 1
+
+        # 3. Fallback: sinh mẹo tĩnh
         if not mnemonic:
             try:
                 mnemonic = generate_mnemonic(zh, pinyin, vi)
                 if mnemonic:
-                    n_mnemonic_generated += 1
+                    source = "static"
+                    n_mnemonic_static += 1
             except Exception:
                 mnemonic = ""
 
@@ -356,11 +431,12 @@ def _read_vocab_sheet(ws, hsk, sheet_name, start_row):
             "vi_du_vi": vi_du_vi,
             "vi_du_words": vi_du_words,
             "mnemonic": mnemonic,
+            "mnemonic_source": source,   # ⭐ 'ai' | 'static' | 'excel' | 'none'
             "radical": radical,
             "source_sheet": sheet_name,
         })
 
-    return data, n_mnemonic_generated, n_radical_generated
+    return data, n_mnemonic_ai, n_mnemonic_static, n_radical_generated
 def build_vocab_css(vocab_id="tu-vung"):
     css = r"""
 /* TAB TU VUNG PREMIUM */
