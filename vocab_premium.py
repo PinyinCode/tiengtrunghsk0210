@@ -54,13 +54,47 @@ def load_ai_mnemonics():
 
 
 def _get_ai_mnemonic(hsk, stt, zh):
-    """Key format: '{hsk}|{stt}|{zh}' — vd: 'HSK1|1|爱'"""
+    """
+    Key format: '{hsk}|{stt}|{zh}'
+    File JSON có thể dùng 'HSK 1|1|爱' (có dấu cách)
+    Code truyền vào 'HSK1|1|爱' (đã clean bởi _normalize_hsk)
+    → Thử nhiều format để khớp.
+    """
     if not _AI_MNEMONICS:
         return ""
-    key = (str(hsk or "").strip() + "|"
-           + str(stt or "").strip() + "|"
-           + str(zh or "").strip())
-    return _AI_MNEMONICS.get(key, "")
+
+    hsk_str = str(hsk or "").strip()
+    stt_str = str(stt or "").strip()
+    zh_str  = str(zh or "").strip()
+
+    # Tạo biến thể HSK có dấu cách: "HSK1" → "HSK 1"
+    m = re.match(r'^(HSK)\s*(\d+.*)$', hsk_str, re.IGNORECASE)
+    hsk_spaced = (m.group(1).upper() + " " + m.group(2)) if m else hsk_str
+
+    # Thử 4 format key phổ biến
+    candidates = [
+        hsk_str + "|" + stt_str + "|" + zh_str,             # "HSK1|1|爱"
+        hsk_spaced + "|" + stt_str + "|" + zh_str,          # "HSK 1|1|爱"
+        hsk_str.lower() + "|" + stt_str + "|" + zh_str,     # "hsk1|1|爱"
+        hsk_spaced.lower() + "|" + stt_str + "|" + zh_str,  # "hsk 1|1|爱"
+    ]
+
+    for key in candidates:
+        if key in _AI_MNEMONICS:
+            return _AI_MNEMONICS[key]
+
+    # Fallback: scan toàn bộ (chậm hơn nhưng chắc chắn)
+    target_hsk = hsk_str.replace(" ", "").lower()
+    for k, v in _AI_MNEMONICS.items():
+        parts = k.split("|")
+        if len(parts) != 3:
+            continue
+        if (parts[0].replace(" ", "").lower() == target_hsk
+                and parts[1].strip() == stt_str
+                and parts[2].strip() == zh_str):
+            return v
+
+    return ""
 
 
 # ═══════════════════════════════════════════════════════════════════
