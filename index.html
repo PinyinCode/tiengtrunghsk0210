@@ -28955,7 +28955,7 @@ window.__switchRawData = function(datasetId) {
 
 
 <script>
-/* FIX.PY OVERRIDE - Bind tab moi + TIER LOCK + ONBOARDING */
+/* FIX.PY OVERRIDE - Bind tab moi + TIER LOCK + ONBOARDING + HSK7-9 */
 (function() {
     'use strict';
     var NEW_IDS = ["1k-cau-giao-tiep"];
@@ -28967,10 +28967,14 @@ window.__switchRawData = function(datasetId) {
         var pool = (typeof RAW_DATA !== 'undefined' && Array.isArray(RAW_DATA))
                    ? RAW_DATA : [];
         var target = String(hskTarget || '').toUpperCase().replace(/\s+/g, '');
+        /* ⭐ Nếu user gõ HSK7/HSK8/HSK9 → chuẩn hóa về HSK7-9 */
+        if (target === 'HSK7' || target === 'HSK8' || target === 'HSK9') {
+            target = 'HSK7-9';
+        }
         return pool.filter(function(r) {
             var rh = String(r.hsk || '').toUpperCase().replace(/\s+/g, '');
+            /* ⭐ Data lưu 'HSK7-9' → khớp với target HSK7-9 */
             if (rh !== target) return false;
-            /* ⭐ Nếu sttTarget là null → lấy hết HSK đó */
             if (sttTarget === null) return true;
             /* ⭐ Ưu tiên stt_original (số thuần), fallback stt (bỏ prefix) */
             var sttStr = (r.stt_original != null && String(r.stt_original).trim() !== '')
@@ -29085,21 +29089,28 @@ window.__switchRawData = function(datasetId) {
             if (!window.FIXPY_DATASETS || !window.FIXPY_DATASETS[curDs]) {
                 return origApply.apply(this, arguments);
             }
-            /* ⭐ Kiểm tra cú pháp hskX N */
+            /* ⭐ Kiểm tra cú pháp hskX N (HỖ TRỢ CẢ 'hsk7-9') */
             var si = document.getElementById('searchInput');
             var raw = si ? si.value.trim() : '';
-            var m = raw.toLowerCase().match(/^hsk\s*(\d+)\s*(?:(\d+)(?:\s+(\d+))?)?$/);
+            var m = raw.toLowerCase().match(/^hsk\s*(7[-\s]*9|\d+)\s*(?:(\d+)(?:\s+(\d+))?)?$/);
             if (!m) {
                 return origApply.apply(this, arguments);
             }
             /* ⭐ Có cú pháp đặc biệt → xử lý riêng */
-            var hskNum = m[1];
+            var hskRaw = m[1].replace(/\s+/g, '');
+            var hskNum = hskRaw;
+            /* ⭐ Map 7/8/9 → 7-9 */
+            if (hskNum === '7' || hskNum === '8' || hskNum === '9') {
+                hskNum = '7-9';
+            }
             var startStt = m[2] ? parseInt(m[2], 10) : null;
             var endStt = m[3] ? parseInt(m[3], 10) : (startStt !== null ? startStt : null);
             if (startStt !== null && endStt < startStt) {
                 var tmp = startStt; startStt = endStt; endStt = tmp;
             }
-            var pool = window.__findByHskStt('HSK' + hskNum, null);
+            /* ⭐ Tạo target HSK chuẩn: 'HSK7-9' hoặc 'HSK1' ... */
+            var targetHsk = (hskNum === '7-9') ? 'HSK7-9' : ('HSK' + hskNum);
+            var pool = window.__findByHskStt(targetHsk, null);
             var result = pool;
             if (startStt !== null) {
                 result = pool.filter(function(r) {
@@ -29119,25 +29130,25 @@ window.__switchRawData = function(datasetId) {
             }
             if (typeof render === 'function') render(true);
             if (typeof updateResultCount === 'function') updateResultCount();
-            /* ⭐ Update filter UI (chip, clear btn) */
             if (typeof updateFilterUI === 'function') updateFilterUI();
             var clearBtn = document.getElementById('clearSearchBtn');
             if (clearBtn) clearBtn.classList.add('show');
             /* ⭐ Toast thông báo */
             if (typeof showSearchToast === 'function') {
+                var hskDisplay = (hskNum === '7-9') ? '7-9' : hskNum;
                 var msg;
                 if (startStt === null) {
-                    msg = '✅ HSK' + hskNum + ': ' + result.length + ' câu';
+                    msg = '✅ HSK' + hskDisplay + ': ' + result.length + ' câu';
                 } else if (startStt === endStt) {
-                    msg = '✅ HSK' + hskNum + ' câu ' + startStt + ': ' + result.length + ' kết quả';
+                    msg = '✅ HSK' + hskDisplay + ' câu ' + startStt + ': ' + result.length + ' kết quả';
                 } else {
-                    msg = '✅ HSK' + hskNum + ' câu ' + startStt + '→' + endStt + ': ' + result.length + ' kết quả';
+                    msg = '✅ HSK' + hskDisplay + ' câu ' + startStt + '→' + endStt + ': ' + result.length + ' kết quả';
                 }
                 showSearchToast(msg);
             }
         };
         window.__fixPyApplyFilterPatched = true;
-        console.log('[fix.py] applyFilter patched for hskX N syntax');
+        console.log('[fix.py] applyFilter patched for hskX N + HSK7-9');
     }
 
     function bindTab(dsId) {
