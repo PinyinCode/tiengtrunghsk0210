@@ -10758,7 +10758,7 @@ body[data-vocab-mode="1"] .mobile-view {
     position:fixed;
     left:20px;
     bottom:calc(90px + env(safe-area-inset-bottom));
-    z-index:99999;
+    z-index:9997;
     display:flex;
     flex-direction:column;
     align-items:flex-start;
@@ -10775,14 +10775,9 @@ body[data-vocab-mode="1"] .mobile-view {
     pointer-events:none;
 }
 
+/* Khi cum floating group mo -> day len cao hon */
 body.has-floating-group #quickSearchRoot{
     bottom:calc(260px + env(safe-area-inset-bottom));
-}
-
-/* Khi o full modal -> day quick search len cao hon (tranh nut nav) */
-body.practice-full-open #quickSearchRoot{
-    bottom:calc(140px + env(safe-area-inset-bottom));
-    z-index:99999;
 }
 
 .quick-search-toggle{
@@ -10872,7 +10867,7 @@ body.practice-full-open #quickSearchRoot{
     font-size:.85rem;font-weight:700;color:#fff;
     background:linear-gradient(135deg,#0891b2,#155e75);
     box-shadow:0 8px 24px rgba(14,116,144,.45);
-    z-index:999999;opacity:0;
+    z-index:99999;opacity:0;
     transition:opacity .25s,transform .3s cubic-bezier(.34,1.56,.64,1);
     pointer-events:none;max-width:90vw;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
@@ -10890,16 +10885,10 @@ body.practice-full-open #quickSearchRoot{
     body.has-floating-group #quickSearchRoot{
         bottom:calc(240px + env(safe-area-inset-bottom));
     }
-    body.practice-full-open #quickSearchRoot{
-        bottom:calc(130px + env(safe-area-inset-bottom));
-    }
     .quick-search-toggle{width:42px;height:42px;font-size:1rem;}
 }
 @media (max-width:400px){
     #quickSearchRoot{left:10px;}
-    body.practice-full-open #quickSearchRoot{
-        bottom:calc(120px + env(safe-area-inset-bottom));
-    }
     .quick-search-toggle{width:40px;height:40px;}
 }
 
@@ -31528,50 +31517,6 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
 
     function $id(id){ return document.getElementById(id); }
 
-    /* =======================================================
-       0. TU DONG EXPOSE CAC HAM PRIVATE RA WINDOW
-       ======================================================= */
-    (function autoExpose(){
-        var tries = 0;
-        var timer = setInterval(function(){
-            tries++;
-            try{
-                if(typeof window.applyFilter !== 'function' &&
-                   typeof applyFilter === 'function'){
-                    window.applyFilter = applyFilter;
-                }
-            }catch(e){}
-            try{
-                if(typeof window.pfApplyFilter !== 'function' &&
-                   typeof pfApplyFilter === 'function'){
-                    window.pfApplyFilter = pfApplyFilter;
-                }
-            }catch(e){}
-            try{
-                if(typeof window.RAW_DATA === 'undefined' &&
-                   typeof RAW_DATA !== 'undefined'){
-                    window.RAW_DATA = RAW_DATA;
-                }
-            }catch(e){}
-            try{
-                if(typeof window.pfBuildQuickNav !== 'function' &&
-                   typeof pfBuildQuickNav === 'function'){
-                    window.pfBuildQuickNav = pfBuildQuickNav;
-                }
-            }catch(e){}
-            try{
-                if(typeof window.parseSearchQuery !== 'function' &&
-                   typeof parseSearchQuery === 'function'){
-                    window.parseSearchQuery = parseSearchQuery;
-                }
-            }catch(e){}
-            if(tries > 40) clearInterval(timer);
-        }, 250);
-    })();
-
-    /* =======================================================
-       1. MOUNT DOM
-       ======================================================= */
     function buildDOM(){
         var root = document.createElement('div');
         root.id = QS.MOUNT_ID;
@@ -31607,9 +31552,6 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
         return true;
     }
 
-    /* =======================================================
-       2. PARSE cu phap
-       ======================================================= */
     function parseQuery(raw){
         if(typeof window.parseSearchQuery === 'function'){
             try{
@@ -31640,9 +31582,6 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
         };
     }
 
-    /* =======================================================
-       3. LAY DU LIEU GOC
-       ======================================================= */
     function getBaseData(){
         try{
             if(typeof window.RAW_DATA !== 'undefined' && Array.isArray(window.RAW_DATA)){
@@ -31659,9 +31598,6 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
         return [];
     }
 
-    /* =======================================================
-       4. LOC DU LIEU
-       ======================================================= */
     function filterData(raw, parsed){
         var baseData = getBaseData();
         if(baseData.length === 0) return null;
@@ -31687,98 +31623,26 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
         });
     }
 
-    /* =======================================================
-       5. KIEM TRA DANG O FULL MODAL
-       ======================================================= */
-    function isFullModalOpen(){
-        var pfModal = $id('practiceFullModal');
-        return pfModal && pfModal.classList.contains('show');
-    }
-
-    /* =======================================================
-       6. AP DUNG KET QUA (trang chinh HOAC full modal)
-       ======================================================= */
     function applyResult(result, raw, parsed){
         if(!result || result.length === 0) return false;
-
-        var inFullModal = isFullModalOpen();
-
-        if(inFullModal){
-            /* Truong hop 1: Dang o full modal */
-            var pfInput = $id('pfSearchInput');
-            if(pfInput){
-                pfInput.value = raw;
-            }
-
-            /* Dong bo ra search chinh de khi dong modal van giu */
-            var siMain = $id('searchInput');
-            if(siMain) siMain.value = raw;
-
-            var pfCalled = false;
-            try{
-                if(typeof window.pfApplyFilter === 'function'){
-                    window.pfApplyFilter();
-                    pfCalled = true;
-                }
-            }catch(e){
-                console.warn('[quick-search] pfApplyFilter error:', e);
-            }
-
-            /* Fallback: dispatch input event tren pfSearchInput */
-            if(!pfCalled && pfInput){
-                try{
-                    pfInput.dispatchEvent(new Event('input', { bubbles: true }));
-                }catch(e){
-                    var ev1 = document.createEvent('Event');
-                    ev1.initEvent('input', true, true);
-                    pfInput.dispatchEvent(ev1);
-                }
-            }
-
-            /* Hien nut clear cua pfSearchInput */
-            try{
-                var pfClear = $id('pfClearSearchBtn');
-                if(pfClear) pfClear.classList.add('show');
-            }catch(e){}
-
-            return true;
-        }
-
-        /* Truong hop 2: Trang chinh */
         var si = $id('searchInput');
-        if(!si) return false;
-
-        si.value = raw;
-
-        var filterCalled = false;
-        try{
-2            if(typeof window.applyFilter === 'function'){
-                window.applyFilter();
-                filterCalled = true;
+        if(!si){
+            if(typeof window.__applyQuickSearchResult === 'function'){
+                try{ window.__applyQuickSearchResult(result); return true; }catch(e){}
             }
-        }catch(e){}
-
-        if(!filterCalled){
-            try{
-                si.dispatchEvent(new Event('input', { bubbles: true }));
-            }catch(e){
-                var ev = document.createEvent('Event');
-                ev2.initEvent('input', true, true);
-                si.dispatchEvent(ev2);
-            }
+            return false;
         }
-
+        si.value = raw;
         try{
-            var cb = $id('clearSearchBtn');
-            if(cb) cb.classList.add('show');
-        }catch(e){}
-
+            si.dispatchEvent(new Event('input', { bubbles: true }));
+        }catch(e){
+            var ev = document.createEvent('Event');
+            ev.initEvent('input', true, true);
+            si.dispatchEvent(ev);
+        }
         return true;
     }
 
-    /* =======================================================
-       7. TOAST
-       ======================================================= */
     function showToast(msg, isError){
         var old = $id('quickSearchToast');
         if(old) old.remove();
@@ -31794,9 +31658,6 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
         }, 2400);
     }
 
-    /* =======================================================
-       8. HANH DONG TIM KIEM
-       ======================================================= */
     function doSearch(){
         var input = $id('quickSearchInput');
         if(!input) return;
@@ -31829,22 +31690,15 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
         showToast(msg);
 
         closePanel();
-
-        /* Chi scroll khi o trang chinh */
-        if(!isFullModalOpen()){
-            setTimeout(function(){
-                var mainEl = $id('mainContent');
-                if(mainEl){
-                    var y = mainEl.getBoundingClientRect().top + window.scrollY - 100;
-                    window.scrollTo({ top:y, behavior:'smooth' });
-                }
-            }, 100);
-        }
+        setTimeout(function(){
+            var mainEl = $id('mainContent');
+            if(mainEl){
+                var y = mainEl.getBoundingClientRect().top + window.scrollY - 100;
+                window.scrollTo({ top:y, behavior:'smooth' });
+            }
+        }, 100);
     }
 
-    /* =======================================================
-       9. MO / DONG PANEL
-       ======================================================= */
     function openPanel(){
         QS.open = true;
         var p = $id('quickSearchPanel');
@@ -31867,9 +31721,6 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
         if(i){ i.value = ''; i.focus(); }
     }
 
-    /* =======================================================
-       10. BIND EVENTS
-       ======================================================= */
     function bind(){
         if(QS.inited) return;
         var toggle = $id('quickSearchToggle');
@@ -31883,53 +31734,24 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
         }
         QS.inited = true;
 
-        /* Nut toggle: mo/dong panel */
         toggle.addEventListener('click', function(e){
             e.stopPropagation();
-            e.preventDefault();
             if(QS.open) closePanel(); else openPanel();
         });
-
-        /* Input: hien nut clear/go khi co chu */
         input.addEventListener('input', function(){
             panel.classList.toggle('has-value', !!this.value.trim());
         });
-
-        /* ENTER = TIM, ESC = XOA/DONG */
         input.addEventListener('keydown', function(e){
-            if(e.key === 'Enter' || e.keyCode === 13){
+            if(e.key === 'Enter'){ e.preventDefault(); doSearch(); }
+            else if(e.key === 'Escape'){
                 e.preventDefault();
-                e.stopPropagation();
-                doSearch();
-                return false;
-            }
-            if(e.key === 'Escape' || e.keyCode === 27){
-                e.preventDefault();
-                if(this.value.trim()){
-                    this.value = '';
-                    panel.classList.remove('has-value');
-                } else {
-                    closePanel();
-                }
-                return false;
+                if(this.value.trim()){ this.value=''; panel.classList.remove('has-value'); }
+                else closePanel();
             }
         });
+        clearB.addEventListener('click', function(e){ e.stopPropagation(); clearPanel(); });
+        goB.addEventListener('click', function(e){ e.stopPropagation(); doSearch(); });
 
-        /* Nut X: xoa input */
-        clearB.addEventListener('click', function(e){
-            e.stopPropagation();
-            e.preventDefault();
-            clearPanel();
-        });
-
-        /* Nut mui ten: TIM (giong Enter) */
-        goB.addEventListener('click', function(e){
-            e.stopPropagation();
-            e.preventDefault();
-            doSearch();
-        });
-
-        /* Click ra ngoai: dong panel neu input trong */
         document.addEventListener('click', function(e){
             if(!QS.open) return;
             if(e.target.closest('#' + QS.MOUNT_ID)) return;
@@ -31938,20 +31760,9 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
             closePanel();
         });
 
-        /* ESC cap document */
-        document.addEventListener('keydown', function(e){
-            if(!QS.open) return;
-            if(e.key === 'Escape' || e.keyCode === 27){
-                closePanel();
-            }
-        });
-
         console.log('[quick-search] Da bind events');
     }
 
-    /* =======================================================
-       11. INIT
-       ======================================================= */
     function init(){
         if(mount()){
             bind();
@@ -31968,7 +31779,6 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
         init();
     }
 
-    /* Expose de debug */
     window.__quickSearch = {
         open: openPanel,
         close: closePanel,
