@@ -24,7 +24,7 @@ if not API_KEY:
 # ⭐ Endpoint Singapore chuẩn (International)
 client = OpenAI(
     api_key=API_KEY,
-    base_url="https://ws-dd0dve4tf4gwwmpy.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1"
+    base_url="https://ws-8lcqaxwxdv0h9xzy.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1"
 )
 
 OUTPUT_FILE = "data/mnemonics_demo.json"
