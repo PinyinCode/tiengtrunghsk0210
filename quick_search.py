@@ -1,29 +1,28 @@
 # -*- coding: utf-8 -*-
-r"""
-quick_search.py — Ô TÌM KIẾM NHANH ĐỘC LẬP, ĐI THEO NÚT CHAT
-════════════════════════════════════════════════════════════════════
+"""
+quick_search.py - O TIM KIEM NHANH DOC LAP, DI THEO NUT CHAT
 
-MODULE NÀY KHÔNG SỬA BẤT KỲ FILE NÀO KHÁC.
-Chỉ inject thêm CSS + HTML + JS vào index.html sau khi
-tất cả module khác đã build xong (fix.py, chat_support.py, ...).
+Module nay KHONG sua bat ky file nao khac.
+Chi inject them CSS + HTML + JS vao index.html sau khi
+tat ca module khac da build xong (fix.py, chat_support.py, ...).
 
-ĐẶC ĐIỂM:
-  • Ô search nhanh riêng, KHÔNG đụng #searchInput chính
-  • Vị trí: nằm TRONG #chatFloatWrap (trên nút chat)
-    → tự động di chuyển theo nút chat
-  • Collapse thành icon 🔍 khi không dùng
-  • Hỗ trợ cú pháp: "hsk1", "hsk1 5", "hsk1 5 10", "hsk7-9"
-  • Enter / nút → filter bảng câu (tạm thời, ghi đè search chính)
-  • Esc / ✕ → reset
-  • Toast thông báo kết quả
-  • Dark mode + responsive mobile
-  • Tự động retry nếu #chatFloatWrap chưa tồn tại
+DAC DIEM:
+  - O search nhanh rieng, KHONG dung #searchInput chinh
+  - Vi tri: nam TRONG #chatFloatWrap (tren nut chat)
+    -> tu dong di chuyen theo nut chat
+  - Collapse thanh icon kinh lup khi khong dung
+  - Ho tro cu phap: hsk1, hsk1 5, hsk1 5 10, hsk7-9
+  - Enter / nut -> filter bang cau (tam thoi, ghi de search chinh)
+  - Esc / X -> reset
+  - Toast thong bao ket qua
+  - Dark mode + responsive mobile
+  - Tu dong retry neu #chatFloatWrap chua ton tai
 
-CÁCH DÙNG:
+CACH DUNG:
   from quick_search import patch_quick_search
   patch_quick_search("index.html")
 
-HOẶC chạy trực tiếp:
+HOAC chay truc tiep:
   python quick_search.py
 """
 
@@ -32,16 +31,10 @@ import re
 import sys
 
 
-# ═══════════════════════════════════════════════════════════════
-#  ID / MARKER (dùng để tránh inject trùng)
-# ═══════════════════════════════════════════════════════════════
 MARKER_CSS = "/* ===== QUICK_SEARCH_MODULE_CSS ===== */"
 MARKER_JS  = "/* ===== QUICK_SEARCH_MODULE_JS  ===== */"
 
 
-# ═══════════════════════════════════════════════════════════════
-#  CSS
-# ═══════════════════════════════════════════════════════════════
 def build_quick_search_css():
     return r"""
 /* ===== QUICK_SEARCH_MODULE_CSS ===== */
@@ -170,7 +163,6 @@ def build_quick_search_css():
     box-shadow:0 8px 24px rgba(220,38,38,.5);
 }
 
-/* ─── Khi chat mở → ẩn quick search ─── */
 body.chat-is-open .quick-search-wrap{
     opacity:0;pointer-events:none;
     transform:translateY(-8px);
@@ -188,9 +180,6 @@ body.chat-is-open .quick-search-wrap{
 """
 
 
-# ═══════════════════════════════════════════════════════════════
-#  JS
-# ═══════════════════════════════════════════════════════════════
 def build_quick_search_js():
     return r"""
 /* ===== QUICK_SEARCH_MODULE_JS  ===== */
@@ -200,16 +189,7 @@ def build_quick_search_js():
     var QS = { open:false, inited:false, retries:0 };
 
     function $id(id){ return document.getElementById(id); }
-    function esc(s){
-        if(s==null) return '';
-        return String(s)
-            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-            .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-    }
 
-    /* ═══════════════════════════════════════════════════════
-       1. INJECT DOM vào #chatFloatWrap
-       ═══════════════════════════════════════════════════════ */
     function injectDOM(){
         if($id('quickSearchWrap')) return true;
 
@@ -217,7 +197,7 @@ def build_quick_search_js():
         if(!wrap){
             QS.retries++;
             if(QS.retries > 60){
-                console.warn('[quick-search] #chatFloatWrap không xuất hiện sau 60 lần thử → bỏ qua');
+                console.warn('[quick-search] chatFloatWrap khong xuat hien sau 60 lan thu');
                 return false;
             }
             setTimeout(injectDOM, 500);
@@ -231,40 +211,34 @@ def build_quick_search_js():
             '<div class="quick-search-panel" id="quickSearchPanel">' +
                 '<i class="fas fa-search" style="color:var(--text-3,#94a3b8);font-size:.78rem;flex-shrink:0"></i>' +
                 '<input type="text" id="quickSearchInput" ' +
-                    'placeholder="hsk1 5 · hsk2 10 20" ' +
+                    'placeholder="hsk1 5 - hsk2 10 20" ' +
                     'autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">' +
-                '<button class="quick-search-clear" id="quickSearchClear" type="button" title="Xoá">' +
+                '<button class="quick-search-clear" id="quickSearchClear" type="button" title="Xoa">' +
                     '<i class="fas fa-times"></i>' +
                 '</button>' +
-                '<button class="quick-search-go" id="quickSearchGo" type="button" title="Tìm">' +
+                '<button class="quick-search-go" id="quickSearchGo" type="button" title="Tim">' +
                     '<i class="fas fa-arrow-right"></i>' +
                 '</button>' +
             '</div>' +
             '<div class="quick-search-hint">' +
-                'Cú pháp: <kbd>hsk1</kbd> · <kbd>hsk1 5</kbd> · <kbd>hsk1 5 10</kbd> · <kbd>hsk7-9</kbd>' +
+                'Cu phap: <kbd>hsk1</kbd> - <kbd>hsk1 5</kbd> - <kbd>hsk1 5 10</kbd> - <kbd>hsk7-9</kbd>' +
             '</div>' +
-            '<button class="quick-search-toggle" id="quickSearchToggle" type="button" title="Tìm kiếm nhanh">' +
+            '<button class="quick-search-toggle" id="quickSearchToggle" type="button" title="Tim kiem nhanh">' +
                 '<i class="fas fa-search"></i>' +
             '</button>';
 
-        // ⭐ Chèn vào ĐẦU wrapper (nằm TRÊN nút chat)
         wrap.insertBefore(div, wrap.firstChild);
-        console.log('[quick-search] ✅ Đã chèn vào #chatFloatWrap');
+        console.log('[quick-search] Da chen vao chatFloatWrap');
         return true;
     }
 
-    /* ═══════════════════════════════════════════════════════
-       2. PARSE cú pháp (fallback nếu không có window.parseSearchQuery)
-       ═══════════════════════════════════════════════════════ */
     function parseQuery(raw){
-        // Ưu tiên dùng parser chính nếu có
         if(typeof window.parseSearchQuery === 'function'){
             try{
                 var r = window.parseSearchQuery(raw);
                 if(r) return r;
             }catch(e){}
         }
-        // Fallback: tự parse
         var q = (raw||'').trim();
         if(!q) return null;
         var m = q.toLowerCase().match(/^hsk\s*(7[-\s]*9|\d+)(?:\s+(\d+)(?:\s+(\d+))?)?$/);
@@ -289,17 +263,12 @@ def build_quick_search_js():
         };
     }
 
-    /* ═══════════════════════════════════════════════════════
-       3. LỌC dữ liệu
-       ═══════════════════════════════════════════════════════ */
     function filterData(raw, parsed){
         var baseData = [];
         try{
-            // Ưu tiên RAW_DATA của scope chính
             if(typeof window.RAW_DATA !== 'undefined' && Array.isArray(window.RAW_DATA)){
                 baseData = window.RAW_DATA;
             }
-            // Fallback: thử đọc từ FIXPY_DATASETS
             else if(window.FIXPY_DATASETS){
                 var curDs = (typeof window.CURRENT_DATASET !== 'undefined')
                             ? window.CURRENT_DATASET : 'tonghop';
@@ -333,18 +302,11 @@ def build_quick_search_js():
         });
     }
 
-    /* ═══════════════════════════════════════════════════════
-       4. APPLY kết quả vào bảng câu chính
-       ═══════════════════════════════════════════════════════ */
     function applyResult(result, raw, parsed){
         if(!result || result.length === 0) return false;
 
-        // ⭐ CÁCH AN TOÀN NHẤT: ghi vào #searchInput chính rồi trigger
-        // → không cần truy cập closure `filtered` / `render`
-        // Đây là cách duy nhất KHÔNG ĐỤNG code hiện tại.
         var si = $id('searchInput');
         if(!si){
-            // Fallback: dùng bridge nếu được expose
             if(typeof window.__applyQuickSearchResult === 'function'){
                 try{
                     window.__applyQuickSearchResult(result);
@@ -354,20 +316,11 @@ def build_quick_search_js():
             return false;
         }
 
-        // Nếu là cú pháp đặc biệt (hskX N) → ghi nguyên chuỗi vào #searchInput
-        // → applyFilter() sẽ tự parse (vì đã được patch hỗ trợ)
-        if(parsed && parsed.type === 'hsk_stt'){
-            si.value = raw;
-        } else {
-            // Text thường → ghi thẳng
-            si.value = raw;
-        }
+        si.value = raw;
 
-        // ⭐ Trigger input event → applyFilter() chạy tự nhiên
         try{
             si.dispatchEvent(new Event('input', { bubbles: true }));
         }catch(e){
-            // IE fallback
             var ev = document.createEvent('Event');
             ev.initEvent('input', true, true);
             si.dispatchEvent(ev);
@@ -376,36 +329,30 @@ def build_quick_search_js():
         return true;
     }
 
-    /* ═══════════════════════════════════════════════════════
-       5. TOAST
-       ═══════════════════════════════════════════════════════ */
     function showToast(msg, isError){
         var old = $id('quickSearchToast');
         if(old) old.remove();
 
         var t = document.createElement('div');
         t.id = 'quickSearchToast';
-        t.className = 'quick-search-toast' + (isError ? ' error' : '');
-        t.textContent = msg;
+        t.className = 'quick-search-toast' + (isError.classList ? ' error' : '');
+        t.textContent =.remove msg;
         document.body.appendChild(t);
 
-        requestAnimationFrame(function(){ t.classList.add('show'); });
+('        requestAnimationFrame(function(){ t.classList.add('show'); });
 
-        setTimeout(function(){
-            t.classList.remove('show');
+show        setTimeout(function(){
+            t');
             setTimeout(function(){ if(t.parentNode) t.remove(); }, 300);
         }, 2400);
     }
 
-    /* ═══════════════════════════════════════════════════════
-       6. HÀNH ĐỘNG SEARCH
-       ═══════════════════════════════════════════════════════ */
     function doSearch(){
         var input = $id('quickSearchInput');
         if(!input) return;
         var raw = input.value.trim();
         if(!raw){
-            showToast('Nhập gì đó để tìm...', true);
+            showToast('Nhap gi do de tim...', true);
             input.focus();
             return;
         }
@@ -414,7 +361,7 @@ def build_quick_search_js():
         var result = filterData(raw, parsed);
 
         if(result === null){
-            showToast('❌ Chưa có dữ liệu để tìm', true);
+            showToast('Chua co du lieu de tim', true);
             return;
         }
 
@@ -422,14 +369,14 @@ def build_quick_search_js():
             var msgs;
             if(parsed){
                 if(parsed.startStt === null){
-                    msgs = '❌ Không có câu nào trong ' + parsed.hsk;
+                    msgs = 'Khong co cau nao trong ' + parsed.hsk;
                 } else if(parsed.startStt === parsed.endStt){
-                    msgs = '❌ Không có câu số ' + parsed.startStt + ' trong ' + parsed.hsk;
+                    msgs = 'Khong co cau so ' + parsed.startStt + ' trong ' + parsed.hsk;
                 } else {
-                    msgs = '❌ Không có câu ' + parsed.startStt + '→' + parsed.endStt + ' trong ' + parsed.hsk;
+                    msgs = 'Khong co cau ' + parsed.startStt + '-' + parsed.endStt + ' trong ' + parsed.hsk;
                 }
             } else {
-                msgs = '❌ Không tìm thấy: "' + raw + '"';
+                msgs = 'Khong tim thay: ' + raw;
             }
             showToast(msgs, true);
             return;
@@ -437,26 +384,24 @@ def build_quick_search_js():
 
         var ok = applyResult(result, raw, parsed);
         if(!ok){
-            showToast('⚠️ Không thể áp dụng kết quả', true);
+            showToast('Khong the ap dung ket qua', true);
             return;
         }
 
-        // ⭐ Thông báo thành công
         var msg;
         if(parsed){
             if(parsed.startStt === null){
-                msg = '✅ ' + parsed.hsk + ' · ' + result.length + ' câu';
+                msg = parsed.hsk + ' - ' + result.length + ' cau';
             } else if(parsed.startStt === parsed.endStt){
-                msg = '✅ ' + parsed.hsk + ' câu ' + parsed.startStt + ' · ' + result.length + ' kết quả';
+                msg = parsed.hsk + ' cau ' + parsed.startStt + ' - ' + result.length + ' ket qua';
             } else {
-                msg = '✅ ' + parsed.hsk + ' ' + parsed.startStt + '→' + parsed.endStt + ' · ' + result.length + ' kết quả';
+                msg = parsed.hsk + ' ' + parsed.startStt + '-' + parsed.endStt + ' - ' + result.length + ' ket qua';
             }
         } else {
-            msg = '🔍 Tìm thấy ' + result.length + ' câu';
+            msg = 'Tim thay ' + result.length + ' cau';
         }
         showToast(msg);
 
-        // ⭐ Đóng panel + scroll
         closePanel();
         setTimeout(function(){
             var mainEl = $id('mainContent');
@@ -467,9 +412,6 @@ def build_quick_search_js():
         }, 100);
     }
 
-    /* ═══════════════════════════════════════════════════════
-       7. MỞ / ĐÓNG PANEL
-       ═══════════════════════════════════════════════════════ */
     function openPanel(){
         QS.open = true;
         var p = $id('quickSearchPanel');
@@ -495,9 +437,6 @@ def build_quick_search_js():
         if(i){ i.value = ''; i.focus(); }
     }
 
-    /* ═══════════════════════════════════════════════════════
-       8. BIND EVENTS
-       ═══════════════════════════════════════════════════════ */
     function bind(){
         if(QS.inited) return;
         var toggle = $id('quickSearchToggle');
@@ -544,26 +483,21 @@ def build_quick_search_js():
             doSearch();
         });
 
-        // Click ra ngoài → đóng nếu ô trống
         document.addEventListener('click', function(e){
-            if(!QS.openPanel) return;
+            if(!QS.open) return;
             if(e.target.closest('#quickSearchWrap')) return;
             var i = $id('quickSearchInput');
-            if(i && i.value.trim()) return;  // đang có text → không tự đóng
+            if(i && i.value.trim()) return;
             closePanel();
         });
 
-        console.log('[quick-search] ✅ Đã bind events');
+        console.log('[quick-search] Da bind events');
     }
 
-    /* ═══════════════════════════════════════════════════════
-       9. INIT (có retry)
-       ═══════════════════════════════════════════════════════ */
     function init(){
         if(injectDOM()){
             bind();
         } else {
-            // DOM chưa sẵn sàng → retry sau khi injectDOM thành công
             setTimeout(function(){
                 if($id('quickSearchWrap')) bind();
             }, 600);
@@ -576,9 +510,8 @@ def build_quick_search_js():
         init();
     }
 
-    // ⭐ Expose để debug
     window.__quickSearch = {
-        open: open,
+        open: openPanel,
         close: closePanel,
         clear: clearPanel,
         do: doSearch,
@@ -588,83 +521,62 @@ def build_quick_search_js():
 """
 
 
-# ═══════════════════════════════════════════════════════════════
-#  INJECT VÀO index.html
-# ═══════════════════════════════════════════════════════════════
 def patch_quick_search(html_path="index.html"):
-    """
-    Inject CSS + JS quick search vào index.html.
-    KHÔNG sửa bất kỳ file nào khác.
-
-    Trả về True nếu inject thành công, False nếu bỏ qua (đã có sẵn).
-    """
     if not os.path.isfile(html_path):
-        print("[quick_search] ❌ Không tìm thấy: " + html_path)
+        print("[quick_search] Khong tim thay: " + html_path)
         return False
 
     with open(html_path, "r", encoding="utf-8") as f:
         html = f.read()
 
-    # ═══ Đã inject rồi? ═══
     if MARKER_JS in html:
-        print("[quick_search] ℹ️  Đã có sẵn trong HTML — bỏ qua")
+        print("[quick_search] Da co san trong HTML - bo qua")
         return False
 
     css = build_quick_search_css()
     js  = build_quick_search_js()
 
-    # ═══ Chèn CSS trước </style> đầu tiên (nếu có) ═══
-    css_injected = False
     pat_style = re.compile(r'(\s*)(</style>)', re.MULTILINE)
     m = pat_style.search(html)
     if m:
         html = html[:m.start(2)] + "\n" + css + "\n" + html[m.start(2):]
-        css_injected = True
-        print("[quick_search] ✅ Đã chèn CSS (trước </style> đầu tiên)")
+        print("[quick_search] Da chen CSS truoc /style dau tien")
     else:
-        # Fallback: chèn vào <head>
         pat_head = re.compile(r'(<head[^>]*>)', re.IGNORECASE)
         m2 = pat_head.search(html)
         if m2:
             block = "\n<style>\n" + css + "\n</style>\n"
             html = html[:m2.end()] + block + html[m2.end():]
-            css_injected = True
-            print("[quick_search] ✅ Đã chèn CSS (trong <head>)")
+            print("[quick_search] Da chen CSS trong head")
         else:
-            print("[quick_search] ⚠️  Không tìm thấy </style> hoặc <head> → CSS bỏ qua")
+            print("[quick_search] Khong tim thay style hoac head - CSS bo qua")
 
-    # ═══ Chèn JS trước </body> ═══
     js_block = "\n<script>\n" + js + "\n</script>\n"
     pat_body = re.compile(r'(\s*)(</body>)', re.MULTILINE)
     n = 0
     def _repl(m):
         nonlocal n
         n += 1
-        return m.group(1) + js
-
-
-_block + m.group(1) +# m.group(2)
+        return m.group(1) + js_block + m.group(1) + m.group(2)
     html = pat_body.sub(_repl, html, count=1)
 
     if n == 0:
-        print("[quick_search] ❌ Không tìm thấy </body> → bỏ qua")
+        print("[quick_search] Khong tim thay body - bo qua")
         return False
-    print("[quick_search] ✅ Đã chèn JS (trước </body>)")
+    print("[quick_search] Da chen JS truoc /body")
 
-    # ═══ Ghi lại ═══
     with open(html_path, "w", encoding="utf-8") as f:
         f.write(html)
 
     size_kb = os.path.getsize(html_path) / 1024
-    print("[quick_search] ✅ HOÀN TẤT — " + html_path +
-          " (" + str(round(size_kb, 1)) + " KB)")
-    return True ═══════════════════════════════════════════════════════════════
-#  CLI
-# ═══════════════════════════════════════════════════════════════
+    print("[quick_search] HOAN TAT - " + html_path + " (" + str(round(size_kb, 1)) + " KB)")
+    return True
+
+
 if __name__ == "__main__":
     target = sys.argv[1] if len(sys.argv) > 1 else "index.html"
-    print("=" * 62)
+    print("=" * 60)
     print("[quick_search] Patch: " + target)
-    print("=" * 62)
+    print("=" * 60)
     ok = patch_quick_search(target)
     sys.exit(0 if ok else 1)
