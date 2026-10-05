@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       limit:
-        description: "Số từ cần sinh (0 = tất cả)"
+        description: "So tu can sinh (0 = tat ca)"
         required: true
         default: "20"
       resume:
-        description: "Bỏ qua từ đã có? (1=on, 0=off)"
+        description: "Bo qua tu da co? (1=on, 0=off)"
         required: true
         default: "1"
 
@@ -35,21 +35,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install openai openpyxl cn2an jieba
 
-      - name: Verify API key
+      - name: Run AI generator
+        continue-on-error: true
         env:
           DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
-        run: |
-          if [ -z "$DASHSCOPE_API_KEY" ]; then
-            echo "Chua set DASHSCOPE_API_KEY"
-            exit 1
-          fi
-          echo "OK - API key set"
-
-      - name: Run AI generatorgit
-        continue-on-error: true
-        env commit:
-          DASHSCOPE_API -_KEY: ${{ secrets.DASHSmCOPE_API_KEY }}
-          QWEN "_BASE_URL: ${{ secrets.QWEN_BASE_URL }}
+          QWEN_BASE_URL: ${{ secrets.QWEN_BASE_URL }}
           QWEN_MODEL: ${{ secrets.QWEN_MODEL }}
           DEMO_LIMIT: ${{ github.event.inputs.limit }}
           RESUME: ${{ github.event.inputs.resume }}
