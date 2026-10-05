@@ -40,8 +40,8 @@ jobs:
           DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
         run: |
           if [ -z "$DASHSCOPE_API_KEY" ]; then
-            echo "❌ Chưa set DASHSCOPE_API_KEYics trong GitHub Secrets"
-            exit.yml 1
+            echo "❌ Chưa set DASHSCOPE_API_KEY trong GitHub Secrets"
+            exit 1
           fi
           echo "✅ DASHSCOPE_API_KEY đã set (độ dài: ${#DASHSCOPE_API_KEY})"
 
@@ -54,17 +54,17 @@ jobs:
           echo "✅ File Excel tồn tại"
           ls -la data/
 
-      # ⭐ Bước chạy script — cho phép fail mà không dừng workflow
       - name: Run AI generator
         id: gen
         continue-on-error: true
         env:
           DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+          QWEN_BASE_URL: ${{ secrets.QWEN_BASE_URL }}
+          QWEN_MODEL: ${{ secrets.QWEN_MODEL }}
           DEMO_LIMIT: ${{ github.event.inputs.limit }}
           RESUME: ${{ github.event.inputs.resume }}
         run: python vocab_data/ai_mnemonic_generator.py
 
-      # ⭐ Bước commit — CHẠY NGAY CẢ KHI BƯỚC TRƯỚC FAIL
       - name: Commit output
         if: always()
         run: |
@@ -76,9 +76,7 @@ jobs:
             exit 0
           fi
 
-          SIZE=$(stat -c%s data/ai_mnemonics.json)
           COUNT=$(python -c "import json; print(len(json.load(open('data/ai_mnemonics.json', encoding='utf-8'))))" 2>/dev/null || echo "?")
-          echo "📦 File size: $SIZE bytes"
           echo "📊 Tổng số từ: $COUNT"
 
           git add data/ai_mnemonics.json
