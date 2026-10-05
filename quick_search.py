@@ -277,21 +277,50 @@ def build_quick_search_js():
 
     function applyResult(result, raw, parsed){
         if(!result || result.length === 0) return false;
+
         var si = $id('searchInput');
-        if(!si){
-            if(typeof window.__applyQuickSearchResult === 'function'){
-                try{ window.__applyQuickSearchResult(result); return true; }catch(e){}
-            }
-            return false;
-        }
+        if(!si) return false;
+
+        // Buoc 1: Ghi raw query vao #searchInput chinh
         si.value = raw;
+
+        // Buoc 2: Cap nhat state neu co (fix.py patch se doc lai tu input)
         try{
-            si.dispatchEvent(new Event('input', { bubbles: true }));
+            if(typeof window.state !== 'undefined' && window.state){
+                window.state.search = raw.toLowerCase();
+                window.state.hsk = '';
+                window.state.subject = '';
+            }
+        }catch(e){}
+
+        // Buoc 3: Goi truc tiep window.applyFilter (da duoc fix.py patch)
+        var filterCalled = false;
+        try{
+            if(typeof window.applyFilter === 'function'){
+                window.applyFilter();
+                filterCalled = true;
+            }
         }catch(e){
-            var ev = document.createEvent('Event');
-            ev.initEvent('input', true, true);
-            si.dispatchEvent(ev);
+            console.warn('[quick-search] window.applyFilter error:', e);
         }
+
+        // Buoc 4: Fallback — dispatch input event (cho case cu)
+        if(!filterCalled){
+            try{
+                si.dispatchEvent(new Event('input', { bubbles: true }));
+            }catch(e){
+                var ev = document.createEvent('Event');
+                ev.initEvent('input', true, true);
+                si.dispatchEvent(ev);
+            }
+        }
+
+        // Buoc 5: Hien nut clear cua search chinh
+        try{
+            var cb = $id('clearSearchBtn');
+            if(cb) cb.classList.add('show');
+        }catch(e){}
+
         return true;
     }
 
