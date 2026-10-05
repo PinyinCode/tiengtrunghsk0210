@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 r"""
-Demo sinh mẹo nhớ cho vocab HSK bằng Qwen-Plus (Alibaba Cloud).
-Chạy trên GitHub Actions — Singapore region.
+Demo sinh mẹo nhớ cho vocab HSK bằng Qwen-Plus (Alibaba Cloud - Singapore region).
+Chạy trên GitHub Actions.
 """
 import os
 import sys
@@ -21,7 +21,7 @@ if not API_KEY:
     print("❌ Chưa set DASHSCOPE_API_KEY")
     sys.exit(1)
 
-# ⭐ Endpoint Singapore (có free quota)
+# ⭐ Endpoint Singapore chuẩn (International)
 client = OpenAI(
     api_key=API_KEY,
     base_url="https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
@@ -29,7 +29,7 @@ client = OpenAI(
 
 OUTPUT_FILE = "data/mnemonics_demo.json"
 
-# ⭐ Model Qwen-Plus (1M tokens free ở Singapore)
+# ⭐ Model Qwen-Plus
 MODEL_ID = os.getenv("QWEN_MODEL", "qwen-plus")
 
 DEMO_LIMIT = int(os.getenv("DEMO_LIMIT", "20"))
@@ -112,7 +112,7 @@ Output:"""
 
 
 # ═══════════════════════════════════════════════════════════════════
-#  GỌI API QWEN-PLUS
+#  GỌI API QWEN-PLUS (ĐÃ LOẠI BỎ EXTRABODY GÂY LỖI)
 # ═══════════════════════════════════════════════════════════════════
 def generate_mnemonic(zh, pinyin, vi, hsk):
     prompt = build_prompt(zh, pinyin, vi, hsk)
@@ -123,11 +123,7 @@ def generate_mnemonic(zh, pinyin, vi, hsk):
                 model=MODEL_ID,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.7,
-                max_tokens=800,
-                extra_body={
-                    # Qwen-Plus: tắt thinking mode để tiết kiệm token
-                    "enable_thinking": False
-                }
+                max_tokens=800
             )
             
             if not response or not response.choices:
@@ -136,13 +132,7 @@ def generate_mnemonic(zh, pinyin, vi, hsk):
                 continue
             
             msg = response.choices[0].message
-            
-            # Đọc content — fallback sang reasoning
-            content = None
-            if hasattr(msg, 'content') and msg.content:
-                content = msg.content
-            elif hasattr(msg, 'reasoning_content') and msg.reasoning_content:
-                content = msg.reasoning_content
+            content = msg.content if hasattr(msg, 'content') else None
             
             if content and isinstance(content, str) and content.strip():
                 return content.strip()
@@ -157,7 +147,7 @@ def generate_mnemonic(zh, pinyin, vi, hsk):
                 print(f"      ⏳ Rate limit, chờ {wait}s...")
                 time.sleep(wait)
             else:
-                print(f"      ⚠️  Lỗi (lần {attempt+1}/3): {err[:150]}")
+                print(f"      ⚠️  Lỗi API (lần {attempt+1}/3): {err}")
                 time.sleep(3)
     return ""
 
@@ -219,7 +209,7 @@ def load_sample_words():
 # ═══════════════════════════════════════════════════════════════════
 def main():
     print("=" * 62)
-    print("🎬 DEMO SINH MẸO NHỚ — QWEN-PLUS (ALIBABA)")
+    print("🎬 DEMO SINH MẸO NHỚ — QWEN-PLUS (ALIBABA SINGAPORE)")
     print(f"   Model: {MODEL_ID}")
     print(f"   Số từ: {DEMO_LIMIT}")
     print(f"   Delay: {DELAY_BETWEEN}s")
@@ -264,13 +254,6 @@ def main():
     print(f"✅ HOÀN TẤT: {success}/{len(samples)} từ")
     print(f"📁 File: {OUTPUT_FILE}")
     print("=" * 62)
-    
-    print("\n📝 3 MẪU ĐẦU TIÊN:\n")
-    for i, (key, mnemonic) in enumerate(list(results.items())[:3], 1):
-        zh = key.split('|')[-1]
-        print(f"━━━ Từ {i}: {zh} ━━━")
-        print(mnemonic)
-        print()
 
 
 if __name__ == "__main__":
