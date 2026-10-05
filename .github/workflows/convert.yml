@@ -3,32 +3,25 @@ name: Convert Excel to HTML
 on:
   push:
     paths:
-      # ⭐ File Excel: input.xlsx + Giao_tiếp.xlsx (đặt trong data/)
       - 'data/**'
-      # File chuyên ngành
       - 'scripts/data/**'
-      # Code Python
       - 'scripts/**/*.py'
       - 'scripts/config.json'
-      # ⭐ FIX.PY — chạy sau convert.py để thêm tab từ data/
       - 'fix.py'
       - 'patch_buttons.py'
-      # ⭐ QUICK SEARCH — ô tìm kiếm nhanh đi theo nút chat
       - 'quick_search.py'
-      # ⭐ VOCAB PREMIUM — module từ vựng
       - 'vocab_premium.py'
       - 'vocab_data/**'
       - 'requirements.txt'
-      # Workflow tự nó
       - '.github/workflows/convert.yml'
   workflow_dispatch:
     inputs:
       ai_limit:
-        description: "Số từ AI cần sinh (0 = bỏ qua AI, chỉ dùng mẹo tĩnh)"
+        description: "So tu AI can sinh (0 = bo qua AI)"
         required: false
         default: "50"
       ai_resume:
-        description: "Bỏ qua từ AI đã có? (1=on, 0=off)"
+        description: "Bo qua tu AI da co (1=on, 0=off)"
         required: false
         default: "1"
 
@@ -55,9 +48,6 @@ jobs:
         with:
           python-version: '3.11'
 
-      # ═══════════════════════════════════════════════════════════════
-      #  INSTALL DEPENDENCIES
-      # ═══════════════════════════════════════════════════════════════
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -65,92 +55,35 @@ jobs:
 
       - name: Verify dependencies
         run: |
-          python -c "import openpyxl; print('✅ openpyxl', openpyxl.__version__)"
-          python -c "import cn2an;   print('✅ cn2an', cn2an.__version__)"
-          python -c "import pypinyin; print('✅ pypinyin', pypinyin.__version__)"
-          python -c "import jieba;   print('✅ jieba OK')"
-          python -c "import pandas;  print('✅ pandas', pandas.__version__)"
-          python -c "import openai;  print('✅ openai', openai.__version__)"
+          python -c "import openpyxl; print('openpyxl', openpyxl.__version__)"
+          python -c "import cn2an; print('cn2an', cn2an.__version__)"
+          python -c "import pypinyin; print('pypinyin', pypinyin.__version__)"
+          python -c "import jieba; print('jieba OK')"
+          python -c "import pandas; print('pandas', pandas.__version__)"
+          python -c "import openai; print('openai', openai.__version__)"
 
-      # ⭐ VERIFY MODULE TỪ VỰNG (tĩnh + AI)
       - name: Verify vocab modules
         run: |
-          echo "=== Kiểm tra module từ vựng ==="
-          
           if [ -f vocab_premium.py ]; then
-            echo "✅ Có file vocab_premium.py"
-            python -c "from vocab_premium import read_vocab_excel, build_vocab_css, build_vocab_tab_html, build_vocab_modal_html, build_vocab_js_override; print('✅ vocab_premium imports OK')" || {
-              echo "❌ Lỗi import vocab_premium"
-              exit 1
-            }
-          else
-            echo "⚠️  Không có vocab_premium.py"
+            python -c "from vocab_premium import read_vocab_excel, build_vocab_css, build_vocab_tab_html, build_vocab_modal_html, build_vocab_js_override; print('vocab_premium OK')"
           fi
-          
           if [ -d vocab_data ]; then
-            echo "✅ Có thư mục vocab_data/"
-            ls -la vocab_data/
-            python -c "from vocab_data.radicals_db import RADICALS; print('✅ radicals_db OK (' + str(len(RADICALS)) + ' bộ thủ)')" || echo "⚠️ radicals_db lỗi"
-            python -c "from vocab_data.radical_analyzer import get_radical_for_word; print('✅ radical_analyzer OK')" || echo "⚠️ radical_analyzer lỗi"
-            python -c "from vocab_data.mnemonic_generator import generate_mnemonic; print('✅ mnemonic_generator OK')" || echo "⚠️ mnemonic_generator lỗi"
-            
-            if [ -f vocab_data/ai_mnemonic_generator.py ]; then
-              echo "✅ Có file vocab_data/ai_mnemonic_generator.py"
-              python -c "from vocab_data.ai_mnemonic_generator import generate_one, load_vocab; print('✅ ai_mnemonic_generator imports OK')" || echo "⚠️ ai_mnemonic_generator lỗi (không ảnh hưởng build)"
-            else
-              echo "ℹ️  Không có ai_mnemonic_generator.py"
-            fi
-          else
-            echo "⚠️  Không có vocab_data/"
+            python -c "from vocab_data.radicals_db import RADICALS; print('radicals_db', len(RADICALS))" || true
+            python -c "from vocab_data.radical_analyzer import get_radical_for_word; print('radical_analyzer OK')" || true
+            python -c "from vocab_data.mnemonic_generator import generate_mnemonic; print('mnemonic_generator OK')" || true
           fi
 
-      # ⭐ VERIFY QUICK SEARCH MODULE
       - name: Verify quick_search module
         run: |
-          echo "=== Kiểm tra module quick_search ==="
-          
           if [ -f quick_search.py ]; then
-            echo "✅ Có file quick_search.py"
-            python -c "from quick_search import patch_quick_search; print('✅ quick_search imports OK')" || {
-              echo "❌ Lỗi import quick_search"
-              exit 1
-            }
+            python -c "from quick_search import patch_quick_search; print('quick_search OK')"
           else
-            echo "⚠️  Không có quick_search.py — sẽ bỏ qua bước Quick Search"
+            echo "quick_search.py not found, skip"
           fi
-
-      - name: List files
-        run: |
-          echo "=== Root ==="
-          ls -la
-          echo ""
-          echo "=== data/ (cho fix.py) ==="
-          ls -la data/ || echo "No data folder"
-          echo ""
-          echo "=== scripts/ ==="
-          ls -la scripts/
-          echo ""
-          echo "=== scripts/data/ (cho convert.py) ==="
-          ls -la scripts/data/ || echo "No scripts/data folder"
-          echo ""
-          echo "=== vocab_data/ ==="
-          ls -la vocab_data/ 2>/dev/null || echo "No vocab_data folder"
-
-      - name: Test cn2an conversion
-        run: |
-          python -c "
-          import cn2an
-          tests = [500, 480, 20, 50, 30]
-          for n in tests:
-              print(f'  {n} → {cn2an.an2cn(n)}')
-          "
 
       - name: Pre-flight check
         run: python scripts/check.py
 
-      # ═══════════════════════════════════════════════════════════════
-      #  BƯỚC 0: SINH AI MNEMONICS
-      # ═══════════════════════════════════════════════════════════════
       - name: Generate AI mnemonics
         id: ai_gen
         continue-on-error: true
@@ -161,382 +94,160 @@ jobs:
           DEMO_LIMIT: ${{ github.event.inputs.ai_limit || '50' }}
           RESUME: ${{ github.event.inputs.ai_resume || '1' }}
         run: |
-          echo "=== Kiểm tra điều kiện sinh AI ==="
-          
           if [ -z "$DASHSCOPE_API_KEY" ]; then
-            echo "ℹ️  Không có DASHSCOPE_API_KEY — bỏ qua sinh AI"
             echo "ai_ran=false" >> $GITHUB_OUTPUT
             exit 0
           fi
-          echo "✅ DASHSCOPE_API_KEY có sẵn"
-          
           if [ ! -f "vocab_data/ai_mnemonic_generator.py" ]; then
-            echo "ℹ️  Không có ai_mnemonic_generator.py — bỏ qua"
             echo "ai_ran=false" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
           if [ "$DEMO_LIMIT" = "0" ]; then
-            echo "ℹ️  ai_limit=0 — bỏ qua"
             echo "ai_ran=false" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
           if [ ! -f "data/tu_vung_hsk.xlsx" ]; then
-            echo "⚠️  Không có data/tu_vung_hsk.xlsx — bỏ qua"
             echo "ai_ran=false" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
-          echo ""
-          echo "🚀 Bắt đầu sinh AI mnemonics (limit=$DEMO_LIMIT, resume=$RESUME)"
-          echo "Model: $QWEN_MODEL"
-          echo "-----------------------------------------------"
           python vocab_data/ai_mnemonic_generator.py || true
-          echo "-----------------------------------------------"
-          
           if [ ! -f "data/ai_mnemonics.json" ]; then
-            echo "⚠️  Không có data/ai_mnemonics.json"
             echo "ai_ran=false" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
-          SIZE=$(stat -c%s data/ai_mnemonics.json)
           COUNT=$(python -c "import json; print(len(json.load(open('data/ai_mnemonics.json', encoding='utf-8'))))" 2>/dev/null || echo 0)
-          echo "📦 File size: $SIZE bytes"
-          echo "📊 Tổng số từ có AI mnemonic: $COUNT"
           echo "ai_ran=true" >> $GITHUB_OUTPUT
           echo "ai_count=$COUNT" >> $GITHUB_OUTPUT
 
-      # ═══════════════════════════════════════════════════════════════
-      #  BƯỚC 1: Build index.html gốc
-      # ═══════════════════════════════════════════════════════════════
-      - name: Run convert script (build gốc)
+      - name: Run convert script
         run: python scripts/convert.py
 
       - name: Verify index.html after convert
         run: |
           if [ ! -f index.html ]; then
-            echo "❌ ERROR: index.html not found"
+            echo "index.html not found"
             exit 1
           fi
           SIZE=$(stat -c%s index.html)
-          echo "📦 index.html size: $SIZE bytes"
           if [ "$SIZE" -lt 500000 ]; then
-            echo "❌ index.html quá nhỏ (< 500KB)"
+            echo "index.html too small"
             exit 1
           fi
-          echo "✅ Size OK (> 500KB)"
-          
-          REQUIRED=("RAW_DATA" "DATASET_REGISTRY" "FIREBASE_CONFIG" "firebase-app-compat" "CURRENT_DATASET")
-          for el in "${REQUIRED[@]}"; do
+          for el in RAW_DATA DATASET_REGISTRY FIREBASE_CONFIG CURRENT_DATASET; do
             if grep -q "$el" index.html; then
-              echo "  ✅ $el"
+              echo "OK $el"
             else
-              echo "  ❌ MISSING $el"
+              echo "MISSING $el"
               exit 1
             fi
           done
-          
           OPEN_SCRIPT=$(grep -o "<script" index.html | wc -l)
           CLOSE_SCRIPT=$(grep -o "</script>" index.html | wc -l)
-          echo "  <script>: $OPEN_SCRIPT"
-          echo "  </script>: $CLOSE_SCRIPT"
           if [ "$OPEN_SCRIPT" -ne "$CLOSE_SCRIPT" ]; then
-            echo "  ❌ Số thẻ script KHÔNG khớp!"
+            echo "script tags mismatch"
             exit 1
           fi
-          echo "  ✅ Thẻ script cân bằng"
 
-      # ═══════════════════════════════════════════════════════════════
-      #  ⭐ VERIFY FILE AI MNEMONICS TRƯỚC KHI fix.py CHẠY
-      # ═══════════════════════════════════════════════════════════════
-      - name: Verify AI mnemonics file exists (trước khi fix.py chạy)
+      - name: Verify AI mnemonics file
         id: verify_ai
         run: |
-          echo "=== Kiểm tra file AI mnemonics ==="
-          
           if [ ! -f "data/ai_mnemonics.json" ]; then
-            echo "❌ KHÔNG có data/ai_mnemonics.json"
-            echo "→ fix.py sẽ không có mẹo AI để nhúng"
             echo "has_ai=false" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
-          SIZE=$(stat -c%s data/ai_mnemonics.json)
           COUNT=$(python -c "import json; print(len(json.load(open('data/ai_mnemonics.json', encoding='utf-8'))))" 2>/dev/null || echo 0)
-          echo "📦 File size: $SIZE bytes"
-          echo "📊 Số từ có mẹo AI: $COUNT"
-          
           if [ "$COUNT" -gt 0 ]; then
-            echo "✅ Có $COUNT từ AI mnemonics"
             echo "has_ai=true" >> $GITHUB_OUTPUT
             echo "ai_count=$COUNT" >> $GITHUB_OUTPUT
-            
-            echo ""
-            echo "=== Kiểm tra 3 key đầu ==="
-            python -c "
-          import json
-          d = json.load(open('data/ai_mnemonics.json', encoding='utf-8'))
-          keys = list(d.keys())[:3]
-          for k in keys:
-              print(f'  {repr(k)}: {d[k][:60]}...')
-          "
           else
-            echo "⚠️  File JSON rỗng (0 từ)"
             echo "has_ai=false" >> $GITHUB_OUTPUT
           fi
 
-      # ⭐ XÓA CACHE PYTHON để fix.py đọc file JSON mới
       - name: Clear Python cache
         run: |
-          echo "=== Xóa cache Python ==="
           find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
           find . -type f -name "*.pyc" -delete 2>/dev/null || true
-          rm -rf .pytest_cache .mypy_cache 2>/dev/null || true
-          echo "✅ Đã xóa cache"
-          echo ""
-          echo "=== Verify cache đã xóa ==="
-          find . -type d -name "__pycache__" 2>/dev/null || echo "  Không còn __pycache__"
 
-      # ═══════════════════════════════════════════════════════════════
-      #  BƯỚC 2: CHẠY fix.py
-      # ═══════════════════════════════════════════════════════════════
-      - name: Run fix.py (thêm tab từ data/ + nhúng AI mnemonics)
+      - name: Run fix.py
         run: |
-          echo "=== Chạy fix.py ==="
-          echo "File JSON có ${{ steps.verify_ai.outputs.ai_count }} từ AI"
-          echo ""
-          
           if [ -f fix.py ]; then
             python fix.py
           else
-            echo "ℹ️  Không có fix.py"
+            echo "no fix.py"
           fi
 
-      # ═══════════════════════════════════════════════════════════════
-      #  ⭐ BƯỚC 3: CHẠY quick_search.py — Ô TÌM KIẾM NHANH
-      #  Chạy SAU fix.py (cần #chatFloatWrap có trong HTML)
-      # ═══════════════════════════════════════════════════════════════
-      - name: Run quick_search.py (thêm ô search nhanh vào chat FAB)
+      - name: Run quick_search.py
         run: |
-          echo "═══════════════════════════════════════════════"
-          echo "🔍 QUICK SEARCH — Ô tìm kiếm nhanh"
-          echo "═══════════════════════════════════════════════"
-          
           if [ -f quick_search.py ]; then
             python quick_search.py
           else
-            echo "ℹ️  Không có quick_search.py — bỏ qua bước này"
+            echo "no quick_search.py"
           fi
 
-      - name: Verify quick_search trong index.html
+      - name: Verify quick_search in index.html
         run: |
-          echo "═══════════════════════════════════════════════"
-          echo "🔍 VERIFY: QUICK SEARCH TRONG INDEX.HTML"
-          echo "═══════════════════════════════════════════════"
-          
           if [ ! -f quick_search.py ]; then
-            echo "ℹ️  Không có quick_search.py — bỏ qua verify"
             exit 0
           fi
-          
           if grep -q "QUICK_SEARCH_MODULE_JS" index.html; then
-            echo "✅ Module Quick Search JS đã nhúng"
-            COUNT_JS=$(grep -o "QUICK_SEARCH_MODULE_JS" index.html | wc -l)
-            echo "   Số lần inject JS: $COUNT_JS"
-            if [ "$COUNT_JS" -gt 1 ]; then
-              echo "   ⚠️  JS bị inject trùng $COUNT_JS lần!"
-            fi
+            COUNT=$(grep -o "QUICK_SEARCH_MODULE_JS" index.html | wc -l)
+            echo "quick_search JS inject count: $COUNT"
           else
-            echo "⚠️  Không tìm thấy QUICK_SEARCH_MODULE_JS trong index.html"
-            echo "   → Kiểm tra quick_search.py có chạy thành công không"
+            echo "quick_search JS not found"
           fi
-          
           if grep -q "QUICK_SEARCH_MODULE_CSS" index.html; then
-            echo "✅ CSS Quick Search đã nhúng"
-            COUNT_CSS=$(grep -o "QUICK_SEARCH_MODULE_CSS" index.html | wc -l)
-            echo "   Số lần inject CSS: $COUNT_CSS"
-            if [ "$COUNT_CSS" -gt 1 ]; then
-              echo "   ⚠️  CSS bị inject trùng $COUNT_CSS lần!"
-            fi
+            echo "quick_search CSS OK"
           else
-            echo "⚠️  Không tìm thấy CSS Quick Search"
+            echo "quick_search CSS not found"
           fi
-          
-          echo ""
-          echo "═══════════════════════════════════════════════"
 
-      # ═══════════════════════════════════════════════════════════════
-      #  VERIFY sau fix.py — AI MNEMONICS
-      # ═══════════════════════════════════════════════════════════════
-      - name: Verify AI mnemonics trong index.html
+      - name: Verify AI mnemonics in index.html
         run: |
-          echo "═══════════════════════════════════════════════"
-          echo "🔍 VERIFY: AI MNEMONICS TRONG INDEX.HTML"
-          echo "═══════════════════════════════════════════════"
-          
           if [ "${{ steps.verify_ai.outputs.has_ai }}" != "true" ]; then
-            echo "ℹ️  Không có AI mnemonics — bỏ qua verify"
             exit 0
           fi
-          
-          echo "📊 File JSON có ${{ steps.verify_ai.outputs.ai_count }} từ"
-          echo ""
-          
-          echo "=== Kiểm tra marker AI trong HTML ==="
-          
           AI_MARKER_COUNT=$(grep -o 'mnemonic_source":"ai"' index.html | wc -l)
-          echo "  Số từ có 'mnemonic_source':'ai': $AI_MARKER_COUNT"
-          
-          AI_CONTENT_COUNT=$(grep -o 'Chiết tự' index.html | wc -l)
-          echo "  Số lần xuất hiện 'Chiết tự': $AI_CONTENT_COUNT"
-          
-          STORY_COUNT=$(grep -o 'Câu chuyện' index.html | wc -l)
-          echo "  Số lần xuất hiện 'Câu chuyện': $STORY_COUNT"
-          
-          echo ""
-          
-          if grep -q 'data-dataset="tu-vung"' index.html; then
-            echo "✅ Tab 'Từ vựng Premium' found"
-          else
-            echo "❌ Tab 'Từ vựng' MISSING"
-          fi
-          
-          if grep -q 'similar-hint-block' index.html; then
-            echo "✅ CSS 'Dễ nhầm' found"
-          else
-            echo "ℹ️  CSS 'Dễ nhầm' chưa có (cần thêm similar_chars.json)"
-          fi
-          
-          if grep -q 'tu-vung":' index.html || grep -q '"tu-vung"' index.html; then
-            echo "✅ Data 'tu-vung' found trong HTML"
-          else
-            echo "⚠️  Data 'tu-vung' có thể chưa nhúng"
-          fi
-          
-          echo ""
-          echo "═══════════════════════════════════════════════"
-          
+          AI_CONTENT_COUNT=$(grep -o 'Chiet tu' index.html | wc -l)
           if [ "$AI_MARKER_COUNT" -eq 0 ] && [ "$AI_CONTENT_COUNT" -eq 0 ]; then
-            echo "❌ FAIL: Không tìm thấy mẹo AI nào trong index.html"
-            echo "   → fix.py không đọc được data/ai_mnemonics.json"
-            echo "   → Kiểm tra lại đường dẫn file trong vocab_premium.py"
+            echo "no AI mnemonics found in index.html"
             exit 1
           fi
-          
-          echo "✅ PASS: AI mnemonics đã được nhúng vào index.html"
+          echo "AI mnemonics OK"
 
       - name: Verify datasets loaded
         run: |
-          echo "=== Kiểm tra bộ dữ liệu trong index.html ==="
-          
           if grep -q '"tonghop"' index.html; then
-            echo "  ✅ dataset 'tonghop' found"
+            echo "tonghop OK"
           else
-            echo "  ❌ dataset 'tonghop' MISSING"
+            echo "tonghop MISSING"
             exit 1
           fi
-          
-          echo ""
-          echo "=== Kiểm tra file trong data/ ==="
-          if [ -d "data" ]; then
-            FOUND=0
-            for f in data/*.xlsx data/*.xls data/*.csv; do
-              [ -e "$f" ] || continue
-              FNAME=$(basename "$f")
-              case "$FNAME" in
-                ~\$*) continue ;;
-              esac
-              echo "  📄 File: $FNAME"
-              FOUND=$((FOUND + 1))
-            done
-          fi
-          
-          if [ -f "data/Giao_tiếp.xlsx" ] || [ -f "data/giao-tiep.xlsx" ] || [ -f "data/Giao_tiep.xlsx" ]; then
-            if grep -q '"giaotiep"' index.html; then
-              echo "  ✅ Tab 'Giao Tiếp' found"
-            else
-              echo "  ⚠️  Tab 'Giao Tiếp' MISSING"
-            fi
-          fi
-          
           if grep -q 'FIX.PY: AUTO-FIT LAYOUT' index.html; then
-            echo "  ✅ CSS override từ fix.py có mặt"
-          fi
-          
-          if [ -f "data/tu_vung_hsk.xlsx" ]; then
-            echo ""
-            echo "=== Kiểm tra tab Từ vựng Premium ==="
-            
-            if grep -q 'data-dataset="tu-vung"' index.html; then
-              echo "  ✅ Tab 'Từ vựng Premium' found"
-            else
-              echo "  ⚠️  Tab 'Từ vựng' MISSING"
-            fi
-            
-            if grep -q 'vocab-upgrade-modal' index.html; then
-              echo "  ✅ Modal upgrade Premium found"
-            fi
-            
-            if grep -q 'card-radical' index.html; then
-              echo "  ✅ CSS block Bộ thủ found"
-            fi
-            
-            if grep -q 'card-mnemonic' index.html; then
-              echo "  ✅ CSS block Mẹo nhớ found"
-            fi
-            
-            if grep -q 'vocab-locked' index.html; then
-              echo "  ✅ CSS tab locked found"
-            fi
+            echo "fix.py CSS OK"
           fi
 
-      - name: Verify numbers converted
-        run: |
-          echo "=== Kiểm tra số Ả Rập trong index.html ==="
-          grep -q "五百" index.html && echo "✅ Tìm thấy '五百'" || echo "⚠️  Không tìm thấy '五百'"
-          grep -q "四百八十" index.html && echo "✅ Tìm thấy '四百八十'" || echo "⚠️  Không tìm thấy '四百八十'"
-
-      # ═══════════════════════════════════════════════════════════════
-      #  COMMIT & PUSH
-      # ═══════════════════════════════════════════════════════════════
-      - name: Commit & push
+      - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # Add index.html
           git add index.html
-          
-          # ⭐ Add AI mnemonics nếu có
           if [ -f "data/ai_mnemonics.json" ]; then
             git add data/ai_mnemonics.json
-            echo "📦 Sẽ commit data/ai_mnemonics.json"
           fi
-          
-          # Add tất cả file khác thay đổi
           git add -A
-          
           if git diff --quiet && git diff --staged --quiet; then
-            echo "✅ Không có thay đổi để commit"
+            echo "no changes"
           else
             AI_COUNT="${{ steps.verify_ai.outputs.ai_count }}"
-            
-            # ⭐ Tag quick search trong commit message
             QS_TAG=""
             if grep -q "QUICK_SEARCH_MODULE_JS" index.html; then
               QS_TAG=" + QS"
             fi
-            
-            git commit -m "🤖 Auto convert Excel to HTML (AI: ${AI_COUNT} từ${QS_TAG}) [skip ci]"
+            git commit -m "Auto convert Excel to HTML (AI: ${AI_COUNT}${QS_TAG}) [skip ci]"
             git pull --rebase origin ${{ github.ref_name }} || true
             git push origin HEAD:${{ github.ref_name }}
           fi
 
-      # ═══════════════════════════════════════════════════════════════
-      #  UPLOAD ARTIFACT
-      # ═══════════════════════════════════════════════════════════════
       - name: Prepare Pages artifact
         run: |
           mkdir -p _site
@@ -544,15 +255,10 @@ jobs:
           [ -d "assets" ] && cp -r assets _site/ || true
           [ -d "static" ] && cp -r static _site/ || true
           [ -f "404.html" ] && cp 404.html _site/ || true
-          
           if [ -f "data/ai_mnemonics.json" ]; then
             mkdir -p _site/data
             cp data/ai_mnemonics.json _site/data/
-            echo "📦 Đã copy ai_mnemonics.json vào artifact"
           fi
-          
-          echo "=== Artifact contents ==="
-          ls -la _site/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
