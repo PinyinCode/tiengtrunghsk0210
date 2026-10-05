@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-quick_search.py - O TIM KIEM NHANH DOC LAP
+quick_search.py - O TIM KIEM NHANH DOC LAP, TU LOC + TU RENDER
 
 Module nay KHONG sua bat ky file nao khac.
-Mount doc lap vao body, KHONG phu thuoc chatFloatWrap.
-Vi tri: goc trai duoi, ngay TREN nut chat (CSS positioning).
+Tu loc du lieu va tu render HTML vao #mobileWrapper.
+Khong phu thuoc window.applyFilter.
 """
 
 import os
@@ -39,12 +39,9 @@ def build_quick_search_css():
     transform:translateY(10px);
     pointer-events:none;
 }
-
-/* Khi cum floating group mo -> day len cao hon */
 body.has-floating-group #quickSearchRoot{
     bottom:calc(260px + env(safe-area-inset-bottom));
 }
-
 .quick-search-toggle{
     width:44px;height:44px;border-radius:50%;
     border:2px solid #fff;
@@ -67,7 +64,6 @@ body.has-floating-group #quickSearchRoot{
 }
 .quick-search-toggle i{transition:transform .3s;}
 .quick-search-toggle.active i{transform:rotate(90deg);}
-
 .quick-search-panel{
     display:flex;align-items:center;gap:.35rem;
     padding:0;border-radius:999px;
@@ -124,7 +120,6 @@ body.has-floating-group #quickSearchRoot{
 }
 .quick-search-panel.has-value .quick-search-clear,
 .quick-search-panel.has-value .quick-search-go{display:flex;}
-
 .quick-search-toast{
     position:fixed;top:80px;left:50%;
     transform:translateX(-50%) translateY(-20px);
@@ -144,7 +139,36 @@ body.has-floating-group #quickSearchRoot{
     background:linear-gradient(135deg,#dc2626,#991b1b);
     box-shadow:0 8px 24px rgba(220,38,38,.5);
 }
-
+.quick-search-result-header{
+    grid-column:1 / -1;
+    padding:.7rem 1rem;
+    background:linear-gradient(135deg,#0891b2,#0e7490);
+    color:#fff;
+    border-radius:12px;
+    font-size:.85rem;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    gap:.5rem;
+    margin-bottom:.5rem;
+}
+.quick-search-result-header i{font-size:1rem;}
+.quick-search-clear-result{
+    margin-left:auto;
+    padding:.3rem .7rem;
+    border-radius:50px;
+    border:none;
+    background:rgba(255,255,255,.25);
+    color:#fff;
+    font-size:.72rem;
+    font-weight:700;
+    cursor:pointer;
+    font-family:inherit;
+    display:inline-flex;
+    align-items:center;
+    gap:.3rem;
+}
+.quick-search-clear-result:hover{background:rgba(255,255,255,.4);}
 @media (max-width:768px){
     #quickSearchRoot{left:12px;bottom:calc(80px + env(safe-area-inset-bottom));}
     body.has-floating-group #quickSearchRoot{
@@ -154,7 +178,7 @@ body.has-floating-group #quickSearchRoot{
 }
 @media (max-width:400px){
     #quickSearchRoot{left:10px;}
-    .quick-search-toggle{width:40px;height:40px;}
+    .quick-search-toggle{width:40px;height:42px;}
 }
 """
 
@@ -169,6 +193,56 @@ def build_quick_search_js():
 
     function $id(id){ return document.getElementById(id); }
 
+    function escHtml(s){
+        if(s == null) return '';
+        return String(s)
+            .replace(/&/g,'&amp;')
+            .replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;')
+            .replace(/"/g,'&quot;')
+            .replace(/'/g,'&#39;');
+    }
+    function escJs(s){
+        if(s == null) return '';
+        return String(s)
+            .replace(/\\/g,'\\\\')
+            .replace(/'/g,"\\'")
+            .replace(/"/g,'\\"')
+            .replace(/\n/g,'\\n')
+            .replace(/\r/g,'');
+    }
+
+    /* =======================================================
+       0. AUTO EXPOSE RAW_DATA
+       ======================================================= */
+    (function autoExpose(){
+        var tries = 0;
+        var timer = setInterval(function(){
+            tries++;
+            try{
+                if(typeof window.RAW_DATA === 'undefined'){
+                    if(typeof RAW_DATA !== 'undefined' && Array.isArray(RAW_DATA)){
+                        window.RAW_DATA = RAW_DATA;
+                    }
+                }
+                if(typeof window.CURRENT_DATASET === 'undefined'){
+                    if(typeof CURRENT_DATASET !== 'undefined'){
+                        window.CURRENT_DATASET = CURRENT_DATASET;
+                    }
+                }
+                if(typeof window.parseSearchQuery !== 'function'){
+                    if(typeof parseSearchQuery === 'function'){
+                        window.parseSearchQuery = parseSearchQuery;
+                    }
+                }
+            }catch(e){}
+            if(tries > 60) clearInterval(timer);
+        }, 250);
+    })();
+
+    /* =======================================================
+       1. MOUNT DOM
+       ======================================================= */
     function buildDOM(){
         var root = document.createElement('div');
         root.id = QS.MOUNT_ID;
@@ -204,6 +278,9 @@ def build_quick_search_js():
         return true;
     }
 
+    /* =======================================================
+       2. PARSE cu phap
+       ======================================================= */
     function parseQuery(raw){
         if(typeof window.parseSearchQuery === 'function'){
             try{
@@ -234,6 +311,9 @@ def build_quick_search_js():
         };
     }
 
+    /* =======================================================
+       3. LAY DU LIEU GOC
+       ======================================================= */
     function getBaseData(){
         try{
             if(typeof window.RAW_DATA !== 'undefined' && Array.isArray(window.RAW_DATA)){
@@ -246,10 +326,16 @@ def build_quick_search_js():
                     return window.FIXPY_DATASETS[curDs].data || [];
                 }
             }
+            if(typeof RAW_DATA !== 'undefined' && Array.isArray(RAW_DATA)){
+                return RAW_DATA;
+            }
         }catch(e){}
         return [];
     }
 
+    /* =======================================================
+       4. LOC DU LIEU
+       ======================================================= */
     function filterData(raw, parsed){
         var baseData = getBaseData();
         if(baseData.length === 0) return null;
@@ -275,26 +361,122 @@ def build_quick_search_js():
         });
     }
 
-    function applyResult(result, raw, parsed){
-        if(!result || result.length === 0) return false;
-        var si = $id('searchInput');
-        if(!si){
-            if(typeof window.__applyQuickSearchResult === 'function'){
-                try{ window.__applyQuickSearchResult(result); return true; }catch(e){}
-            }
+    /* =======================================================
+       5. TU RENDER HTML VAO #mobileWrapper
+       ======================================================= */
+    function renderResults(result, raw, parsed){
+        var wrapper = $id('mobileWrapper');
+        if(!wrapper){
+            console.warn('[quick-search] Khong tim thay #mobileWrapper');
             return false;
         }
-        si.value = raw;
-        try{
-            si.dispatchEvent(new Event('input', { bubbles: true }));
-        }catch(e){
-            var ev = document.createEvent('Event');
-            ev.initEvent('input', true, true);
-            si.dispatchEvent(ev);
+
+        // Tao header thong bao
+        var headerHtml = '<div class="quick-search-result-header">' +
+            '<i class="fas fa-search"></i>' +
+            '<span>Tim thay ' + result.length + ' ket qua cho "' + escHtml(raw) + '"</span>' +
+            '<button class="quick-search-clear-result" onclick="window.__quickSearch.clearResult()">' +
+                '<i class="fas fa-times"></i> Xoa' +
+            '</button>' +
+        '</div>';
+
+        // Tao HTML cho tung card
+        var cardsHtml = '';
+        var maxShow = Math.min(result.length, 300);
+        for(var i = 0; i < maxShow; i++){
+            var r = result[i];
+            var zhHtml = escHtml(r.zh);
+            var viHtml = escHtml(r.vi);
+            var sttSafe = escHtml(r.stt);
+            var sttJs = escJs(r.stt);
+            var zhJs = escJs(r.zh);
+            var viJs = escJs(r.vi);
+            var pinyinJs = escJs(r.pinyin);
+
+            var audio = r.zh ? '<button class="audio-btn" onclick="speakText(\'' + zhJs + '\', this, event)" title="Nghe"><i class="fas fa-volume-up"></i></button>' : '';
+            var writeBtn = r.zh ? '<button class="write-btn" onclick="openWriter(\'' + zhJs + '\', \'' + viJs + '\', \'' + pinyinJs + '\', event)" title="Luyen viet"><i class="fas fa-pen-fancy"></i></button>' : '';
+            var fullBtn = r.zh ? '<button class="practice-full-btn" onclick="openPracticeFull(\'' + sttJs + '\', event)" title="Luyen tap full"><i class="fas fa-expand"></i></button>' : '';
+
+            var topicTag = r.topic ? '<span class="card-tag topic">' + escHtml(r.topic) + '</span>' : '';
+            var subjectTag = r.subject ? '<span class="card-tag subject">' + escHtml(r.subject) + '</span>' : '';
+
+            var favBtn = (typeof favBuildFavButton === 'function')
+                ? favBuildFavButton(r.stt) : '';
+
+            cardsHtml += '<div class="card" data-hsk="' + escHtml(r.hsk || '') + '" onclick="toggleFocus(\'' + sttJs + '\', this)" data-stt="' + sttSafe + '">' +
+                '<div class="card-header">' +
+                    '<div class="card-stt">' + sttSafe + '</div>' +
+                    '<div class="card-meta">' +
+                        (r.hsk ? '<span class="card-tag hsk">' + escHtml(r.hsk) + '</span>' : '') +
+                        topicTag +
+                        subjectTag +
+                    '</div>' +
+                    '<div onclick="event.stopPropagation()" class="action-group">' +
+                        audio + writeBtn + fullBtn + favBtn +
+                    '</div>' +
+                '</div>' +
+                '<div class="card-body">' +
+                    (r.vi ? '<div class="card-vi">' + viHtml + '</div>' : '') +
+                    '<div class="card-zh">' + zhHtml + '</div>' +
+                    (r.pinyin ? '<div class="card-pinyin">' + escHtml(r.pinyin) + '</div>' : '') +
+                '</div>' +
+            '</div>';
         }
+
+        if(result.length > maxShow){
+            cardsHtml += '<div class="end-note">' +
+                '<i class="fas fa-info-circle"></i> Hien thi ' + maxShow + '/' + result.length + ' ket qua' +
+            '</div>';
+        }
+
+        // Ghi de vao wrapper
+        wrapper.innerHTML = headerHtml + cardsHtml;
+
+        // Scroll len
+        var mainEl = $id('mainContent');
+        if(mainEl){
+            var y = mainEl.getBoundingClientRect().top + window.scrollY - 100;
+            window.scrollTo({ top:y, behavior:'smooth' });
+        }
+
         return true;
     }
 
+    /* =======================================================
+       6. XOA KET QUA — quay ve trang thai cu
+       ======================================================= */
+    function clearResult(){
+        var si = $id('searchInput');
+        if(si) si.value = '';
+        try{
+            if(typeof window.state !== 'undefined' && window.state){
+                window.state.search = '';
+                window.state.hsk = '';
+                window.state.subject = '';
+            }
+        }catch(e){}
+        // Goi applyFilter goc de render lai
+        try{
+            if(typeof window.applyFilter === 'function'){
+                window.applyFilter();
+                return;
+            }
+        }catch(e){}
+        // Fallback: dispatch input event
+        if(si){
+            try{
+                si.dispatchEvent(new Event('input', { bubbles: true }));
+            }catch(e){
+                var ev = document.createEvent('Event');
+                ev.initEvent('input', true, true);
+                si.dispatchEvent(ev);
+            }
+        }
+    }
+
+    /* =======================================================
+       7. TOAST
+       ======================================================= */
     function showToast(msg, isError){
         var old = $id('quickSearchToast');
         if(old) old.remove();
@@ -310,6 +492,9 @@ def build_quick_search_js():
         }, 2400);
     }
 
+    /* =======================================================
+       8. HANH DONG TIM KIEM
+       ======================================================= */
     function doSearch(){
         var input = $id('quickSearchInput');
         if(!input) return;
@@ -318,39 +503,59 @@ def build_quick_search_js():
 
         var parsed = parseQuery(raw);
         var result = filterData(raw, parsed);
-        if(result === null){ showToast('Chua co du lieu de tim', true); return; }
+
+        if(result === null){
+            showToast('Chua co du lieu de tim (RAW_DATA trong)', true);
+            return;
+        }
+
         if(result.length === 0){
             var msgs;
             if(parsed){
                 if(parsed.startStt === null) msgs = 'Khong co cau nao trong ' + parsed.hsk;
                 else if(parsed.startStt === parsed.endStt) msgs = 'Khong co cau ' + parsed.startStt + ' trong ' + parsed.hsk;
                 else msgs = 'Khong co cau ' + parsed.startStt + '-' + parsed.endStt + ' trong ' + parsed.hsk;
-            } else msgs = 'Khong tim thay: ' + raw;
+            } else {
+                msgs = 'Khong tim thay: ' + raw;
+            }
             showToast(msgs, true);
             return;
         }
 
-        var ok = applyResult(result, raw, parsed);
-        if(!ok){ showToast('Khong the ap dung ket qua', true); return; }
+        // ⭐ TU RENDER
+        var ok = renderResults(result, raw, parsed);
+        if(!ok){
+            showToast('Khong render duoc ket qua', true);
+            return;
+        }
 
+        // ⭐ DONG BO vao #searchInput (de neu user bam o search chinh van giu)
+        var si = $id('searchInput');
+        if(si){
+            si.value = raw;
+            try{
+                var cb = $id('clearSearchBtn');
+                if(cb) cb.classList.add('show');
+            }catch(e){}
+        }
+
+        // ⭐ Toast
         var msg;
         if(parsed){
             if(parsed.startStt === null) msg = parsed.hsk + ' - ' + result.length + ' cau';
             else if(parsed.startStt === parsed.endStt) msg = parsed.hsk + ' ' + parsed.startStt + ' - ' + result.length + ' ket qua';
             else msg = parsed.hsk + ' ' + parsed.startStt + '-' + parsed.endStt + ' - ' + result.length + ' ket qua';
-        } else msg = 'Tim thay ' + result.length + ' cau';
+        } else {
+            msg = 'Tim thay ' + result.length + ' cau';
+        }
         showToast(msg);
 
         closePanel();
-        setTimeout(function(){
-            var mainEl = $id('mainContent');
-            if(mainEl){
-                var y = mainEl.getBoundingClientRect().top + window.scrollY - 100;
-                window.scrollTo({ top:y, behavior:'smooth' });
-            }
-        }, 100);
     }
 
+    /* =======================================================
+       9. MO / DONG PANEL
+       ======================================================= */
     function openPanel(){
         QS.open = true;
         var p = $id('quickSearchPanel');
@@ -373,6 +578,9 @@ def build_quick_search_js():
         if(i){ i.value = ''; i.focus(); }
     }
 
+    /* =======================================================
+       10. BIND EVENTS
+       ======================================================= */
     function bind(){
         if(QS.inited) return;
         var toggle = $id('quickSearchToggle');
@@ -394,15 +602,28 @@ def build_quick_search_js():
             panel.classList.toggle('has-value', !!this.value.trim());
         });
         input.addEventListener('keydown', function(e){
-            if(e.key === 'Enter'){ e.preventDefault(); doSearch(); }
-            else if(e.key === 'Escape'){
+            if(e.key === 'Enter' || e.keyCode === 13){
+                e.preventDefault();
+                e.stopPropagation();
+                doSearch();
+                return false;
+            }
+            if(e.key === 'Escape' || e.keyCode === 27){
                 e.preventDefault();
                 if(this.value.trim()){ this.value=''; panel.classList.remove('has-value'); }
                 else closePanel();
             }
         });
-        clearB.addEventListener('click', function(e){ e.stopPropagation(); clearPanel(); });
-        goB.addEventListener('click', function(e){ e.stopPropagation(); doSearch(); });
+        clearB.addEventListener('click', function(e){
+            e.stopPropagation();
+            e.preventDefault();
+            clearPanel();
+        });
+        goB.addEventListener('click', function(e){
+            e.stopPropagation();
+            e.preventDefault();
+            doSearch();
+        });
 
         document.addEventListener('click', function(e){
             if(!QS.open) return;
@@ -415,6 +636,9 @@ def build_quick_search_js():
         console.log('[quick-search] Da bind events');
     }
 
+    /* =======================================================
+       11. INIT
+       ======================================================= */
     function init(){
         if(mount()){
             bind();
@@ -437,6 +661,7 @@ def build_quick_search_js():
         clear: clearPanel,
         do: doSearch,
         mount: mount,
+        clearResult: clearResult,
         reinit: function(){ QS.inited = false; QS.retries = 0; init(); }
     };
 })();
