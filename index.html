@@ -10754,11 +10754,32 @@ body[data-vocab-mode="1"] .mobile-view {
 
 
 /* ===== QUICK_SEARCH_MODULE_CSS ===== */
-.quick-search-wrap{
-    display:flex;align-items:center;gap:.4rem;
-    pointer-events:auto;
-    position:relative;
+#quickSearchRoot{
+    position:fixed;
+    left:20px;
+    bottom:calc(90px + env(safe-area-inset-bottom));
+    z-index:9997;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:.5rem;
+    pointer-events:none;
+    transition:bottom .35s cubic-bezier(.34,1.56,.64,1),
+               opacity .25s ease,
+               transform .25s ease;
 }
+#quickSearchRoot > *{ pointer-events:auto; }
+#quickSearchRoot.hidden{
+    opacity:0;
+    transform:translateY(10px);
+    pointer-events:none;
+}
+
+/* Khi cum floating group mo -> day len cao hon */
+body.has-floating-group #quickSearchRoot{
+    bottom:calc(260px + env(safe-area-inset-bottom));
+}
+
 .quick-search-toggle{
     width:44px;height:44px;border-radius:50%;
     border:2px solid #fff;
@@ -10766,18 +10787,18 @@ body[data-vocab-mode="1"] .mobile-view {
     color:#fff;cursor:pointer;
     display:flex;align-items:center;justify-content:center;
     font-size:1.05rem;
-    box-shadow:0 8px 24px rgba(14,116,144,.45);
+    box-shadow:0 8px 24px rgba(14,116,144,.55);
     transition:all .3s cubic-bezier(.34,1.56,.64,1);
-    flex-shrink:0;position:relative;
+    flex-shrink:0;
     font-family:inherit;padding:0;
 }
 .quick-search-toggle:hover{
     transform:scale(1.08);
-    box-shadow:0 12px 32px rgba(14,116,144,.65);
+    box-shadow:0 12px 32px rgba(14,116,144,.75);
 }
 .quick-search-toggle.active{
     background:linear-gradient(135deg,#dc2626,#991b1b);
-    box-shadow:0 8px 24px rgba(220,38,38,.55);
+    box-shadow:0 8px 24px rgba(220,38,38,.65);
 }
 .quick-search-toggle i{transition:transform .3s;}
 .quick-search-toggle.active i{transform:rotate(90deg);}
@@ -10785,9 +10806,9 @@ body[data-vocab-mode="1"] .mobile-view {
 .quick-search-panel{
     display:flex;align-items:center;gap:.35rem;
     padding:0;border-radius:999px;
-    background:var(--surface,#fff);
-    border:2px solid var(--border,#e2e8f0);
-    box-shadow:0 8px 24px rgba(15,23,42,.15);
+    background:#fff;
+    border:2px solid #e2e8f0;
+    box-shadow:0 8px 24px rgba(15,23,42,.25);
     overflow:hidden;
     max-width:0;opacity:0;transform:translateX(-8px);
     transition:max-width .35s cubic-bezier(.34,1.56,.64,1),
@@ -10795,9 +10816,11 @@ body[data-vocab-mode="1"] .mobile-view {
                transform .3s ease,
                padding .25s ease;
     pointer-events:none;
+    position:relative;
 }
 .quick-search-panel.open{
-    max-width:340px;opacity:1;transform:translateX(0);
+    max-width:calc(100vw - 90px);
+    opacity:1;transform:translateX(0);
     padding:.25rem .3rem .25rem .75rem;
     pointer-events:auto;
 }
@@ -10806,27 +10829,26 @@ body[data-vocab-mode="1"] .mobile-view {
 }
 .quick-search-panel input{
     flex:1;min-width:0;border:none;outline:none;
-    background:transparent;color:var(--text,#0f172a);
-    font-size:.82rem;font-family:inherit;
-    padding:.35rem 0;
+    background:transparent;color:#0f172a;
+    font-size:.85rem;font-family:inherit;
+    padding:.4rem 0;
+    min-width:180px;
 }
+[data-theme="dark"] .quick-search-panel input{color:#f1f5f9;}
 .quick-search-panel input::placeholder{
-    color:var(--text-3,#94a3b8);font-size:.78rem;
+    color:#94a3b8;font-size:.78rem;
 }
 .quick-search-clear,.quick-search-go{
-    width:28px;height:28px;border-radius:50%;
+    width:30px;height:30px;border-radius:50%;
     border:none;cursor:pointer;
     display:none;align-items:center;justify-content:center;
-    font-size:.72rem;flex-shrink:0;
+    font-size:.75rem;flex-shrink:0;
     transition:.15s;font-family:inherit;padding:0;
 }
 .quick-search-clear{
-    background:var(--surface-2,#f8fafc);
-    color:var(--text-2,#475569);
+    background:#f1f5f9;color:#475569;
 }
-.quick-search-clear:hover{
-    background:#fee2e2;color:#dc2626;
-}
+.quick-search-clear:hover{background:#fee2e2;color:#dc2626;}
 .quick-search-go{
     background:linear-gradient(135deg,#0891b2,#0e7490);
     color:#fff;
@@ -10837,27 +10859,6 @@ body[data-vocab-mode="1"] .mobile-view {
 }
 .quick-search-panel.has-value .quick-search-clear,
 .quick-search-panel.has-value .quick-search-go{display:flex;}
-
-.quick-search-hint{
-    position:absolute;top:calc(100% + 6px);left:0;
-    padding:.35rem .6rem;
-    background:rgba(15,23,42,.92);color:#fff;
-    font-size:.68rem;border-radius:8px;line-height:1.35;
-    pointer-events:none;
-    opacity:0;transform:translateY(-4px);
-    transition:opacity .2s,transform .2s;
-    white-space:nowrap;
-    z-index:10;
-}
-.quick-search-panel.open:focus-within ~ .quick-search-hint,
-.quick-search-panel.open:focus-within .quick-search-hint{
-    opacity:1;transform:translateY(0);
-}
-.quick-search-hint kbd{
-    display:inline-block;padding:0 .3rem;
-    background:rgba(255,255,255,.15);
-    border-radius:3px;font-family:monospace;font-size:.95em;
-}
 
 .quick-search-toast{
     position:fixed;top:80px;left:50%;
@@ -10879,18 +10880,15 @@ body[data-vocab-mode="1"] .mobile-view {
     box-shadow:0 8px 24px rgba(220,38,38,.5);
 }
 
-body.chat-is-open .quick-search-wrap{
-    opacity:0;pointer-events:none;
-    transform:translateY(-8px);
-    transition:opacity .2s,transform .2s;
-}
-
 @media (max-width:768px){
+    #quickSearchRoot{left:12px;bottom:calc(80px + env(safe-area-inset-bottom));}
+    body.has-floating-group #quickSearchRoot{
+        bottom:calc(240px + env(safe-area-inset-bottom));
+    }
     .quick-search-toggle{width:42px;height:42px;font-size:1rem;}
-    .quick-search-panel.open{max-width:calc(100vw - 90px);}
-    .quick-search-hint{font-size:.62rem;white-space:normal;max-width:240px;}
 }
 @media (max-width:400px){
+    #quickSearchRoot{left:10px;}
     .quick-search-toggle{width:40px;height:40px;}
 }
 
@@ -31515,30 +31513,15 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
 (function(){
     'use strict';
 
-    var QS = { open:false, inited:false, retries:0 };
+    var QS = { open:false, inited:false, retries:0, MOUNT_ID:'quickSearchRoot' };
 
     function $id(id){ return document.getElementById(id); }
 
-    function injectDOM(){
-        if($id('quickSearchWrap')) return true;
-
-        var wrap = $id('chatFloatWrap');
-        if(!wrap){
-            QS.retries++;
-            if(QS.retries > 60){
-                console.warn('[quick-search] chatFloatWrap khong xuat hien sau 60 lan thu');
-                return false;
-            }
-            setTimeout(injectDOM, 500);
-            return false;
-        }
-
-        var div = document.createElement('div');
-        div.id = 'quickSearchWrap';
-        div.className = 'quick-search-wrap';
-        div.innerHTML =
+    function buildDOM(){
+        var root = document.createElement('div');
+        root.id = QS.MOUNT_ID;
+        root.innerHTML =
             '<div class="quick-search-panel" id="quickSearchPanel">' +
-                '<i class="fas fa-search" style="color:var(--text-3,#94a3b8);font-size:.78rem;flex-shrink:0"></i>' +
                 '<input type="text" id="quickSearchInput" ' +
                     'placeholder="hsk1 5 - hsk2 10 20" ' +
                     'autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">' +
@@ -31549,15 +31532,23 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
                     '<i class="fas fa-arrow-right"></i>' +
                 '</button>' +
             '</div>' +
-            '<div class="quick-search-hint">' +
-                'Cu phap: <kbd>hsk1</kbd> - <kbd>hsk1 5</kbd> - <kbd>hsk1 5 10</kbd> - <kbd>hsk7-9</kbd>' +
-            '</div>' +
             '<button class="quick-search-toggle" id="quickSearchToggle" type="button" title="Tim kiem nhanh">' +
                 '<i class="fas fa-search"></i>' +
             '</button>';
+        return root;
+    }
 
-        wrap.insertBefore(div, wrap.firstChild);
-        console.log('[quick-search] Da chen vao chatFloatWrap');
+    function mount(){
+        if($id(QS.MOUNT_ID)) return true;
+        if(!document.body){
+            QS.retries++;
+            if(QS.retries > 60) return false;
+            setTimeout(mount, 300);
+            return false;
+        }
+        var root = buildDOM();
+        document.body.appendChild(root);
+        console.log('[quick-search] Mount vao body thanh cong');
         return true;
     }
 
@@ -31572,7 +31563,6 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
         if(!q) return null;
         var m = q.toLowerCase().match(/^hsk\s*(7[-\s]*9|\d+)(?:\s+(\d+)(?:\s+(\d+))?)?$/);
         if(!m) return null;
-
         var hskRaw = m[1].replace(/\s+/g,'');
         var hskNum = hskRaw;
         if(hskNum === '7' || hskNum === '8' || hskNum === '9' || hskNum === '79'){
@@ -31592,21 +31582,24 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
         };
     }
 
-    function filterData(raw, parsed){
-        var baseData = [];
+    function getBaseData(){
         try{
             if(typeof window.RAW_DATA !== 'undefined' && Array.isArray(window.RAW_DATA)){
-                baseData = window.RAW_DATA;
+                return window.RAW_DATA;
             }
-            else if(window.FIXPY_DATASETS){
+            if(window.FIXPY_DATASETS){
                 var curDs = (typeof window.CURRENT_DATASET !== 'undefined')
                             ? window.CURRENT_DATASET : 'tonghop';
                 if(window.FIXPY_DATASETS[curDs]){
-                    baseData = window.FIXPY_DATASETS[curDs].data || [];
+                    return window.FIXPY_DATASETS[curDs].data || [];
                 }
             }
         }catch(e){}
+        return [];
+    }
 
+    function filterData(raw, parsed){
+        var baseData = getBaseData();
         if(baseData.length === 0) return null;
 
         if(parsed && parsed.type === 'hsk_stt'){
@@ -31620,7 +31613,6 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
                 return sttNum >= parsed.startStt && sttNum <= parsed.endStt;
             });
         }
-
         var s = raw.toLowerCase();
         return baseData.filter(function(r){
             return (r.vi && r.vi.toLowerCase().indexOf(s) !== -1) ||
@@ -31633,20 +31625,14 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
 
     function applyResult(result, raw, parsed){
         if(!result || result.length === 0) return false;
-
         var si = $id('searchInput');
         if(!si){
             if(typeof window.__applyQuickSearchResult === 'function'){
-                try{
-                    window.__applyQuickSearchResult(result);
-                    return true;
-                }catch(e){}
+                try{ window.__applyQuickSearchResult(result); return true; }catch(e){}
             }
             return false;
         }
-
         si.value = raw;
-
         try{
             si.dispatchEvent(new Event('input', { bubbles: true }));
         }catch(e){
@@ -31654,24 +31640,20 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
             ev.initEvent('input', true, true);
             si.dispatchEvent(ev);
         }
-
         return true;
     }
 
     function showToast(msg, isError){
         var old = $id('quickSearchToast');
         if(old) old.remove();
-
         var t = document.createElement('div');
         t.id = 'quickSearchToast';
-        t.className = 'quick-search-toast' + (isError.classList ? ' error' : '');
-        t.textContent =.remove msg;
+        t.className = 'quick-search-toast' + (isError ? ' error' : '');
+        t.textContent = msg;
         document.body.appendChild(t);
-
-('        requestAnimationFrame(function(){ t.classList.add('show'); });
-
-show        setTimeout(function(){
-            t');
+        requestAnimationFrame(function(){ t.classList.add('show'); });
+        setTimeout(function(){
+            t.classList.remove('show');
             setTimeout(function(){ if(t.parentNode) t.remove(); }, 300);
         }, 2400);
     }
@@ -31680,55 +31662,31 @@ show        setTimeout(function(){
         var input = $id('quickSearchInput');
         if(!input) return;
         var raw = input.value.trim();
-        if(!raw){
-            showToast('Nhap gi do de tim...', true);
-            input.focus();
-            return;
-        }
+        if(!raw){ showToast('Nhap gi do de tim...', true); input.focus(); return; }
 
         var parsed = parseQuery(raw);
         var result = filterData(raw, parsed);
-
-        if(result === null){
-            showToast('Chua co du lieu de tim', true);
-            return;
-        }
-
+        if(result === null){ showToast('Chua co du lieu de tim', true); return; }
         if(result.length === 0){
             var msgs;
             if(parsed){
-                if(parsed.startStt === null){
-                    msgs = 'Khong co cau nao trong ' + parsed.hsk;
-                } else if(parsed.startStt === parsed.endStt){
-                    msgs = 'Khong co cau so ' + parsed.startStt + ' trong ' + parsed.hsk;
-                } else {
-                    msgs = 'Khong co cau ' + parsed.startStt + '-' + parsed.endStt + ' trong ' + parsed.hsk;
-                }
-            } else {
-                msgs = 'Khong tim thay: ' + raw;
-            }
+                if(parsed.startStt === null) msgs = 'Khong co cau nao trong ' + parsed.hsk;
+                else if(parsed.startStt === parsed.endStt) msgs = 'Khong co cau ' + parsed.startStt + ' trong ' + parsed.hsk;
+                else msgs = 'Khong co cau ' + parsed.startStt + '-' + parsed.endStt + ' trong ' + parsed.hsk;
+            } else msgs = 'Khong tim thay: ' + raw;
             showToast(msgs, true);
             return;
         }
 
         var ok = applyResult(result, raw, parsed);
-        if(!ok){
-            showToast('Khong the ap dung ket qua', true);
-            return;
-        }
+        if(!ok){ showToast('Khong the ap dung ket qua', true); return; }
 
         var msg;
         if(parsed){
-            if(parsed.startStt === null){
-                msg = parsed.hsk + ' - ' + result.length + ' cau';
-            } else if(parsed.startStt === parsed.endStt){
-                msg = parsed.hsk + ' cau ' + parsed.startStt + ' - ' + result.length + ' ket qua';
-            } else {
-                msg = parsed.hsk + ' ' + parsed.startStt + '-' + parsed.endStt + ' - ' + result.length + ' ket qua';
-            }
-        } else {
-            msg = 'Tim thay ' + result.length + ' cau';
-        }
+            if(parsed.startStt === null) msg = parsed.hsk + ' - ' + result.length + ' cau';
+            else if(parsed.startStt === parsed.endStt) msg = parsed.hsk + ' ' + parsed.startStt + ' - ' + result.length + ' ket qua';
+            else msg = parsed.hsk + ' ' + parsed.startStt + '-' + parsed.endStt + ' - ' + result.length + ' ket qua';
+        } else msg = 'Tim thay ' + result.length + ' cau';
         showToast(msg);
 
         closePanel();
@@ -31747,10 +31705,7 @@ show        setTimeout(function(){
         var t = $id('quickSearchToggle');
         if(p) p.classList.add('open');
         if(t) t.classList.add('active');
-        setTimeout(function(){
-            var i = $id('quickSearchInput');
-            if(i) i.focus();
-        }, 200);
+        setTimeout(function(){ var i = $id('quickSearchInput'); if(i) i.focus(); }, 200);
     }
     function closePanel(){
         QS.open = false;
@@ -31773,48 +31728,33 @@ show        setTimeout(function(){
         var input  = $id('quickSearchInput');
         var clearB = $id('quickSearchClear');
         var goB    = $id('quickSearchGo');
-        if(!toggle || !panel || !input || !clearB || !goB) return;
+        if(!toggle || !panel || !input || !clearB || !goB){
+            setTimeout(bind, 300);
+            return;
+        }
         QS.inited = true;
 
         toggle.addEventListener('click', function(e){
             e.stopPropagation();
-            if(QS.open) closePanel();
-            else openPanel();
+            if(QS.open) closePanel(); else openPanel();
         });
-
         input.addEventListener('input', function(){
-            var v = this.value.trim();
-            panel.classList.toggle('has-value', !!v);
+            panel.classList.toggle('has-value', !!this.value.trim());
         });
-
         input.addEventListener('keydown', function(e){
-            if(e.key === 'Enter'){
+            if(e.key === 'Enter'){ e.preventDefault(); doSearch(); }
+            else if(e.key === 'Escape'){
                 e.preventDefault();
-                doSearch();
-            } else if(e.key === 'Escape'){
-                e.preventDefault();
-                if(this.value.trim()){
-                    this.value = '';
-                    panel.classList.remove('has-value');
-                } else {
-                    closePanel();
-                }
+                if(this.value.trim()){ this.value=''; panel.classList.remove('has-value'); }
+                else closePanel();
             }
         });
-
-        clearB.addEventListener('click', function(e){
-            e.stopPropagation();
-            clearPanel();
-        });
-
-        goB.addEventListener('click', function(e){
-            e.stopPropagation();
-            doSearch();
-        });
+        clearB.addEventListener('click', function(e){ e.stopPropagation(); clearPanel(); });
+        goB.addEventListener('click', function(e){ e.stopPropagation(); doSearch(); });
 
         document.addEventListener('click', function(e){
             if(!QS.open) return;
-            if(e.target.closest('#quickSearchWrap')) return;
+            if(e.target.closest('#' + QS.MOUNT_ID)) return;
             var i = $id('quickSearchInput');
             if(i && i.value.trim()) return;
             closePanel();
@@ -31824,11 +31764,11 @@ show        setTimeout(function(){
     }
 
     function init(){
-        if(injectDOM()){
+        if(mount()){
             bind();
         } else {
             setTimeout(function(){
-                if($id('quickSearchWrap')) bind();
+                if($id(QS.MOUNT_ID)) bind();
             }, 600);
         }
     }
@@ -31844,6 +31784,7 @@ show        setTimeout(function(){
         close: closePanel,
         clear: clearPanel,
         do: doSearch,
+        mount: mount,
         reinit: function(){ QS.inited = false; QS.retries = 0; init(); }
     };
 })();
