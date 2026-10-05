@@ -10334,6 +10334,18 @@ body[data-vocab-mode="1"] .mobile-view {
         transform: translate(-50%, -100%) scale(1) translateY(0);
     }
 }
+.card-mnemonic-body .similar-hint-block .similar-diff {
+    margin-top: .5rem;
+    padding-top: .5rem;
+    border-top: 1px dashed rgba(220, 38, 38, .25);
+    font-size: .72rem;
+    color: var(--text-2);
+    line-height: 1.5;
+}
+[data-theme="dark"] .card-mnemonic-body .similar-hint-block .similar-diff {
+    border-top-color: rgba(248, 113, 113, .3);
+    color: #fca5a5;
+}
 
 
 /* ═══ BANNER CẢNH BÁO TỪ VỰNG ═══ */
@@ -29504,7 +29516,20 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
         if (!currentChar) return '';
 
         var similarMap = window.__SIMILAR_CHARS__ || {};
-        var chars = similarMap[currentChar] || [];
+        var entry = similarMap[currentChar];
+
+        // ⭐ HỖ TRỢ CẢ 2 FORMAT:
+        //   - Cũ: ["恨", "狠"]
+        //   - Mới: {similar: ["恨", "狠"], diff: "..."}
+        var chars = [];
+        if (entry && typeof entry === 'object') {
+            if (Array.isArray(entry)) {
+                chars = entry;
+            } else if (Array.isArray(entry.similar)) {
+                chars = entry.similar;
+            }
+        }
+
         if (!chars || chars.length === 0) return '';
 
         var vocabList = [];
@@ -29581,14 +29606,21 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
 
         if (items.length === 0) return '';
 
+        var diffText = '';
+        if (entry && !Array.isArray(entry) && entry.diff) {
+            diffText = '<div class="similar-diff">'
+                     + '📌 ' + _esc(entry.diff)
+                     + '</div>';
+        }
+
         return '<div class="similar-hint-block">'
              + '<span class="similar-title">🔍 DỄ NHẦM</span>'
              + '<div class="similar-chars">'
              + items.join(' <span class="similar-sep">·</span> ')
              + '</div>'
+             + diffText
              + '</div>';
     }
-
     function enhanceCards() {
         if (!_isVocabMode()) return;
         if (!canAccessVocab()) return;
