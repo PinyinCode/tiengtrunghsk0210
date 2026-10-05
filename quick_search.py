@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-quick_search.py - O TIM KIEM NHANH DOC LAP, TU LOC + TU RENDER
+quick_search.py - O TIM KIEM NHANH CO CHON PHAM VI
 
-Module nay KHONG sua bat ky file nao khac.
-Tu loc du lieu va tu render HTML vao #mobileWrapper.
-Khong phu thuoc window.applyFilter.
+- Scope = "current": chi tim trong tab hien tai (RAW_DATA)
+- Scope = "all": tim trong TAT CA tab (DATASET_REGISTRY + FIXPY_DATASETS)
 """
 
 import os
@@ -82,12 +81,28 @@ body.has-floating-group #quickSearchRoot{
 .quick-search-panel.open{
     max-width:calc(100vw - 90px);
     opacity:1;transform:translateX(0);
-    padding:.25rem .3rem .25rem .75rem;
+    padding:.25rem .3rem .25rem .5rem;
     pointer-events:auto;
 }
 [data-theme="dark"] .quick-search-panel{
     background:#1e293b;border-color:#334155;
 }
+.quick-search-scope{
+    border:none;outline:none;
+    background:transparent;color:#475569;
+    font-size:.72rem;font-weight:700;
+    font-family:inherit;
+    padding:.3rem .2rem;
+    cursor:pointer;
+    border-right:1px solid #e2e8f0;
+    padding-right:.5rem;
+    margin-right:.2rem;
+    max-width:95px;
+}
+.quick-search-scope:focus{outline:none;}
+[data-theme="dark"] .quick-search-scope{color:#cbd5e1;border-right-color:#334155;}
+.quick-search-scope option{background:#fff;color:#0f172a;}
+[data-theme="dark"] .quick-search-scope option{background:#1e293b;color:#f1f5f9;}
 .quick-search-panel input{
     flex:1;min-width:0;border:none;outline:none;
     background:transparent;color:#0f172a;
@@ -151,8 +166,15 @@ body.has-floating-group #quickSearchRoot{
     align-items:center;
     gap:.5rem;
     margin-bottom:.5rem;
+    flex-wrap:wrap;
 }
 .quick-search-result-header i{font-size:1rem;}
+.quick-search-result-header .qs-dataset-info{
+    font-size:.7rem;
+    font-weight:500;
+    opacity:.85;
+    margin-left:.3rem;
+}
 .quick-search-clear-result{
     margin-left:auto;
     padding:.3rem .7rem;
@@ -169,16 +191,33 @@ body.has-floating-group #quickSearchRoot{
     gap:.3rem;
 }
 .quick-search-clear-result:hover{background:rgba(255,255,255,.4);}
+.quick-search-dataset-tag{
+    position:absolute;
+    top:4px;
+    right:8px;
+    padding:1px 6px;
+    background:rgba(8,145,178,.12);
+    color:#0891b2;
+    border-radius:50px;
+    font-size:.6rem;
+    font-weight:700;
+    z-index:5;
+}
+[data-theme="dark"] .quick-search-dataset-tag{
+    background:rgba(8,145,178,.25);
+    color:#67e8f9;
+}
 @media (max-width:768px){
     #quickSearchRoot{left:12px;bottom:calc(80px + env(safe-area-inset-bottom));}
     body.has-floating-group #quickSearchRoot{
         bottom:calc(240px + env(safe-area-inset-bottom));
     }
     .quick-search-toggle{width:42px;height:42px;font-size:1rem;}
+    .quick-search-scope{max-width:80px;font-size:.68rem;}
 }
 @media (max-width:400px){
     #quickSearchRoot{left:10px;}
-    .quick-search-toggle{width:40px;height:42px;}
+    .quick-search-toggle{width:40px;height:40px;}
 }
 """
 
@@ -213,27 +252,24 @@ def build_quick_search_js():
     }
 
     /* =======================================================
-       0. AUTO EXPOSE RAW_DATA
+       0. AUTO EXPOSE
        ======================================================= */
     (function autoExpose(){
         var tries = 0;
         var timer = setInterval(function(){
             tries++;
             try{
-                if(typeof window.RAW_DATA === 'undefined'){
-                    if(typeof RAW_DATA !== 'undefined' && Array.isArray(RAW_DATA)){
-                        window.RAW_DATA = RAW_DATA;
-                    }
+                if(typeof window.RAW_DATA === 'undefined' &&
+                   typeof RAW_DATA !== 'undefined' && Array.isArray(RAW_DATA)){
+                    window.RAW_DATA = RAW_DATA;
                 }
-                if(typeof window.CURRENT_DATASET === 'undefined'){
-                    if(typeof CURRENT_DATASET !== 'undefined'){
-                        window.CURRENT_DATASET = CURRENT_DATASET;
-                    }
+                if(typeof window.CURRENT_DATASET === 'undefined' &&
+                   typeof CURRENT_DATASET !== 'undefined'){
+                    window.CURRENT_DATASET = CURRENT_DATASET;
                 }
-                if(typeof window.parseSearchQuery !== 'function'){
-                    if(typeof parseSearchQuery === 'function'){
-                        window.parseSearchQuery = parseSearchQuery;
-                    }
+                if(typeof window.parseSearchQuery !== 'function' &&
+                   typeof parseSearchQuery === 'function'){
+                    window.parseSearchQuery = parseSearchQuery;
                 }
             }catch(e){}
             if(tries > 60) clearInterval(timer);
@@ -248,6 +284,10 @@ def build_quick_search_js():
         root.id = QS.MOUNT_ID;
         root.innerHTML =
             '<div class="quick-search-panel" id="quickSearchPanel">' +
+                '<select id="quickSearchScope" class="quick-search-scope" title="Pham vi tim kiem">' +
+                    '<option value="current">Tab hien tai</option>' +
+                    '<option value="all">Tat ca tab</option>' +
+                '</select>' +
                 '<input type="text" id="quickSearchInput" ' +
                     'placeholder="hsk1 5 - hsk2 10 20" ' +
                     'autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">' +
@@ -312,19 +352,57 @@ def build_quick_search_js():
     }
 
     /* =======================================================
-       3. LAY DU LIEU GOC
+       3. LAY DU LIEU — THEO SCOPE
        ======================================================= */
     function getBaseData(){
+        var scopeEl = $id('quickSearchScope');
+        var scope = scopeEl ? scopeEl.value : 'current';
+
+        if(scope === 'all'){
+            var all = [];
+            try{
+                if(typeof window.DATASET_REGISTRY !== 'undefined' && window.DATASET_REGISTRY){
+                    Object.keys(window.DATASET_REGISTRY).forEach(function(id){
+                        var ds = window.DATASET_REGISTRY[id];
+                        if(ds && Array.isArray(ds.data)){
+                            ds.data.forEach(function(r){
+                                var copy = {};
+                                for(var k in r) copy[k] = r[k];
+                                copy._dataset = id;
+                                copy._datasetName = ds.name || id;
+                                all.push(copy);
+                            });
+                        }
+                    });
+                }
+                if(window.FIXPY_DATASETS){
+                    Object.keys(window.FIXPY_DATASETS).forEach(function(id){
+                        if(typeof window.DATASET_REGISTRY !== 'undefined' &&
+                           window.DATASET_REGISTRY[id]) return;
+                        var ds = window.FIXPY_DATASETS[id];
+                        if(ds && Array.isArray(ds.data)){
+                            ds.data.forEach(function(r){
+                                var copy = {};
+                                for(var k in r) copy[k] = r[k];
+                                copy._dataset = id;
+                                copy._datasetName = ds.name || id;
+                                all.push(copy);
+                            });
+                        }
+                    });
+                }
+            }catch(e){
+                console.warn('[quick-search] Loi gop du lieu:', e);
+            }
+            if(all.length > 0){
+                console.log('[quick-search] Scope ALL: ' + all.length + ' cau');
+                return all;
+            }
+        }
+
         try{
             if(typeof window.RAW_DATA !== 'undefined' && Array.isArray(window.RAW_DATA)){
                 return window.RAW_DATA;
-            }
-            if(window.FIXPY_DATASETS){
-                var curDs = (typeof window.CURRENT_DATASET !== 'undefined')
-                            ? window.CURRENT_DATASET : 'tonghop';
-                if(window.FIXPY_DATASETS[curDs]){
-                    return window.FIXPY_DATASETS[curDs].data || [];
-                }
             }
             if(typeof RAW_DATA !== 'undefined' && Array.isArray(RAW_DATA)){
                 return RAW_DATA;
@@ -362,7 +440,7 @@ def build_quick_search_js():
     }
 
     /* =======================================================
-       5. TU RENDER HTML VAO #mobileWrapper
+       5. RENDER KET QUA
        ======================================================= */
     function renderResults(result, raw, parsed){
         var wrapper = $id('mobileWrapper');
@@ -371,16 +449,19 @@ def build_quick_search_js():
             return false;
         }
 
-        // Tao header thong bao
+        var scopeEl = $id('quickSearchScope');
+        var scope = scopeEl ? scopeEl.value : 'current';
+        var scopeLabel = (scope === 'all') ? 'Tat ca tab' : 'Tab hien tai';
+
         var headerHtml = '<div class="quick-search-result-header">' +
             '<i class="fas fa-search"></i>' +
-            '<span>Tim thay ' + result.length + ' ket qua cho "' + escHtml(raw) + '"</span>' +
+            '<span>Tim thay <b>' + result.length + '</b> ket qua</span>' +
+            '<span class="qs-dataset-info">(' + scopeLabel + ')</span>' +
             '<button class="quick-search-clear-result" onclick="window.__quickSearch.clearResult()">' +
                 '<i class="fas fa-times"></i> Xoa' +
             '</button>' +
         '</div>';
 
-        // Tao HTML cho tung card
         var cardsHtml = '';
         var maxShow = Math.min(result.length, 300);
         for(var i = 0; i < maxShow; i++){
@@ -400,10 +481,16 @@ def build_quick_search_js():
             var topicTag = r.topic ? '<span class="card-tag topic">' + escHtml(r.topic) + '</span>' : '';
             var subjectTag = r.subject ? '<span class="card-tag subject">' + escHtml(r.subject) + '</span>' : '';
 
+            var dsTag = '';
+            if(scope === 'all' && r._datasetName){
+                dsTag = '<span class="quick-search-dataset-tag">' + escHtml(r._datasetName) + '</span>';
+            }
+
             var favBtn = (typeof favBuildFavButton === 'function')
                 ? favBuildFavButton(r.stt) : '';
 
-            cardsHtml += '<div class="card" data-hsk="' + escHtml(r.hsk || '') + '" onclick="toggleFocus(\'' + sttJs + '\', this)" data-stt="' + sttSafe + '">' +
+            cardsHtml += '<div class="card" data-hsk="' + escHtml(r.hsk || '') + '" onclick="toggleFocus(\'' + sttJs + '\', this)" data-stt="' + sttSafe + '" style="position:relative">' +
+                dsTag +
                 '<div class="card-header">' +
                     '<div class="card-stt">' + sttSafe + '</div>' +
                     '<div class="card-meta">' +
@@ -429,25 +516,23 @@ def build_quick_search_js():
             '</div>';
         }
 
-        // Ghi de vao wrapper
         wrapper.innerHTML = headerHtml + cardsHtml;
 
-        // Scroll len
         var mainEl = $id('mainContent');
         if(mainEl){
-            var y = mainEl.getBoundingClientRect().top + window.scrollY - 100;
-            window.scrollTo({ top:y, behavior:'smooth' });
-        }
+            var y = mainEl.getBoundingClientRect().top + window.scrollY -(' 100;
+            window.scrollsearchTo({ top:y, behavior:'smooth' });
+Input        }
 
         return true;
     }
 
-    /* =======================================================
-       6. XOA KET QUA — quay ve trang thai cu
-       ======================================================= */
+    /* =================================================');
+======
+       6. XOA KET QUA
+              ======================================================= */
     function clearResult(){
-        var si = $id('searchInput');
-        if(si) si.value = '';
+ if        var si = $id(si) si.value = '';
         try{
             if(typeof window.state !== 'undefined' && window.state){
                 window.state.search = '';
@@ -455,14 +540,12 @@ def build_quick_search_js():
                 window.state.subject = '';
             }
         }catch(e){}
-        // Goi applyFilter goc de render lai
         try{
             if(typeof window.applyFilter === 'function'){
                 window.applyFilter();
                 return;
             }
         }catch(e){}
-        // Fallback: dispatch input event
         if(si){
             try{
                 si.dispatchEvent(new Event('input', { bubbles: true }));
@@ -493,7 +576,7 @@ def build_quick_search_js():
     }
 
     /* =======================================================
-       8. HANH DONG TIM KIEM
+       8. TIM KIEM
        ======================================================= */
     function doSearch(){
         var input = $id('quickSearchInput');
@@ -505,7 +588,7 @@ def build_quick_search_js():
         var result = filterData(raw, parsed);
 
         if(result === null){
-            showToast('Chua co du lieu de tim (RAW_DATA trong)', true);
+            showToast('Chua co du lieu de tim', true);
             return;
         }
 
@@ -522,14 +605,12 @@ def build_quick_search_js():
             return;
         }
 
-        // ⭐ TU RENDER
         var ok = renderResults(result, raw, parsed);
         if(!ok){
             showToast('Khong render duoc ket qua', true);
             return;
         }
 
-        // ⭐ DONG BO vao #searchInput (de neu user bam o search chinh van giu)
         var si = $id('searchInput');
         if(si){
             si.value = raw;
@@ -539,14 +620,17 @@ def build_quick_search_js():
             }catch(e){}
         }
 
-        // ⭐ Toast
+        var scopeEl = $id('quickSearchScope');
+        var scope = scopeEl ? scopeEl.value : 'current';
+        var scopeSuffix = (scope === 'all') ? ' (tat ca tab)' : '';
+
         var msg;
         if(parsed){
-            if(parsed.startStt === null) msg = parsed.hsk + ' - ' + result.length + ' cau';
-            else if(parsed.startStt === parsed.endStt) msg = parsed.hsk + ' ' + parsed.startStt + ' - ' + result.length + ' ket qua';
-            else msg = parsed.hsk + ' ' + parsed.startStt + '-' + parsed.endStt + ' - ' + result.length + ' ket qua';
+            if(parsed.startStt === null) msg = parsed.hsk + ' - ' + result.length + ' cau' + scopeSuffix;
+            else if(parsed.startStt === parsed.endStt) msg = parsed.hsk + ' ' + parsed.startStt + ' - ' + result.length + ' ket qua' + scopeSuffix;
+            else msg = parsed.hsk + ' ' + parsed.startStt + '-' + parsed.endStt + ' - ' + result.length + ' ket qua' + scopeSuffix;
         } else {
-            msg = 'Tim thay ' + result.length + ' cau';
+            msg = 'Tim thay ' + result.length + ' cau' + scopeSuffix;
         }
         showToast(msg);
 
@@ -588,11 +672,25 @@ def build_quick_search_js():
         var input  = $id('quickSearchInput');
         var clearB = $id('quickSearchClear');
         var goB    = $id('quickSearchGo');
+        var scopeEl = $id('quickSearchScope');
         if(!toggle || !panel || !input || !clearB || !goB){
             setTimeout(bind, 300);
             return;
         }
         QS.inited = true;
+
+        if(scopeEl){
+            try{
+                var saved = localStorage.getItem('quickSearchScope');
+                if(saved === 'all' || saved === 'current'){
+                    scopeEl.value = saved;
+                }
+            }catch(e){}
+            scopeEl.addEventListener('change', function(){
+                try{ localStorage.setItem('quickSearchScope', this.value); }catch(e){}
+                console.log('[quick-search] Doi scope:', this.value);
+            });
+        }
 
         toggle.addEventListener('click', function(e){
             e.stopPropagation();
