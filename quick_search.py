@@ -1,27 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-quick_search.py - O TIM KIEM NHANH DOC LAP, DI THEO NUT CHAT
+quick_search.py - O TIM KIEM NHANH DOC LAP
 
 Module nay KHONG sua bat ky file nao khac.
-Mount doc lap vao body, khong phu thuoc chatFloatWrap.
-Tu dong phat hien full modal de loc dung ngu canh.
-
-DAC DIEM:
-  - O search nhanh rieng, KHONG dung #searchInput chinh
-  - Vi tri: goc trai duoi, ngay tren nut chat
-  - Enter / nut mui ten -> tim kiem
-  - Esc / X -> reset
-  - Tu dong loc bang cau chinh HOAC dropdown chon cau (full modal)
-  - Tu dong expose window.applyFilter / window.pfApplyFilter / window.RAW_DATA
-  - Toast thong bao ket qua
-  - Dark mode + responsive mobile
-
-CACH DUNG:
-  from quick_search import patch_quick_search
-  patch_quick_search("index.html")
-
-HOAC chay truc tiep:
-  python quick_search.py
+Mount doc lap vao body, KHONG phu thuoc chatFloatWrap.
+Vi tri: goc trai duoi, ngay TREN nut chat (CSS positioning).
 """
 
 import os
@@ -57,15 +40,9 @@ def build_quick_search_css():
     pointer-events:none;
 }
 
+/* Khi cum floating group mo -> day len cao hon */
 body.has-floating-group #quickSearchRoot{
     bottom:calc(260px + env(safe-area-inset-bottom));
-}
-
-/* Khi full modal mo -> an quick search (vi da co o search trong modal) */
-body.practice-full-open #quickSearchRoot{
-    opacity:0;
-    pointer-events:none;
-    transform:translateY(10px);
 }
 
 .quick-search-toggle{
@@ -183,54 +160,15 @@ body.practice-full-open #quickSearchRoot{
 
 
 def build_quick_search_js():
-   .p return r"""
-/* ===== QUICKf_SEARCH_MODULE_JS  =====Apply */
+    return r"""
+/* ===== QUICK_SEARCH_MODULE_JS  ===== */
 (function(){
     'use strict';
 
-    varFilter QS = { open:false, in !==ited:false, retries:0, ' MOUNT_ID:'quickSearchRoot' };
+    var QS = { open:false, inited:false, retries:0, MOUNT_ID:'quickSearchRoot' };
 
     function $id(id){ return document.getElementById(id); }
 
-    /* ═══════════════════════════════════════════════════════
-       0. TU DONG EXPOSE CAC HAM PRIVATE RA WINDOW
-       (applyFilter, pfApplyFilter, RAW_DATA)
-       ═══════════════════════════════════════════════════════ */
-    (function autoExpose(){
-        var tries = 0;
-        var timer = setInterval(function(){
-            tries++;
-            try{
-                if(typeof window.applyFilter !== 'function' &&
-                   typeof applyFilter === 'function'){
-                    window.applyFilter = applyFilter;
-                }
-            }catch(e){}
-            try{
-                if(typeof windowfunction' &&
-                   typeof pfApplyFilter === 'function'){
-                    window.pfApplyFilter = pfApplyFilter;
-                }
-            }catch(e){}
-            try{
-                if(typeof window.RAW_DATA === 'undefined' &&
-                   typeof RAW_DATA !== 'undefined'){
-                    window.RAW_DATA = RAW_DATA;
-                }
-            }catch(e){}
-            try{
-                if(typeof window.pfBuildQuickNav !== 'function' &&
-                   typeof pfBuildQuickNav === 'function'){
-                    window.pfBuildQuickNav = pfBuildQuickNav;
-                }
-            }catch(e){}
-            if(tries > 40) clearInterval(timer);
-        }, 250);
-    })();
-
-    /* ═══════════════════════════════════════════════════════
-       1. MOUNT DOM
-       ═══════════════════════════════════════════════════════ */
     function buildDOM(){
         var root = document.createElement('div');
         root.id = QS.MOUNT_ID;
@@ -266,9 +204,6 @@ def build_quick_search_js():
         return true;
     }
 
-    /* ═══════════════════════════════════════════════════════
-       2. PARSE cu phap
-       ═══════════════════════════════════════════════════════ */
     function parseQuery(raw){
         if(typeof window.parseSearchQuery === 'function'){
             try{
@@ -299,9 +234,6 @@ def build_quick_search_js():
         };
     }
 
-    /* ═══════════════════════════════════════════════════════
-       3. LAY DU LIEU GOC
-       ═══════════════════════════════════════════════════════ */
     function getBaseData(){
         try{
             if(typeof window.RAW_DATA !== 'undefined' && Array.isArray(window.RAW_DATA)){
@@ -318,9 +250,6 @@ def build_quick_search_js():
         return [];
     }
 
-    /* ═══════════════════════════════════════════════════════
-       4. LOC DU LIEU
-       ═══════════════════════════════════════════════════════ */
     function filterData(raw, parsed){
         var baseData = getBaseData();
         if(baseData.length === 0) return null;
@@ -346,98 +275,26 @@ def build_quick_search_js():
         });
     }
 
-    /* ═══════════════════════════════════════════════════════
-       5. KIEM TRA DANG O FULL MODAL
-       ═══════════════════════════════════════════════════════ */
-    function isFullModalOpen(){
-        var pfModal = $id('practiceFullModal');
-        return pfModal && pfModal.classList.contains('show');
-    }
-
-    /* ═══════════════════════════════════════════════════════
-       6. AP DUNG KET QUA (trang chinh HOAC full modal)
-       ═══════════════════════════════════════════════════════ */
     function applyResult(result, raw, parsed){
         if(!result || result.length === 0) return false;
-
-        var inFullModal = isFullModalOpen();
-
-        if(inFullModal){
-            /* ─── Truong hop 1: Dang o full modal ─── */
-            var pfInput = $id('pfSearchInput');
-            if(pfInput){
-                pfInput.value = raw;
-            }
-
-            /* Dong bo ra search chinh de khi dong modal van giu */
-            var siMain = $id('searchInput');
-            if(siMain) siMain.value = raw;
-
-            var pfCalled = false;
-            try{
-                if(typeof window.pfApplyFilter === 'function'){
-                    window.pfApplyFilter();
-                    pfCalled = true;
-                }
-            }catch(e){
-                console.warn('[quick-search] pfApplyFilter error:', e);
-            }
-
-            /* Fallback: dispatch input event tren pfSearchInput */
-            if(!pfCalled && pfInput){
-                try{
-                    pfInput.dispatchEvent(new Event('input', { bubbles: true }));
-                }catch(e){
-                    var ev1 = document.createEvent('Event');
-                    ev1.initEvent('input', true, true);
-                    pfInput.dispatchEvent(ev1);
-                }
-            }
-
-            /* Hien nut clear cua pfSearchInput */
-            try{
-                var pfClear = $id('pfClearSearchBtn');
-                if(pfClear) pfClear.classList.add('show');
-            }catch(e){}
-
-            return true;
-        }
-
-        /* ─── Truong hop 2: Trang chinh ─── */
         var si = $id('searchInput');
-        if(!si) return false;
-
-        si.value = raw;
-
-        var filterCalled = false;
-        try{
-            if(typeof window.applyFilter === 'function'){
-                window.applyFilter();
-                filterCalled = true;
+        if(!si){
+            if(typeof window.__applyQuickSearchResult === 'function'){
+                try{ window.__applyQuickSearchResult(result); return true; }catch(e){}
             }
-        }catch(e){}
-
-        if(!filterCalled){
-            try{
-                si.dispatchEvent(new Event('input', { bubbles: true }));
-            }catch(e){
-                var ev2 = document.createEvent('Event');
-                ev2.initEvent('input', true, true);
-                si.dispatchEvent(ev2);
-            }
+            return false;
         }
-
+        si.value = raw;
         try{
-            var cb = $id('clearSearchBtn');
-            if(cb) cb.classList.add('show');
-        }catch(e){}
-
+            si.dispatchEvent(new Event('input', { bubbles: true }));
+        }catch(e){
+            var ev = document.createEvent('Event');
+            ev.initEvent('input', true, true);
+            si.dispatchEvent(ev);
+        }
         return true;
     }
 
-    /* ═══════════════════════════════════════════════════════
-       7. TOAST
-       ═══════════════════════════════════════════════════════ */
     function showToast(msg, isError){
         var old = $id('quickSearchToast');
         if(old) old.remove();
@@ -453,9 +310,6 @@ def build_quick_search_js():
         }, 2400);
     }
 
-    /* ═══════════════════════════════════════════════════════
-       8. HANH DONG TIM KIEM
-       ═══════════════════════════════════════════════════════ */
     function doSearch(){
         var input = $id('quickSearchInput');
         if(!input) return;
@@ -488,22 +342,15 @@ def build_quick_search_js():
         showToast(msg);
 
         closePanel();
-
-        /* Chi scroll khi o trang chinh (khong phai full modal) */
-        if(!isFullModalOpen()){
-            setTimeout(function(){
-                var mainEl = $id('mainContent');
-                if(mainEl){
-                    var y = mainEl.getBoundingClientRect().top + window.scrollY - 100;
-                    window.scrollTo({ top:y, behavior:'smooth' });
-                }
-            }, 100);
-        }
+        setTimeout(function(){
+            var mainEl = $id('mainContent');
+            if(mainEl){
+                var y = mainEl.getBoundingClientRect().top + window.scrollY - 100;
+                window.scrollTo({ top:y, behavior:'smooth' });
+            }
+        }, 100);
     }
 
-    /* ═══════════════════════════════════════════════════════
-       9. MO / DONG PANEL
-       ═══════════════════════════════════════════════════════ */
     function openPanel(){
         QS.open = true;
         var p = $id('quickSearchPanel');
@@ -526,9 +373,6 @@ def build_quick_search_js():
         if(i){ i.value = ''; i.focus(); }
     }
 
-    /* ═══════════════════════════════════════════════════════
-       10. BIND EVENTS
-       ═══════════════════════════════════════════════════════ */
     function bind(){
         if(QS.inited) return;
         var toggle = $id('quickSearchToggle');
@@ -542,53 +386,24 @@ def build_quick_search_js():
         }
         QS.inited = true;
 
-        /* Nut toggle: mo/dong panel */
         toggle.addEventListener('click', function(e){
             e.stopPropagation();
-            e.preventDefault();
             if(QS.open) closePanel(); else openPanel();
         });
-
-        /* Input: hien nut clear/go khi co chu */
         input.addEventListener('input', function(){
             panel.classList.toggle('has-value', !!this.value.trim());
         });
-
-        /* ENTER = TIM, ESC = XOA/DONG */
         input.addEventListener('keydown', function(e){
-            if(e.key === 'Enter' || e.keyCode === 13){
+            if(e.key === 'Enter'){ e.preventDefault(); doSearch(); }
+            else if(e.key === 'Escape'){
                 e.preventDefault();
-                e.stopPropagation();
-                doSearch();
-                return false;
-            }
-            if(e.key === 'Escape' || e.keyCode === 27){
-                e.preventDefault();
-                if(this.value.trim()){
-                    this.value = '';
-                    panel.classList.remove('has-value');
-                } else {
-                    closePanel();
-                }
-                return false;
+                if(this.value.trim()){ this.value=''; panel.classList.remove('has-value'); }
+                else closePanel();
             }
         });
+        clearB.addEventListener('click', function(e){ e.stopPropagation(); clearPanel(); });
+        goB.addEventListener('click', function(e){ e.stopPropagation(); doSearch(); });
 
-        /* Nut X: xoa input */
-        clearB.addEventListener('click', function(e){
-            e.stopPropagation();
-            e.preventDefault();
-            clearPanel();
-        });
-
-        /* Nut mui ten: TIM (giong Enter) */
-        goB.addEventListener('click', function(e){
-            e.stopPropagation();
-            e.preventDefault();
-            doSearch();
-        });
-
-        /* Click ra ngoai: dong panel neu input trong */
         document.addEventListener('click', function(e){
             if(!QS.open) return;
             if(e.target.closest('#' + QS.MOUNT_ID)) return;
@@ -597,20 +412,9 @@ def build_quick_search_js():
             closePanel();
         });
 
-        /* ESC cap document */
-        document.addEventListener('keydown', function(e){
-            if(!QS.open) return;
-            if(e.key === 'Escape' || e.keyCode === 27){
-                closePanel();
-            }
-        });
-
         console.log('[quick-search] Da bind events');
     }
 
-    /* ═══════════════════════════════════════════════════════
-       11. INIT
-       ═══════════════════════════════════════════════════════ */
     function init(){
         if(mount()){
             bind();
@@ -627,7 +431,6 @@ def build_quick_search_js():
         init();
     }
 
-    /* Expose de debug */
     window.__quickSearch = {
         open: openPanel,
         close: closePanel,
