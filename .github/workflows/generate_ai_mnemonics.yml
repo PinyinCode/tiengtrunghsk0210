@@ -56,6 +56,8 @@ jobs:
           ls -la data/
 
       - name: Run AI generator
+        id: gen
+        continue-on-error: true
         env:
           DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
           DEMO_LIMIT: ${{ github.event.inputs.limit }}
@@ -70,7 +72,7 @@ jobs:
           fi
           SIZE=$(stat -c%s data/ai_mnemonics.json)
           echo "📦 File size: $SIZE bytes"
-          COUNT=$(python -c "import json; print(len(json.load(open('data/ai_mnemonics.json'))))")
+          COUNT=$(python -c "import json; print(len(json.load(open('data/ai_mnemonics.json', encoding='utf-8'))))")
           echo "📊 Tổng số từ có mẹo nhớ: $COUNT"
 
       - name: Commit output
