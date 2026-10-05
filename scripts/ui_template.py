@@ -6178,11 +6178,15 @@ function applyFilter() {
     var parsed = parseSearchQuery(rawSearch);
 
     if (parsed && parsed.type === 'hsk_stt') {
+        /* ⭐ Chuẩn hóa HSK để so sánh (bỏ khoảng trắng + uppercase) */
+        var targetHsk = String(parsed.hsk || '').toUpperCase().replace(/\s+/g, '');
+
         filtered = baseData.filter(function(r) {
-            if (r.hsk !== parsed.hsk) return false;
+            var rHsk = String(r.hsk || '').toUpperCase().replace(/\s+/g, '');
+            if (rHsk !== targetHsk) return false;
             if (parsed.startStt === null) return true;
 
-            var sttNum = parseInt(r.stt);
+            var sttNum = parseInt(String(r.stt).trim(), 10);
             if (isNaN(sttNum)) return false;
 
             return sttNum >= parsed.startStt && sttNum <= parsed.endStt;
@@ -7030,11 +7034,15 @@ function pfApplyFilter() {
 
     /* ═══ NHÁNH 1: CÚ PHÁP ĐẶC BIỆT ═══ */
     if (parsed && parsed.type === 'hsk_stt') {
+        /* ⭐ Chuẩn hóa HSK để so sánh (bỏ khoảng trắng + uppercase) */
+        var targetHsk = String(parsed.hsk || '').toUpperCase().replace(/\s+/g, '');
+
         filtered = baseData.filter(function(r) {
-            if (r.hsk !== parsed.hsk) return false;
+            var rHsk = String(r.hsk || '').toUpperCase().replace(/\s+/g, '');
+            if (rHsk !== targetHsk) return false;
             if (parsed.startStt === null) return true;
 
-            var sttNum = parseInt(r.stt);
+            var sttNum = parseInt(String(r.stt).trim(), 10);
             if (isNaN(sttNum)) return false;
 
             return sttNum >= parsed.startStt && sttNum <= parsed.endStt;
