@@ -10,7 +10,7 @@ on:
       tmodel:
         description: 'Model AI'
         required: false
-        default: 'qwen-plus'
+        default: 'qwen-plus-character'
 
   push:
     paths:
@@ -49,7 +49,7 @@ jobs:
       - name: Run demo mnemonics
         env:
           DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
-          QWEN_MODEL: ${{ github.event.inputs.model || 'qwen-plus' }}
+          QWEN_MODEL: ${{ github.event.inputs.tmodel || 'qwen-plus-character' }}
           DEMO_LIMIT: ${{ github.event.inputs.demo_limit || '20' }}
           DELAY_BETWEEN: '2.0'
         run: |
