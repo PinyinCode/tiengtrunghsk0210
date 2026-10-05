@@ -29,8 +29,8 @@ client = OpenAI(
 
 OUTPUT_FILE = "data/mnemonics_demo.json"
 
-# ⭐ Model Qwen-Plus
-MODEL_ID = os.getenv("QWEN_MODEL", "qwen-plus")
+# ⭐ Đã cập nhật MODEL_ID mặc định thành qwen-plus-character
+MODEL_ID = os.getenv("QWEN_MODEL", "qwen-plus-character")
 
 DEMO_LIMIT = int(os.getenv("DEMO_LIMIT", "20"))
 DELAY_BETWEEN = float(os.getenv("DELAY_BETWEEN", "2.0"))
@@ -112,7 +112,7 @@ Output:"""
 
 
 # ═══════════════════════════════════════════════════════════════════
-#  GỌI API QWEN-PLUS (ĐÃ LOẠI BỎ EXTRABODY GÂY LỖI)
+#  GỌI API QWEN-PLUS
 # ═══════════════════════════════════════════════════════════════════
 def generate_mnemonic(zh, pinyin, vi, hsk):
     prompt = build_prompt(zh, pinyin, vi, hsk)
@@ -209,7 +209,7 @@ def load_sample_words():
 # ═══════════════════════════════════════════════════════════════════
 def main():
     print("=" * 62)
-    print("🎬 DEMO SINH MẸO NHỚ — QWEN-PLUS (ALIBABA SINGAPORE)")
+    print("🎬 DEMO SINH MẸO NHỚ — QWEN (ALIBABA SINGAPORE)")
     print(f"   Model: {MODEL_ID}")
     print(f"   Số từ: {DEMO_LIMIT}")
     print(f"   Delay: {DELAY_BETWEEN}s")
