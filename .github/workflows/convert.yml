@@ -13,6 +13,8 @@ on:
       # ⭐ FIX.PY — chạy sau convert.py để thêm tab từ data/
       - 'fix.py'
       - 'patch_buttons.py'
+      # ⭐ QUICK SEARCH — ô tìm kiếm nhanh đi theo nút chat
+      - 'quick_search.py'
       # ⭐ VOCAB PREMIUM — module từ vựng
       - 'vocab_premium.py'
       - 'vocab_data/**'
@@ -102,7 +104,22 @@ jobs:
             echo "⚠️  Không có vocab_data/"
           fi
 
-      - name: List filescho
+      # ⭐ VERIFY QUICK SEARCH MODULE
+      - name: Verify quick_search module
+        run: |
+          echo "=== Kiểm tra module quick_search ==="
+          
+          if [ -f quick_search.py ]; then
+            echo "✅ Có file quick_search.py"
+            python -c "from quick_search import patch_quick_search; print('✅ quick_search imports OK')" || {
+              echo "❌ Lỗi import quick_search"
+              exit 1
+            }
+          else
+            echo "⚠️  Không có quick_search.py — sẽ bỏ qua bước Quick Search"
+          fi
+
+      - name: List files
         run: |
           echo "=== Root ==="
           ls -la
@@ -113,7 +130,7 @@ jobs:
           echo "=== scripts/ ==="
           ls -la scripts/
           echo ""
-          echo "=== scripts/data/ ( convert.py) ==="
+          echo "=== scripts/data/ (cho convert.py) ==="
           ls -la scripts/data/ || echo "No scripts/data folder"
           echo ""
           echo "=== vocab_data/ ==="
@@ -232,8 +249,7 @@ jobs:
           echo "  ✅ Thẻ script cân bằng"
 
       # ═══════════════════════════════════════════════════════════════
-      #  ⭐ BƯỚC QUAN TRỌNG NHẤT: ĐẢM BẢO fix.py ĐỌC LẠI JSON MỚI
-      #  Xóa cache + verify file JSON trước khi chạy fix.py
+      #  ⭐ VERIFY FILE AI MNEMONICS TRƯỚC KHI fix.py CHẠY
       # ═══════════════════════════════════════════════════════════════
       - name: Verify AI mnemonics file exists (trước khi fix.py chạy)
         id: verify_ai
@@ -257,7 +273,6 @@ jobs:
             echo "has_ai=true" >> $GITHUB_OUTPUT
             echo "ai_count=$COUNT" >> $GITHUB_OUTPUT
             
-            # ⭐ Kiểm tra vài key để đảm bảo file đúng format
             echo ""
             echo "=== Kiểm tra 3 key đầu ==="
             python -c "
@@ -272,7 +287,7 @@ jobs:
             echo "has_ai=false" >> $GITHUB_OUTPUT
           fi
 
-      # ⭐ XÓA CACHE PYTHON để đảm bảo fix.py đọc file JSON mới
+      # ⭐ XÓA CACHE PYTHON để fix.py đọc file JSON mới
       - name: Clear Python cache
         run: |
           echo "=== Xóa cache Python ==="
@@ -284,7 +299,9 @@ jobs:
           echo "=== Verify cache đã xóa ==="
           find . -type d -name "__pycache__" 2>/dev/null || echo "  Không còn __pycache__"
 
-      # ⭐ CHẠY fix.py — sẽ đọc lại JSON và nhúng vào index.html
+      # ═══════════════════════════════════════════════════════════════
+      #  BƯỚC 2: CHẠY fix.py
+      # ═══════════════════════════════════════════════════════════════
       - name: Run fix.py (thêm tab từ data/ + nhúng AI mnemonics)
         run: |
           echo "=== Chạy fix.py ==="
@@ -298,7 +315,60 @@ jobs:
           fi
 
       # ═══════════════════════════════════════════════════════════════
-      #  VERIFY sau fix.py — ĐẢM BẢO AI MNEMONICS ĐÃ NHÚNG VÀO HTML
+      #  ⭐ BƯỚC 3: CHẠY quick_search.py — Ô TÌM KIẾM NHANH
+      #  Chạy SAU fix.py (cần #chatFloatWrap có trong HTML)
+      # ═══════════════════════════════════════════════════════════════
+      - name: Run quick_search.py (thêm ô search nhanh vào chat FAB)
+        run: |
+          echo "═══════════════════════════════════════════════"
+          echo "🔍 QUICK SEARCH — Ô tìm kiếm nhanh"
+          echo "═══════════════════════════════════════════════"
+          
+          if [ -f quick_search.py ]; then
+            python quick_search.py
+          else
+            echo "ℹ️  Không có quick_search.py — bỏ qua bước này"
+          fi
+
+      - name: Verify quick_search trong index.html
+        run: |
+          echo "═══════════════════════════════════════════════"
+          echo "🔍 VERIFY: QUICK SEARCH TRONG INDEX.HTML"
+          echo "═══════════════════════════════════════════════"
+          
+          if [ ! -f quick_search.py ]; then
+            echo "ℹ️  Không có quick_search.py — bỏ qua verify"
+            exit 0
+          fi
+          
+          if grep -q "QUICK_SEARCH_MODULE_JS" index.html; then
+            echo "✅ Module Quick Search JS đã nhúng"
+            COUNT_JS=$(grep -o "QUICK_SEARCH_MODULE_JS" index.html | wc -l)
+            echo "   Số lần inject JS: $COUNT_JS"
+            if [ "$COUNT_JS" -gt 1 ]; then
+              echo "   ⚠️  JS bị inject trùng $COUNT_JS lần!"
+            fi
+          else
+            echo "⚠️  Không tìm thấy QUICK_SEARCH_MODULE_JS trong index.html"
+            echo "   → Kiểm tra quick_search.py có chạy thành công không"
+          fi
+          
+          if grep -q "QUICK_SEARCH_MODULE_CSS" index.html; then
+            echo "✅ CSS Quick Search đã nhúng"
+            COUNT_CSS=$(grep -o "QUICK_SEARCH_MODULE_CSS" index.html | wc -l)
+            echo "   Số lần inject CSS: $COUNT_CSS"
+            if [ "$COUNT_CSS" -gt 1 ]; then
+              echo "   ⚠️  CSS bị inject trùng $COUNT_CSS lần!"
+            fi
+          else
+            echo "⚠️  Không tìm thấy CSS Quick Search"
+          fi
+          
+          echo ""
+          echo "═══════════════════════════════════════════════"
+
+      # ═══════════════════════════════════════════════════════════════
+      #  VERIFY sau fix.py — AI MNEMONICS
       # ═══════════════════════════════════════════════════════════════
       - name: Verify AI mnemonics trong index.html
         run: |
@@ -314,38 +384,31 @@ jobs:
           echo "📊 File JSON có ${{ steps.verify_ai.outputs.ai_count }} từ"
           echo ""
           
-          # ⭐ Đếm số mẹo AI thực tế nhúng trong index.html
           echo "=== Kiểm tra marker AI trong HTML ==="
           
-          # Marker 1: chuỗi "source":"ai" hoặc mnemonic_source
           AI_MARKER_COUNT=$(grep -o 'mnemonic_source":"ai"' index.html | wc -l)
           echo "  Số từ có 'mnemonic_source':'ai': $AI_MARKER_COUNT"
           
-          # Marker 2: chuỗi "💡 Chiết tự" (mẹo nhớ AI thường có)
           AI_CONTENT_COUNT=$(grep -o 'Chiết tự' index.html | wc -l)
           echo "  Số lần xuất hiện 'Chiết tự': $AI_CONTENT_COUNT"
           
-          # Marker 3: chuỗi "🎬 Câu chuyện"
           STORY_COUNT=$(grep -o 'Câu chuyện' index.html | wc -l)
           echo "  Số lần xuất hiện 'Câu chuyện': $STORY_COUNT"
           
           echo ""
           
-          # ⭐ Kiểm tra tab Từ vựng có tồn tại không
           if grep -q 'data-dataset="tu-vung"' index.html; then
             echo "✅ Tab 'Từ vựng Premium' found"
           else
             echo "❌ Tab 'Từ vựng' MISSING"
           fi
           
-          # ⭐ Kiểm tra tab "Dễ nhầm" (similar chars)
           if grep -q 'similar-hint-block' index.html; then
             echo "✅ CSS 'Dễ nhầm' found"
           else
             echo "ℹ️  CSS 'Dễ nhầm' chưa có (cần thêm similar_chars.json)"
           fi
           
-          # ⭐ Kiểm tra có data từ vựng trong HTML
           if grep -q 'tu-vung":' index.html || grep -q '"tu-vung"' index.html; then
             echo "✅ Data 'tu-vung' found trong HTML"
           else
@@ -355,7 +418,6 @@ jobs:
           echo ""
           echo "═══════════════════════════════════════════════"
           
-          # ⭐ FAIL nếu không có mẹo AI nào trong HTML
           if [ "$AI_MARKER_COUNT" -eq 0 ] && [ "$AI_CONTENT_COUNT" -eq 0 ]; then
             echo "❌ FAIL: Không tìm thấy mẹo AI nào trong index.html"
             echo "   → fix.py không đọc được data/ai_mnemonics.json"
@@ -460,7 +522,14 @@ jobs:
             echo "✅ Không có thay đổi để commit"
           else
             AI_COUNT="${{ steps.verify_ai.outputs.ai_count }}"
-            git commit -m "🤖 Auto convert Excel to HTML (AI: ${AI_COUNT} từ) [skip ci]"
+            
+            # ⭐ Tag quick search trong commit message
+            QS_TAG=""
+            if grep -q "QUICK_SEARCH_MODULE_JS" index.html; then
+              QS_TAG=" + QS"
+            fi
+            
+            git commit -m "🤖 Auto convert Excel to HTML (AI: ${AI_COUNT} từ${QS_TAG}) [skip ci]"
             git pull --rebase origin ${{ github.ref_name }} || true
             git push origin HEAD:${{ github.ref_name }}
           fi
