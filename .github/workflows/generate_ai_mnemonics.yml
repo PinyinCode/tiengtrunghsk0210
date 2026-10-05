@@ -1,0 +1,87 @@
+name: Generate AI Mnemonics
+
+on:
+  # Chạy thủ công từ tab Actions
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Số từ cần sinh (0 = tất cả)"
+        required: true
+        default: "20"
+      resume:
+        description: "Bỏ qua từ đã có? (1=on, 0=off)"
+        required: true
+        default: "1"
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install openai openpyxl
+
+      - name: Verify API key
+        env:
+          DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+        run: |
+          if [ -z "$DASHSCOPE_API_KEY" ]; then
+            echo "❌ Chưa set DASHSCOPE_API_KEY trong GitHub Secrets"
+            exit 1
+          fi
+          echo "✅ DASHSCOPE_API_KEY đã set (độ dài: ${#DASHSCOPE_API_KEY})"
+
+      - name: Check Excel file
+        run: |
+          if [ ! -f "data/tu_vung_hsk.xlsx" ]; then
+            echo "❌ Không có file data/tu_vung_hsk.xlsx"
+            exit 1
+          fi
+          echo "✅ File Excel tồn tại"
+          ls -la data/
+
+      - name: Run AI generator
+        env:
+          DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+          DEMO_LIMIT: ${{ github.event.inputs.limit }}
+          RESUME: ${{ github.event.inputs.resume }}
+        run: python vocab_data/ai_mnemonic_generator.py
+
+      - name: Verify output
+        run: |
+          if [ ! -f "data/ai_mnemonics.json" ]; then
+            echo "❌ Không tạo được data/ai_mnemonics.json"
+            exit 1
+          fi
+          SIZE=$(stat -c%s data/ai_mnemonics.json)
+          echo "📦 File size: $SIZE bytes"
+          COUNT=$(python -c "import json; print(len(json.load(open('data/ai_mnemonics.json'))))")
+          echo "📊 Tổng số từ có mẹo nhớ: $COUNT"
+
+      - name: Commit output
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/ai_mnemonics.json
+          if git diff --cached --quiet; then
+            echo "✅ Không có thay đổi"
+          else
+            git commit -m "🤖 Update AI mnemonics [skip ci]"
+            git pull --rebase origin ${{ github.ref_name }} || true
+            git push origin HEAD:${{ github.ref_name }}
+          fi
