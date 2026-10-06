@@ -85,19 +85,16 @@ jobs:
               print(f"cjkradlib KHONG available: {e}")
               exit(0)
 
-          # 1. Liet ke cac attribute/method co san
           print("\nCac attribute/method co san trong RadicalFinder:")
           methods = [m for m in dir(finder) if not m.startswith('_')]
           for m in methods:
               print(f"  {m}")
 
-          # 2. Thu tung method voi chữ "的"
           print("\n" + "=" * 60)
           print("THU NGHIEM CAC METHOD voi '的'")
           print("=" * 60)
 
           test_char = "的"
-
           for method_name in methods:
               try:
                   method = getattr(finder, method_name)
@@ -111,22 +108,49 @@ jobs:
                       print(f"  {method_name} = {method} (not callable)")
               except Exception as e:
                   print(f"  {method_name} FAILED: {e}")
-
-          # 3. In source code de xem chi tiet
-          print("\n" + "=" * 60)
-          print("SOURCE CODE cjkradlib.core (RadicalFinder)")
-          print("=" * 60)
-          try:
-              import inspect
-              import cjkradlib.core as core
-              source = inspect.getsource(core.RadicalFinder)
-              print(source[:3000])  # In 3000 ky tu dau
-          except Exception as e:
-              print(f"Khong lay duoc source: {e}")
           PYEOF
 
       # ============================================================
-      # DEBUG 2: Liet ke chu Han bi thieu trong radicals_db
+      # DEBUG 2: Xem _RadicalObject co attribute gi
+      # ============================================================
+      - name: Debug _RadicalObject attrs
+        continue-on-error: true
+        run: |
+          python - <<'PYEOF'
+          print("=" * 60)
+          print("DEBUG _RadicalObject")
+          print("=" * 60)
+
+          try:
+              from cjkradlib import RadicalFinder
+              finder = RadicalFinder()
+          except ImportError as e:
+              print(f"cjkradlib KHONG available: {e}")
+              exit(0)
+
+          test_chars = ['的', '深', '剩', '八', '吧', '爱']
+
+          for ch in test_chars:
+              print(f"\n--- '{ch}' ---")
+              try:
+                  obj = finder.search(ch)
+                  print(f"type = {type(obj)}")
+                  print(f"dir  = {[m for m in dir(obj) if not m.startswith('__')]}")
+                  print(f"__dict__ = {getattr(obj, '__dict__', 'NO_DICT')}")
+
+                  for attr in ['character', 'compositions', 'supercompositions', 'variants']:
+                      try:
+                          val = getattr(obj, attr, 'NOT_FOUND')
+                          print(f"  obj.{attr} = {val}")
+                      except Exception as e:
+                          print(f"  obj.{attr} ERROR: {e}")
+              except Exception as e:
+                  print(f"ERROR: {e}")
+
+          PYEOF
+
+      # ============================================================
+      # DEBUG 3: Liet ke chu Han bi thieu trong radicals_db
       # ============================================================
       - name: Debug DB missing chars
         if: github.event.inputs.debug_db == '1'
@@ -182,7 +206,7 @@ jobs:
           PYEOF
 
       # ============================================================
-      # DEBUG 3: Xem 3 mnemonic mau
+      # DEBUG 4: Xem 3 mnemonic mau
       # ============================================================
       - name: Debug sample mnemonics
         if: github.event.inputs.debug_db == '1'
