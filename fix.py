@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
-"""fix.py - Auto-scan data/ them tab rieng."""
+r"""
+fix.py - Auto-scan data/ và thêm MỌI file Excel thành tab riêng.
++ TỰ ĐỘNG thêm tab TỪ VỰNG PREMIUM từ data/tu_vung_hsk.xlsx
+
+Chạy:
+    python scripts/convert.py
+    python fix.py
+"""
 import json
 import os
 import re
@@ -9,6 +16,10 @@ import unicodedata
 
 import openpyxl
 
+
+# =================================================================
+#  CONFIG
+# =================================================================
 INDEX_HTML = "index.html"
 CONFIG_JSON = "config.json"
 DATA_DIR = "data"
@@ -28,6 +39,10 @@ TAB_COLORS = [
     "#7c3aed", "#db2777", "#0284c7", "#65a30d",
 ]
 
+
+# ═══════════════════════════════════════════════════════════════════
+#  VOCAB WARNING CSS
+# ═══════════════════════════════════════════════════════════════════
 VOCAB_WARNING_CSS = r"""
 .vocab-warning-banner {
     display: flex; align-items: center; gap: .85rem;
@@ -311,6 +326,36 @@ def build_vocab_js_patch():
         main.insertBefore(banner, main.firstChild);
     }
 
+    function patchSubjectLock() {
+        if (window.__vocabSubjectLockPatched) return;
+        if (typeof window.buildFilters !== 'function') {
+            setTimeout(patchSubjectLock, 200);
+            return;
+        }
+        var orig = window.buildFilters;
+        window.buildFilters = function() {
+            var result = orig.apply(this, arguments);
+            try {
+                var sf = document.getElementById('subjectFilter');
+                if (!sf) return result;
+                if (_isVocabMode()) {
+                    sf.disabled = true;
+                    sf.value = '';
+                    sf.style.opacity = '0.5';
+                    sf.style.cursor = 'not-allowed';
+                    sf.title = 'Khong kha dung cho Tu vung';
+                } else {
+                    sf.disabled = false;
+                    sf.style.opacity = '';
+                    sf.style.cursor = '';
+                    sf.title = '';
+                }
+            } catch(e) {}
+            return result;
+        };
+        window.__vocabSubjectLockPatched = true;
+    }
+
     function watchVocabMode() {
         var isVocab = (typeof CURRENT_DATASET !== 'undefined') && CURRENT_DATASET === VOCAB_ID;
 
@@ -375,6 +420,50 @@ def build_vocab_js_patch():
 
         window.vocabUpdateLockState = updateTabLockState;
 
+        if (!window.__vocabBuildFiltersPatched && typeof window.buildFilters === 'function') {
+            window.__vocabBuildFiltersPatched = true;
+            var origBuildFilters = window.buildFilters;
+            window.buildFilters = function() {
+                var result = origBuildFilters.apply(this, arguments);
+                if (_isVocabMode()) {
+                    var hf = document.getElementById('hskFilter');
+                    if (hf && !hf.querySelector('option[value="HSK7-9"]')) {
+                        var opt = document.createElement('option');
+                        opt.value = 'HSK7-9';
+                        opt.textContent = 'HSK7-9';
+                        hf.appendChild(opt);
+                    }
+                }
+                return result;
+            };
+        }
+
+        if (!window.__vocabPfFilterPatched && typeof window.pfBuildFilterOptions === 'function') {
+            window.__vocabPfFilterPatched = true;
+            var origPfBuild = window.pfBuildFilterOptions;
+            window.pfBuildFilterOptions = function() {
+                var result = origPfBuild.apply(this, arguments);
+                if (_isVocabMode()) {
+                    var pfHf = document.getElementById('pfHskFilter');
+                    if (pfHf && !pfHf.querySelector('option[value="HSK7-9"]')) {
+                        var opt = document.createElement('option');
+                        opt.value = 'HSK7-9';
+                        opt.textContent = 'HSK7-9';
+                        pfHf.appendChild(opt);
+                    }
+                    var pfSubj = document.getElementById('pfSubjectFilter');
+                    if (pfSubj) {
+                        pfSubj.disabled = true;
+                        pfSubj.value = '';
+                        pfSubj.style.opacity = '0.5';
+                        pfSubj.style.cursor = 'not-allowed';
+                        pfSubj.title = 'Khong kha dung cho Tu vung';
+                    }
+                }
+                return result;
+            };
+        }
+
         if (!vocabBtn.__vocabLimitHooked) {
             vocabBtn.__vocabLimitHooked = true;
             vocabBtn.addEventListener('click', function() {
@@ -413,6 +502,9 @@ def build_vocab_js_patch():
 """
 
 
+# =================================================================
+#  IMPORT VOCAB MODULE
+# =================================================================
 if not os.path.isfile(CONFIG_JSON) and os.path.isfile(os.path.join("..", CONFIG_JSON)):
     os.chdir("..")
     print("[fix.py] Phat hien chay tu scripts/ -> chuyen ve root")
@@ -432,6 +524,9 @@ except ImportError as e:
     print("[fix.py] WARN - Khong load duoc vocab_premium: " + str(e))
 
 
+# =================================================================
+#  CN2AN
+# =================================================================
 try:
     import cn2an
     HAS_CN2AN = True
@@ -525,6 +620,9 @@ def _clean(s):
             .replace('\t', ' ').replace('\\', '\\\\'))
 
 
+# =================================================================
+#  HELPERS
+# =================================================================
 def _slugify(filename):
     base = filename.rsplit(".", 1)[0]
     base = unicodedata.normalize("NFD", base)
@@ -658,6 +756,9 @@ def _read_excel_rows(filepath):
     return rows
 
 
+# =================================================================
+#  SCAN data/
+# =================================================================
 def scan_data_dir():
     if not os.path.isdir(DATA_DIR):
         print("[fix.py] Khong thay thu muc '" + DATA_DIR + "/' - bo qua.")
@@ -731,13 +832,16 @@ def scan_data_dir():
     return datasets
 
 
+# =================================================================
+#  BUILD JS OVERRIDE
+# =================================================================
 def build_js_override(ids_js, datasets_meta_json):
     L = []
     add = L.append
 
     add("")
     add("<script>")
-    add("/* FIX.PY */")
+    add("/* FIX.PY - Lazy load data tu JSON */")
     add("(function() {")
     add("    'use strict';")
     add("    var NEW_IDS = " + ids_js + ";")
@@ -786,40 +890,6 @@ def build_js_override(ids_js, datasets_meta_json):
     add("    };")
     add("")
 
-    add("    window.__fixpyParseHskStt = function(rawQuery) {")
-    add("        if (!rawQuery) return null;")
-    add("        var m = rawQuery.toLowerCase().match(/^hsk\\s*(7[-\\s]*9|\\d+)\\s*(?:(\\d+)(?:\\s+(\\d+))?)?$/);")
-    add("        if (!m) return null;")
-    add("        var hskNum = m[1].replace(/\\s+/g, '');")
-    add("        if (hskNum === '7' || hskNum === '8' || hskNum === '9') hskNum = '7-9';")
-    add("        var startStt = m[2] ? parseInt(m[2], 10) : null;")
-    add("        var endStt = m[3] ? parseInt(m[3], 10) : (startStt !== null ? startStt : null);")
-    add("        if (startStt !== null && endStt < startStt) {")
-    add("            var tmp = startStt; startStt = endStt; endStt = tmp;")
-    add("        }")
-    add("        return {")
-    add("            hsk: (hskNum === '7-9') ? 'HSK7-9' : ('HSK' + hskNum),")
-    add("            hskNum: hskNum,")
-    add("            startStt: startStt,")
-    add("            endStt: endStt")
-    add("        };")
-    add("    };")
-    add("")
-
-    add("    window.__fixpyFilterByHskStt = function(parsed) {")
-    add("        var pool = window.__findByHskStt(parsed.hsk, null);")
-    add("        if (parsed.startStt === null) return pool;")
-    add("        return pool.filter(function(r) {")
-    add("            var sttStr = (r.stt_original != null && String(r.stt_original).trim() !== '')")
-    add("                       ? String(r.stt_original).trim()")
-    add("                       : String(r.stt || '').replace(/^[^0-9]*-/, '');")
-    add("            var n = parseInt(sttStr, 10);")
-    add("            if (isNaN(n)) return false;")
-    add("            return n >= parsed.startStt && n <= parsed.endStt;")
-    add("        });")
-    add("    };")
-    add("")
-
     add("    function patchSwitchRawData() {")
     add("        if (window.__fixPySwitchPatched) return;")
     add("        var origSwitch = window.__switchRawData;")
@@ -829,6 +899,7 @@ def build_js_override(ids_js, datasets_meta_json):
     add("        }")
     add("        window.__switchRawData = function(datasetId) {")
     add("            if (!window.__fixpyDataLoaded && window.__fixpyMeta && window.__fixpyMeta[datasetId]) {")
+    add("                console.log('[fix.py] data chua load, doi...');")
     add("                if (!window.__fixpyPendingSwitch) window.__fixpyPendingSwitch = [];")
     add("                window.__fixpyPendingSwitch.push(datasetId);")
     add("                return true;")
@@ -836,6 +907,7 @@ def build_js_override(ids_js, datasets_meta_json):
     add("            if (window.FIXPY_DATASETS && window.FIXPY_DATASETS[datasetId]) {")
     add("                RAW_DATA = window.FIXPY_DATASETS[datasetId].data || [];")
     add("                CURRENT_DATASET = datasetId;")
+    add("                console.log('[fix.py] switch FIXPY:', datasetId, '->', RAW_DATA.length, 'cau');")
     add("                return true;")
     add("            }")
     add("            return origSwitch.apply(this, arguments);")
@@ -844,7 +916,6 @@ def build_js_override(ids_js, datasets_meta_json):
     add("    }")
     add("    patchSwitchRawData();")
     add("")
-
     add("    window.__fixpyOnDataReady = function() {")
     add("        var pending = window.__fixpyPendingSwitch || [];")
     add("        window.__fixpyPendingSwitch = [];")
@@ -926,6 +997,74 @@ def build_js_override(ids_js, datasets_meta_json):
     add("        window.__fixPyLimitedPatched = true;")
     add("    }")
     add("")
+    add("    window.__fixpyParseHskStt = function(rawQuery) {")
+    add("        if (!rawQuery) return null;")
+    add("        var m = rawQuery.toLowerCase().match(/^hsk\\s*(7[-\\s]*9|\\d+)\\s*(?:(\\d+)(?:\\s+(\\d+))?)?$/);")
+    add("        if (!m) return null;")
+    add("        var hskNum = m[1].replace(/\\s+/g, '');")
+    add("        if (hskNum === '7' || hskNum === '8' || hskNum === '9') hskNum = '7-9';")
+    add("        var startStt = m[2] ? parseInt(m[2], 10) : null;")
+    add("        var endStt = m[3] ? parseInt(m[3], 10) : (startStt !== null ? startStt : null);")
+    add("        if (startStt !== null && endStt < startStt) {")
+    add("            var tmp = startStt; startStt = endStt; endStt = tmp;")
+    add("        }")
+    add("        return {")
+    add("            hsk: (hskNum === '7-9') ? 'HSK7-9' : ('HSK' + hskNum),")
+    add("            hskNum: hskNum,")
+    add("            startStt: startStt,")
+    add("            endStt: endStt")
+    add("        };")
+    add("    };")
+    add("")
+
+    add("    window.__fixpyFilterByHskStt = function(parsed) {")
+    add("        var pool = window.__findByHskStt(parsed.hsk, null);")
+    add("        if (parsed.startStt === null) return pool;")
+    add("        return pool.filter(function(r) {")
+    add("            var sttStr = (r.stt_original != null && String(r.stt_original).trim() !== '')")
+    add("                       ? String(r.stt_original).trim()")
+    add("                       : String(r.stt || '').replace(/^[^0-9]*-/, '');")
+    add("            var n = parseInt(sttStr, 10);")
+    add("            if (isNaN(n)) return false;")
+    add("            return n >= parsed.startStt && n <= parsed.endStt;")
+    add("        });")
+    add("    };")
+    add("")
+
+
+    add("    window.__fixpyParseHskStt = function(rawQuery) {")
+    add("        if (!rawQuery) return null;")
+    add("        var m = rawQuery.toLowerCase().match(/^hsk\\s*(7[-\\s]*9|\\d+)\\s*(?:(\\d+)(?:\\s+(\\d+))?)?$/);")
+    add("        if (!m) return null;")
+    add("        var hskNum = m[1].replace(/\\s+/g, '');")
+    add("        if (hskNum === '7' || hskNum === '8' || hskNum === '9') hskNum = '7-9';")
+    add("        var startStt = m[2] ? parseInt(m[2], 10) : null;")
+    add("        var endStt = m[3] ? parseInt(m[3], 10) : (startStt !== null ? startStt : null);")
+    add("        if (startStt !== null && endStt < startStt) {")
+    add("            var tmp = startStt; startStt = endStt; endStt = tmp;")
+    add("        }")
+    add("        return {")
+    add("            hsk: (hskNum === '7-9') ? 'HSK7-9' : ('HSK' + hskNum),")
+    add("            hskNum: hskNum,")
+    add("            startStt: startStt,")
+    add("            endStt: endStt")
+    add("        };")
+    add("    };")
+    add("")
+
+    add("    window.__fixpyFilterByHskStt = function(parsed) {")
+    add("        var pool = window.__findByHskStt(parsed.hsk, null);")
+    add("        if (parsed.startStt === null) return pool;")
+    add("        return pool.filter(function(r) {")
+    add("            var sttStr = (r.stt_original != null && String(r.stt_original).trim() !== '')")
+    add("                       ? String(r.stt_original).trim()")
+    add("                       : String(r.stt || '').replace(/^[^0-9]*-/, '');")
+    add("            var n = parseInt(sttStr, 10);")
+    add("            if (isNaN(n)) return false;")
+    add("            return n >= parsed.startStt && n <= parsed.endStt;")
+    add("        });")
+    add("    };")
+    add("")
 
     add("    function patchApplyFilter() {")
     add("        if (window.__fixPyApplyFilterPatched) return;")
@@ -951,6 +1090,9 @@ def build_js_override(ids_js, datasets_meta_json):
     add("                return origApply.apply(this, arguments);")
     add("            }")
     add("            var result = window.__fixpyFilterByHskStt(parsed);")
+    add("            var hskNum = parsed.hskNum;")
+    add("            var startStt = parsed.startStt;")
+    add("            var endStt = parsed.endStt;")
     add("            try {")
     add("                filtered = result;")
     add("            } catch(e) {")
@@ -961,6 +1103,18 @@ def build_js_override(ids_js, datasets_meta_json):
     add("            if (typeof updateFilterUI === 'function') updateFilterUI();")
     add("            var clearBtn = document.getElementById('clearSearchBtn');")
     add("            if (clearBtn) clearBtn.classList.add('show');")
+    add("            if (typeof showSearchToast === 'function') {")
+    add("                var hskDisplay = (hskNum === '7-9') ? '7-9' : hskNum;")
+    add("                var msg;")
+    add("                if (startStt === null) {")
+    add("                    msg = 'HSK' + hskDisplay + ': ' + result.length + ' cau';")
+    add("                } else if (startStt === endStt) {")
+    add("                    msg = 'HSK' + hskDisplay + ' cau ' + startStt + ': ' + result.length + ' ket qua';")
+    add("                } else {")
+    add("                    msg = 'HSK' + hskDisplay + ' cau ' + startStt + '->' + endStt + ': ' + result.length + ' ket qua';")
+    add("                }")
+    add("                showSearchToast(msg);")
+    add("            }")
     add("        };")
     add("        window.__fixPyApplyFilterPatched = true;")
     add("    }")
@@ -1060,10 +1214,31 @@ def build_js_override(ids_js, datasets_meta_json):
     add("                var cb = document.getElementById('clearSearchBtn');")
     add("                if (cb) cb.classList.remove('show');")
     add("            } catch(err) {}")
+    add("            var savedTopics = null;")
+    add("            if (typeof loadOnboardingSelection === 'function') {")
+    add("                try {")
+    add("                    var saved = loadOnboardingSelection();")
+    add("                    if (saved && saved.topics && saved.topics.length > 0) {")
+    add("                        savedTopics = saved.topics;")
+    add("                    }")
+    add("                } catch(e) {}")
+    add("            }")
     add("            try {")
     add("                if (typeof buildFilters === 'function') buildFilters();")
     add("                if (typeof applyFilter === 'function') applyFilter();")
     add("                if (typeof updateResultCount === 'function') updateResultCount();")
+    add("                if (savedTopics && savedTopics.length > 0")
+    add("                    && typeof applyOnboardingSelection === 'function') {")
+    add("                    try {")
+    add("                        var cfg = (typeof getOnboardingConfig === 'function')")
+    add("                                  ? getOnboardingConfig() : null;")
+    add("                        if (cfg) {")
+    add("                            var saved2 = loadOnboardingSelection();")
+    add("                            window.__onboardingAutoPicked = saved2 ? !!saved2.auto_picked : false;")
+    add("                            applyOnboardingSelection(savedTopics, false);")
+    add("                        }")
+    add("                    } catch(e2) {}")
+    add("                }")
     add("                document.querySelectorAll('.ds-btn, .ds-sub-btn').forEach(function(b) {")
     add("                    b.classList.remove('active');")
     add("                });")
@@ -1183,6 +1358,65 @@ def build_js_override(ids_js, datasets_meta_json):
     add("        window.__fixPyApplyOnbPatched = true;")
     add("    }")
     add("")
+    add("    function patchPfApplyFilter() {")
+    add("        if (window.__fixPyPfApplyFilterPatched) return;")
+    add("        var origPfApply = window.pfApplyFilter;")
+    add("        if (typeof origPfApply !== 'function') {")
+    add("            setTimeout(patchPfApplyFilter, 100);")
+    add("            return;")
+    add("        }")
+    add("        window.pfApplyFilter = function() {")
+    add("            if (!window.__fixpyDataLoaded) return;")
+    add("            var curDs = (typeof CURRENT_DATASET !== 'undefined')")
+    add("                        ? CURRENT_DATASET : 'tonghop';")
+    add("            if (curDs === 'tonghop') {")
+    add("                return origPfApply.apply(this, arguments);")
+    add("            }")
+    add("            if (!window.FIXPY_DATASETS || !window.FIXPY_DATASETS[curDs]) {")
+    add("                return origPfApply.apply(this, arguments);")
+    add("            }")
+    add("            var si = document.getElementById('pfSearchInput');")
+    add("            var raw = si ? si.value.trim() : '';")
+    add("            var parsed = window.__fixpyParseHskStt(raw);")
+    add("            if (!parsed) {")
+    add("                return origPfApply.apply(this, arguments);")
+    add("            }")
+    add("            var si2 = document.getElementById('searchInput');")
+    add("            if (si2) si2.value = raw;")
+    add("            if (typeof state !== 'undefined' && state) {")
+    add("                state.search = raw.toLowerCase();")
+    add("            }")
+    add("            var result = window.__fixpyFilterByHskStt(parsed);")
+    add("            try {")
+    add("                filtered = result;")
+    add("            } catch(e) {")
+    add("                window.filtered = result;")
+    add("            }")
+    add("            if (typeof pfBuildQuickNav === 'function') pfBuildQuickNav();")
+    add("            if (typeof pfUpdateFilterUI === 'function') pfUpdateFilterUI();")
+    add("            var clearBtn = document.getElementById('pfClearSearchBtn');")
+    add("            if (clearBtn) clearBtn.classList.add('show');")
+    add("            if (result.length > 0) {")
+    add("                if (typeof loadPracticeFull === 'function') {")
+    add("                    loadPracticeFull(result[0].stt);")
+    add("                }")
+    add("            } else {")
+    add("                var pfViEl = document.getElementById('pfVi');")
+    add("                if (pfViEl) pfViEl.textContent = 'Khong tim thay cau nao';")
+    add("                var pfCounter = document.getElementById('pfCounter');")
+    add("                if (pfCounter) pfCounter.textContent = 'Cau 0 / 0';")
+    add("                var pfTags = document.getElementById('pfTags');")
+    add("                if (pfTags) pfTags.innerHTML = '';")
+    add("                var pfPrev = document.getElementById('pfPrevBtn');")
+    add("                if (pfPrev) pfPrev.disabled = true;")
+    add("                var pfNext = document.getElementById('pfNextBtn');")
+    add("                if (pfNext) pfNext.disabled = true;")
+    add("            }")
+    add("        };")
+    add("        window.__fixPyPfApplyFilterPatched = true;")
+    add("    }")
+    add("")
+
 
     add("    function bindAll() {")
     add("        patchSwitchRawData();")
@@ -1193,7 +1427,6 @@ def build_js_override(ids_js, datasets_meta_json):
     add("        NEW_IDS.forEach(bindTab);")
     add("        patchMarkActive();")
     add("    }")
-    add("")
     add("    if (document.readyState === 'loading') {")
     add("        document.addEventListener('DOMContentLoaded', bindAll);")
     add("    } else {")
@@ -1216,6 +1449,9 @@ def build_js_override(ids_js, datasets_meta_json):
     return "\n".join(L)
 
 
+# =================================================================
+#  BUILD CSS LAYOUT
+# =================================================================
 def build_layout_css(new_datasets, add_vocab):
     css_lines = []
     css_lines.append("")
@@ -1312,6 +1548,9 @@ def build_layout_css(new_datasets, add_vocab):
     return "\n".join(css_lines) + "\n"
 
 
+# =================================================================
+#  MAIN
+# =================================================================
 def main():
     print("=" * 62)
     print("[fix.py] Auto-scan data/ -> them tab rieng cho moi file")
