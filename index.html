@@ -15050,13 +15050,21 @@ function parseSearchQuery(rawQuery) {
 
     var qLower = q.toLowerCase();
 
-    var match = qLower.match(/^hsk\s*(\d+)(?:\s+(\d+)(?:\s+(\d+))?)?$/);
+    // Hỗ trợ: "hsk1", "hsk1 5", "hsk1 5 10", "hsk7", "hsk7-9", "hsk7-9 5"
+    var match = qLower.match(/^hsk\s*(7[-–\s]*9|\d+)\s*(?:(\d+)(?:\s+(\d+))?)?$/);
     if (!match) return null;
 
-    var hskNum = parseInt(match[1]);
-    if (isNaN(hskNum) || hskNum < 1 || hskNum > 6) return null;
+    var hskRaw = match[1].replace(/[\s–]/g, '');  // "7-9" hoặc "5"
+    var hskValue;
 
-    var hskValue = 'HSK' + hskNum;
+    if (hskRaw === '7-9' || hskRaw === '7' || hskRaw === '8' || hskRaw === '9') {
+        hskValue = 'HSK7-9';
+    } else {
+        var hskNum = parseInt(hskRaw, 10);
+        if (isNaN(hskNum) || hskNum < 1 || hskNum > 6) return null;
+        hskValue = 'HSK' + hskNum;
+    }
+
     var startStt = match[2] ? parseInt(match[2]) : null;
     var endStt   = match[3] ? parseInt(match[3]) : startStt;
 
