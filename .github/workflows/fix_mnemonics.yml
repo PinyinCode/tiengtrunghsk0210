@@ -66,9 +66,6 @@ jobs:
           python -c "from vocab_data.radical_analyzer import get_radical_for_word; print('radical_analyzer OK')"
           python -c "from vocab_data.radicals_db import get_radical_info; print('radicals_db OK')"
 
-      # ============================================================
-      # DEBUG 1: Liệt kê chữ Hán bị thiếu trong radicals_db
-      # ============================================================
       - name: Debug DB missing chars
         if: github.event.inputs.debug_db == '1'
         continue-on-error: true
@@ -107,13 +104,11 @@ jobs:
           for key, zh in missing[:20]:
               print(f'  {key} -> {zh}')
           print()
-          # In tat ca chu (khong key) de de bo sung DB
           all_missing_chars = sorted(set(zh for _, zh in missing))
           print(f'Tong so chu unique: {len(all_missing_chars)}')
           print('Tat ca chu (de bo sung DB):')
           print(''.join(all_missing_chars))
           print()
-          # Ghi ra file de upload artifact
           with open('debug_missing_chars.json', 'w', encoding='utf-8') as f:
               json.dump({
                   'total_single': total_single,
@@ -124,9 +119,6 @@ jobs:
           print('Da ghi debug_missing_chars.json')
           PYEOF
 
-      # ============================================================
-      # DEBUG 2: Xem 5 mnemonic da fix (neu co)
-      # ============================================================
       - name: Debug sample mnemonics
         if: github.event.inputs.debug_db == '1'
         continue-on-error: true
@@ -143,7 +135,6 @@ jobs:
           for key, mnemonic in data.items():
               if count >= 3:
                   break
-              # Chi in nhung entry co format 5 dong
               if mnemonic and '💡' in mnemonic and '📌' in mnemonic:
                   print(f'\n--- {key} ---')
                   print(mnemonic[:500])
@@ -153,9 +144,6 @@ jobs:
               print('Chua co mnemonic nao dang 5 dong')
           PYEOF
 
-      # ============================================================
-      # CHAY FIX CHINH
-      # ============================================================
       - name: Run fix mnemonics
         continue-on-error: true
         env:
@@ -179,6 +167,61 @@ jobs:
         run: |
           echo "DIFF SUMMARY"
           git diff --stat data/ai_mnemonics.json || true
+
+      # ============================================================
+      # SHOW CHANGED ENTRIES - In ra entries nao bi sua
+      # ============================================================
+      - name: Show changed entries
+        if: always()
+        continue-on-error: true
+        run: |
+          python - <<'PYEOF'
+          import json
+          import glob
+
+          backups = sorted(glob.glob("data/ai_mnemonics.backup_*.json"))
+          if not backups:
+              print("Khong co backup de so sanh")
+              exit(0)
+
+          old_file = backups[0]
+          print("=" * 60)
+          print(f"SO SANH: {old_file}")
+          print("         VS data/ai_mnemonics.json")
+          print("=" * 60)
+
+          try:
+              with open(old_file, encoding="utf-8") as f:
+                  old_data = json.load(f)
+              with open("data/ai_mnemonics.json", encoding="utf-8") as f:
+                  new_data = json.load(f)
+          except Exception as e:
+              print(f"Loi doc file: {e}")
+              exit(0)
+
+          changed = []
+          for k in new_data:
+              if new_data.get(k) != old_data.get(k):
+                  changed.append(k)
+
+          print(f"Tong entries thay doi: {len(changed)}")
+          print()
+          print("20 entries dau tien:")
+          for k in changed[:20]:
+              print(f"  {k}")
+          print()
+
+          print("=" * 60)
+          print("CHI TIET 3 ENTRIES DAU (CU vs MOI)")
+          print("=" * 60)
+          for k in changed[:3]:
+              print(f"\n### {k} ###")
+              print("--- CU ---")
+              print((old_data.get(k) or "")[:400])
+              print("--- MOI ---")
+              print((new_data.get(k) or "")[:400])
+              print()
+          PYEOF
 
       - name: Upload artifact
         if: always()
