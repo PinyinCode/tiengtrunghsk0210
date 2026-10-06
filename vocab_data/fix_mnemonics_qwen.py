@@ -2,6 +2,7 @@
 """
 fix_mnemonics_qwen.py
 Doc ai_mnemonics.json, tra bo thu, goi Qwen sua, verify, luu.
+Uu tien lay nghia tu file Excel tu_vung_hsk.xlsx.
 """
 
 import os
@@ -96,21 +97,102 @@ def parse_key(key):
     return {"hsk": "?", "stt": "?", "zh": key.strip()}
 
 
+def load_vietnamese_meaning_from_excel():
+    """
+    Doc nghia tieng Viet tu file Excel tu_vung_hsk.xlsx.
+    Cot 4 = nghia tieng Viet, cot 5 = chu Han.
+    Tra ve dict: {chu_han: nghia}
+    """
+    try:
+        import openpyxl
+    except ImportError:
+        print("[EXCEL] Chua cai openpyxl")
+        return {}
+
+    candidates = [
+        os.path.join(_ROOT_DIR, "data", "tu_vung_hsk.xlsx"),
+        os.path.join(_ROOT_DIR, "tu_vung_hsk.xlsx"),
+        os.path.join(_SCRIPT_DIR, "..", "data", "tu_vung_hsk.xlsx"),
+        "data/tu_vung_hsk.xlsx",
+        "tu_vung_hsk.xlsx",
+    ]
+
+    excel_path = None
+    for p in candidates:
+        if os.path.exists(p):
+            excel_path = os.path.abspath(p)
+            break
+
+    if not excel_path:
+        print("[EXCEL] Khong tim thay tu_vung_hsk.xlsx")
+        return {}
+
+    print("[EXCEL] Doc: " + excel_path)
+
+    try:
+        wb = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
+    except Exception as e:
+        print("[EXCEL] Loi mo Excel: " + str(e))
+        return {}
+
+    try:
+        ws = wb.worksheets[0]
+    except Exception as e:
+        print("[EXCEL] Loi lay sheet: " + str(e))
+        wb.close()
+        return {}
+
+    COL_VI = 4
+    COL_ZH = 5
+    DATA_START = 2
+
+    result = {}
+    skipped = 0
+
+    try:
+        for row in ws.iter_rows(min_row=DATA_START, values_only=True):
+            if not row:
+                continue
+
+            if len(row) <= max(COL_VI, COL_ZH):
+                skipped += 1
+                continue
+
+            vi = row[COL_VI]
+            zh = row[COL_ZH]
+
+            if not vi or not zh:
+                skipped += 1
+                continue
+
+            vi_str = str(vi).strip()
+            zh_str = str(zh).strip()
+
+            if vi_str and zh_str:
+                result[zh_str] = vi_str
+    except Exception as e:
+        print("[EXCEL] Loi doc du lieu: " + str(e))
+    finally:
+        wb.close()
+
+    print("[EXCEL] Doc duoc " + str(len(result)) + " entries (bo qua " + str(skipped) + " dong)")
+    return result
+
+
 def extract_vi(mnemonic):
+    """Fallback: lay nghia tu mnemonic cu (chi lay dong Vi du)."""
     if not mnemonic:
         return ""
 
     for line in mnemonic.split("\n"):
         line = line.strip()
-        if line.startswith("📎") or line.startswith("Ví dụ"):
+        if line.startswith("Vi du") or line.startswith("Ví dụ"):
             if " - " in line:
                 parts = line.rsplit(" - ", 1)
                 if len(parts) == 2:
                     vi = parts[1].strip()
-                    # Bỏ dấu câu ở CUỐI câu
                     while vi and vi[-1] in ".!?,;:":
                         vi = vi[:-1].strip()
-                    # Loại bỏ nếu còn dấu câu GIỮA câu
                     bad = False
                     for c in ",;:()":
                         if c in vi:
@@ -195,7 +277,7 @@ def build_prompt_part1(zh, hsk, vi, radical):
     lines.append("")
     lines.append("Viet DUNG 3 dong, KHONG them dong nao khac:")
     lines.append("")
-    lines.append("Chiet tu: Liet ke DAY DU cac thanh phan cua " + zh + ". Format: " + zh + " = [A] + [B] + ...")
+    lines.append("Chiet tu: Liet ke DAY DU cac thanh phan cua " + zh + ". Format: " + zh + " = [A] + [B] + ... => [nghia]")
     lines.append("Am thanh: 2-3 tu gan am tieng Viet")
     lines.append("Cau chuyen: 1 CAU ngan (toi da 25 chu). PHAI ket bang: ... = " + vi.upper())
     lines.append("")
@@ -358,12 +440,17 @@ def main():
     shutil.copy(INPUT_FILE, BACKUP_FILE)
     print("Backup: " + BACKUP_FILE)
 
+    print("\nBuoc 0: Load nghia tieng Viet tu Excel...")
+    vi_dict = load_vietnamese_meaning_from_excel()
+
     print("\nBuoc 1: Quet tim entries sai...")
 
     suspects = []
     skip_compound = 0
     skip_no_db = 0
     skip_no_vi = 0
+    from_excel = 0
+    from_mnemonic = 0
 
     for idx, (key, mnemonic) in enumerate(data.items(), 1):
         if idx % 500 == 0:
@@ -385,10 +472,19 @@ def main():
             continue
 
         if not mnemonic_has_radical(mnemonic, rad):
-            vi = extract_vi(mnemonic)
+            vi = vi_dict.get(zh, "")
+
+            if vi:
+                from_excel += 1
+            else:
+                vi = extract_vi(mnemonic)
+                if vi:
+                    from_mnemonic += 1
+
             if not vi:
                 skip_no_vi += 1
                 continue
+
             suspects.append((key, info, rad, mnemonic, vi))
 
     print("\nKet qua:")
@@ -396,6 +492,8 @@ def main():
     print("   Bo qua:   " + str(skip_compound) + " (chu ghep)")
     print("   Bo qua:   " + str(skip_no_db) + " (DB thieu)")
     print("   Bo qua:   " + str(skip_no_vi) + " (khong co nghia)")
+    print("   Nghia tu Excel:    " + str(from_excel))
+    print("   Nghia tu mnemonic: " + str(from_mnemonic))
 
     if not suspects:
         print("\nKhong co entry nao fix duoc")
