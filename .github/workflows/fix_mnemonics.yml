@@ -66,6 +66,91 @@ jobs:
           python -c "from vocab_data.radical_analyzer import get_radical_for_word; print('radical_analyzer OK')"
           python -c "from vocab_data.radicals_db import get_radical_info; print('radicals_db OK')"
 
+      # ============================================================
+      # DEBUG CJKRADLIB - Kiem tra cjkradlib co hoat dong khong
+      # ============================================================
+      - name: Debug cjkradlib
+        continue-on-error: true
+        run: |
+          python - <<'PYEOF'
+          import sys
+          sys.path.insert(0, '.')
+
+          print("=" * 60)
+          print("DEBUG CJKRADLIB")
+          print("=" * 60)
+
+          # 1. Test import
+          try:
+              from cjkradlib import RadicalFinder
+              finder = RadicalFinder()
+              print("cjkradlib import OK")
+          except ImportError as e:
+              print(f"cjkradlib KHONG available: {e}")
+              sys.exit(0)
+
+          # 2. Test decompose vai chu dai dien
+          test_chars = ['八', '吧', '白', '百', '班', '爱', '的', '错', '读', '对']
+          print(f"\nTest decompose {len(test_chars)} chu:")
+          for ch in test_chars:
+              try:
+                  findings = finder.find(ch)
+                  if findings:
+                      radicals = [f.radical for f in findings]
+                      print(f"  {ch} -> {radicals}")
+                  else:
+                      print(f"  {ch} -> EMPTY (khong decompose duoc)")
+              except Exception as e:
+                  print(f"  {ch} -> ERROR: {e}")
+
+          # 3. Test logic cua radical_analyzer
+          print("\n" + "=" * 60)
+          print("TEST LOGIC radical_analyzer")
+          print("=" * 60)
+
+          from vocab_data.radical_analyzer import (
+              get_radical_for_word,
+              HAS_CJKRADLIB,
+              _RADICAL_FINDER,
+          )
+          print(f"HAS_CJKRADLIB = {HAS_CJKRADLIB}")
+          print(f"_RADICAL_FINDER = {_RADICAL_FINDER}")
+
+          print(f"\nget_radical_for_word() voi cac chu thieu:")
+          for ch in test_chars:
+              try:
+                  rad = get_radical_for_word(ch)
+                  if rad:
+                      print(f"  {ch} -> bo: {rad.get('zh', '?')} ({rad.get('meaning', '')[:30]})")
+                  else:
+                      print(f"  {ch} -> None (khong tra duoc)")
+              except Exception as e:
+                  print(f"  {ch} -> ERROR: {e}")
+
+          # 4. Test 20 chu dau tien bi thieu
+          print("\n" + "=" * 60)
+          print("TEST 20 CHU THIEU DAU TIEN")
+          print("=" * 60)
+          missing_chars = "八吧白百班帮杯北本比别差常出穿床次从打到"
+          for ch in missing_chars:
+              rad = get_radical_for_word(ch)
+              if rad:
+                  print(f"  OK  {ch} -> {rad.get('zh', '?')}")
+              else:
+                  # Thu truc tiep cjkradlib
+                  try:
+                      findings = finder.find(ch)
+                      if findings:
+                          print(f"  ??? {ch} -> cjkradlib tra duoc {[f.radical for f in findings]} nhung analyzer return None")
+                      else:
+                          print(f"  NO  {ch} -> cjkradlib cung EMPTY")
+                  except Exception as e:
+                      print(f"  ERR {ch} -> cjkradlib ERROR: {e}")
+          PYEOF
+
+      # ============================================================
+      # DEBUG 1: Liet ke chu Han bi thieu trong radicals_db
+      # ============================================================
       - name: Debug DB missing chars
         if: github.event.inputs.debug_db == '1'
         continue-on-error: true
@@ -119,6 +204,9 @@ jobs:
           print('Da ghi debug_missing_chars.json')
           PYEOF
 
+      # ============================================================
+      # DEBUG 2: Xem 3 mnemonic mau
+      # ============================================================
       - name: Debug sample mnemonics
         if: github.event.inputs.debug_db == '1'
         continue-on-error: true
@@ -144,6 +232,9 @@ jobs:
               print('Chua co mnemonic nao dang 5 dong')
           PYEOF
 
+      # ============================================================
+      # CHAY FIX CHINH
+      # ============================================================
       - name: Run fix mnemonics
         continue-on-error: true
         env:
@@ -169,7 +260,7 @@ jobs:
           git diff --stat data/ai_mnemonics.json || true
 
       # ============================================================
-      # SHOW CHANGED ENTRIES - In ra entries nao bi sua
+      # SHOW CHANGED ENTRIES
       # ============================================================
       - name: Show changed entries
         if: always()
