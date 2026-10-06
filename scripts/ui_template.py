@@ -8155,4 +8155,7 @@ function favBuildFavButton(stt) {
         '<i class="' + iconClass + '"></i>' +
         '</button>';
 }
+window.pfApplyFilter = pfApplyFilter;
+window.pfBuildQuickNav = pfBuildQuickNav;
+window.pfUpdateFilterUI = pfUpdateFilterUI;
 """
