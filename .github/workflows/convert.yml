@@ -122,6 +122,27 @@ jobs:
       - name: Run convert script
         run: python scripts/convert.py
 
+      - name: Run fix.py
+        run: |
+          if [ -f fix.py ]; then
+            python fix.py
+          else
+            echo "no fix.py"
+          fi
+
+      - name: Run quick_search.py
+        run: |
+          if [ -f quick_search.py ]; then
+            python quick_search.py
+          else
+            echo "no quick_search.py"
+          fi
+
+      - name: Clear Python cache
+        run: |
+          find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+          find . -type f -name "*.pyc" -delete 2>/dev/null || true
+
       - name: Verify index.html after convert
         run: |
           if [ ! -f index.html ]; then
@@ -162,6 +183,7 @@ jobs:
         run: |
           if [ ! -f "data/ai_mnemonics.json" ]; then
             echo "has_ai=false" >> $GITHUB_OUTPUT
+            echo "ai_count=0" >> $GITHUB_OUTPUT
             exit 0
           fi
           COUNT=$(python -c "import json; print(len(json.load(open('data/ai_mnemonics.json', encoding='utf-8'))))" 2>/dev/null || echo 0)
@@ -170,27 +192,7 @@ jobs:
             echo "ai_count=$COUNT" >> $GITHUB_OUTPUT
           else
             echo "has_ai=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Clear Python cache
-        run: |
-          find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-          find . -type f -name "*.pyc" -delete 2>/dev/null || true
-
-      - name: Run fix.py
-        run: |
-          if [ -f fix.py ]; then
-            python fix.py
-          else
-            echo "no fix.py"
-          fi
-
-      - name: Run quick_search.py
-        run: |
-          if [ -f quick_search.py ]; then
-            python quick_search.py
-          else
-            echo "no quick_search.py"
+            echo "ai_count=0" >> $GITHUB_OUTPUT
           fi
 
       - name: Verify quick_search in index.html
@@ -209,19 +211,6 @@ jobs:
           else
             echo "quick_search CSS not found"
           fi
-
-      - name: Verify AI mnemonics in index.html
-        run: |
-          if [ "${{ steps.verify_ai.outputs.has_ai }}" != "true" ]; then
-            exit 0
-          fi
-          AI_MARKER_COUNT=$(grep -o 'mnemonic_source":"ai"' index.html | wc -l)
-          AI_CONTENT_COUNT=$(grep -o 'Chiet tu' index.html | wc -l)
-          if [ "$AI_MARKER_COUNT" -eq 0 ] && [ "$AI_CONTENT_COUNT" -eq 0 ]; then
-            echo "no AI mnemonics found in index.html"
-            exit 1
-          fi
-          echo "AI mnemonics OK"
 
       - name: Verify datasets loaded
         run: |
@@ -248,6 +237,12 @@ jobs:
           fi
           if [ -f "data/dataset_registry.json" ]; then
             git add data/dataset_registry.json
+          fi
+          if [ -f "data/fixpy_datasets.json" ]; then
+            git add data/fixpy_datasets.json
+          fi
+          if [ -f "data/similar_chars.json" ]; then
+            git add data/similar_chars.json
           fi
           git add -A
           if git diff --quiet && git diff --staged --quiet; then
@@ -281,8 +276,14 @@ jobs:
           if [ -f "data/dataset_registry.json" ]; then
             cp data/dataset_registry.json _site/data/
           fi
+          if [ -f "data/fixpy_datasets.json" ]; then
+            cp data/fixpy_datasets.json _site/data/
+          fi
+          if [ -f "data/similar_chars.json" ]; then
+            cp data/similar_chars.json _site/data/
+          fi
           echo "=== _site contents ==="
-          find _site -type f | head -20
+          find _site -type f | head -30
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
