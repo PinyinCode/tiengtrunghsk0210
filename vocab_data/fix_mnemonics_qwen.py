@@ -26,9 +26,6 @@ import shutil
 import unicodedata
 from datetime import datetime
 
-# ============================================================
-# FIX IMPORT PATH
-# ============================================================
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 _ROOT_DIR = os.path.dirname(_SCRIPT_DIR)
 
@@ -36,14 +33,10 @@ for _p in [_ROOT_DIR, _SCRIPT_DIR]:
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-# ============================================================
-# IMPORT
-# ============================================================
 try:
     from vocab_data.radical_analyzer import (
         get_radical_for_word,
         normalize_kangxi,
-        KANGXI_TO_CJK,
     )
     from vocab_data.radicals_db import get_radical_info
 except ImportError:
@@ -51,7 +44,6 @@ except ImportError:
         from radical_analyzer import (
             get_radical_for_word,
             normalize_kangxi,
-            KANGXI_TO_CJK,
         )
         from radicals_db import get_radical_info
     except ImportError as e:
@@ -67,9 +59,6 @@ except ImportError:
     sys.exit(1)
 
 
-# ============================================================
-# CẤU HÌNH
-# ============================================================
 API_KEY = os.getenv("DASHSCOPE_API_KEY")
 BASE_URL = os.getenv(
     "QWEN_BASE_URL",
@@ -87,9 +76,6 @@ only_hsk_list = [x.strip() for x in ONLY_HSK.split(",") if x.strip()]
 LIMIT = int(os.getenv("LIMIT", "0"))
 
 
-# ============================================================
-# TÌM FILE INPUT
-# ============================================================
 def find_input_file():
     candidates = [
         os.path.join(_ROOT_DIR, "data", "ai_mnemonics.json"),
@@ -115,9 +101,6 @@ TS = datetime.now().strftime("%Y%m%d_%H%M%S")
 BACKUP_FILE = os.path.join(DATA_DIR, f"ai_mnemonics.backup_{TS}.json")
 
 
-# ============================================================
-# HÀM HỖ TRỢ
-# ============================================================
 def parse_key(key):
     parts = key.split("|")
     if len(parts) == 3:
@@ -130,11 +113,9 @@ def parse_key(key):
 
 
 def extract_vi(mnemonic):
-    """Trích xuất nghĩa tiếng Việt từ mnemonic cũ."""
     if not mnemonic:
         return ""
 
-    # Ưu tiên dòng có 📎 hoặc Ví dụ
     for line in mnemonic.split("\n"):
         line = line.strip()
         if line.startswith("📎") or line.startswith("Ví dụ"):
@@ -143,7 +124,6 @@ def extract_vi(mnemonic):
                 if len(parts) >= 2:
                     return parts[-1].strip()[:60]
 
-    # Fallback: dòng có dấu "-" + ký tự Việt
     for line in mnemonic.split("\n"):
         line = line.strip()
         if " - " in line and any(c in line for c in "àáảãạăâđêôơư"):
@@ -155,7 +135,6 @@ def extract_vi(mnemonic):
 
 
 def get_true_radical(zh):
-    """Tra bộ thủ đúng cho 1 chữ Hán."""
     if not zh or len(zh) > 3:
         return None
 
@@ -186,22 +165,12 @@ def get_true_radical(zh):
 
 
 def mnemonic_has_radical(mnemonic, radical):
-    """
-    Kiểm tra mnemonic có chứa bộ thủ đúng không.
-    
-    FIX BUG: 
-    - Normalize Kangxi Radical → CJK trước khi so sánh
-    - Kiểm tra cả ý nghĩa tiếng Việt của bộ thủ (VD: "mười")
-    """
     if not mnemonic or not radical:
         return True
 
-    # === BƯỚC 1: Normalize Unicode ===
-    # NFC + Kangxi → CJK
     mnemonic_norm = unicodedata.normalize("NFC", mnemonic)
     mnemonic_norm = normalize_kangxi(mnemonic_norm)
 
-    # === BƯỚC 2: Check chữ Hán bộ thủ (sau normalize) ===
     for r in [radical.get("zh", ""), radical.get("base_zh", "")]:
         if not r:
             continue
@@ -209,16 +178,12 @@ def mnemonic_has_radical(mnemonic, radical):
         if r_norm and r_norm in mnemonic_norm:
             return True
 
-    # === BƯỚC 3: Check pinyin bộ thủ (>= 3 ký tự) ===
     py = radical.get("pinyin", "").strip().lower()
     if len(py) >= 3 and py in mnemonic_norm.lower():
         return True
 
-    # === BƯỚC 4: Check ý nghĩa tiếng Việt của bộ thủ ===
-    # VD: mnemonic ghi "mười" thay vì "十"
     meaning = radical.get("meaning", "").strip().lower()
     if meaning:
-        # Bỏ phần trong ngoặc: "Kim loại (biến thể của 金)" -> "kim loại"
         meaning_clean = meaning.split("(")[0].strip()
         if len(meaning_clean) >= 3 and meaning_clean in mnemonic_norm.lower():
             return True
@@ -282,12 +247,12 @@ def call_qwen(prompt):
         try:
             resp = client.chat.completions.create(
                 model=MODEL_ID,
-                messages=[{"role": "user", "content": prompt} if],
+                messages=[{"role": "user", "content": prompt}],
                 temperature=0.5,
                 max_tokens=700,
-           401 )
+            )
 
-            if not resp or not resp." in errchoices:
+            if not resp or not resp.choices:
                 time.sleep(2)
                 continue
 
@@ -306,7 +271,7 @@ def call_qwen(prompt):
                 print("\nQUOTA HET - DUNG SCRIPT")
                 raise RuntimeError("QUOTA")
 
-            or "unauthorized" in err.lower():
+            if "401" in err or "unauthorized" in err.lower():
                 print("\nAPI KEY SAI")
                 raise RuntimeError("AUTH")
 
@@ -339,9 +304,6 @@ def fix_one(zh, hsk, vi, radical, old_mnemonic):
     return old_mnemonic, "verify_fail"
 
 
-# ============================================================
-# MAIN
-# ============================================================
 def main():
     print("=" * 62)
     print("FIX MNEMONICS - QWEN")
