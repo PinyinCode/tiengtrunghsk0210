@@ -212,32 +212,39 @@ MẸO CŨ (SAI BỘ THỦ):
 
 YÊU CẦU SỬA - viết lại đúng 5 dòng:
 
-💡 Chiết tự: Dùng bộ {rad_zh} ({rad_mean}). Nếu chữ có nhiều thành phần, liệt kê ĐẦY ĐỦ các thành phần (VD: 的 = 白 + 勺). KHÔNG bịa bộ khác.
+💡 Chiết tự: Liệt kê ĐẦY ĐỦ các thành phần tạo nên chữ {zh}, trong đó có bộ {rad_zh} ({rad_mean}). Format: {zh} = [thành phần 1] + [thành phần 2] + ... → [nghĩa logic]. VD: 的 = 白 (bạch) + 勺 (chước) → "cái thìa màu trắng".
 
-📌 Âm thanh: 2-3 từ gần âm tiếng Việt.
+📌 Âm thanh: 2-3 từ gần âm tiếng Việt của "{zh}". VD: "de" ≈ "đê", "dế".
 
-🎬 Câu chuyện: 1 CÂU ngắn (tối đa 25 chữ). BẮT BUỘC kết thúc bằng: "... = {vi}". Câu chuyện phải liên kết bộ {rad_zh} với nghĩa "{vi}".
+🎬 Câu chuyện: 1 CÂU ngắn (tối đa 25 chữ). Phải kết thúc bằng: "... = {vi.upper()}". Câu chuyện phải liên kết bộ {rad_zh} với nghĩa "{vi}".
 
 📎 Ví dụ: Câu tiếng Trung + pinyin + nghĩa Việt.
 
-🔗 Liên quan: 3-5 từ mà CHÍNH CHỮ ĐÓ có chứa bộ {rad_zh} trong cấu tạo chữ Hán. KHÔNG liệt kê từ chỉ có nghĩa tương tự. Ghi rõ từng từ theo format: 字 (pinyin - nghĩa).
+🔗 Liên quan: 3-5 từ mà CHÍNH CHỮ ĐÓ CÓ CHỨA bộ {rad_zh} trong cấu tạo chữ Hán. TUYỆT ĐỐI KHÔNG liệt kê từ không có bộ này. Ghi rõ format: 字 (pinyin - nghĩa).
 
 VÍ DỤ ĐÚNG cho 我 (bộ 戈 - giáo mác):
-💡 Chiết tự: 我 = 戈 (bộ giáo mác - vũ khí) → người cầm vũ khí tự vệ = TÔI
+💡 Chiết tự: 我 = 戈 (bộ giáo mác - vũ khí) + 扌 (tay) → người cầm vũ khí tự vệ = TÔI
 📌 Âm thanh: "wǒ" ≈ "ủa" → "Ủa, tôi đây mà!"
-🎬 Câu chuyện: Người cầm giáo (戈) đứng gác — chính là TÔI (我).
+🎬 Câu chuyện: Người cầm giáo (戈) đứng gác — chính là TÔI.
 📎 Ví dụ: 我是学生 (Wǒ shì xuéshēng) - Tôi là học sinh
-🔗 Liên quan: 找 (zhǎo - tìm), 战 (zhàn - chiến), 成 (chéng - thành), 或 (huò - hoặc)
+🔗 Liên quan: 战 (zhàn - chiến), 或 (huò - hoặc), 成 (chéng - thành), 戚 (qī - thân thích)
 
-VÍ DỤ SAI (không làm theo):
+VÍ DỤ ĐÚNG cho 的 (bộ 白 - trắng):
+💡 Chiết tự: 的 = 白 (bạch - trắng) + 勺 (chước - cái thìa) → "cái thìa màu trắng" → dùng để chỉ sự sở hữu = CỦA
+📌 Âm thanh: "de" ≈ "đê", "dế" (con dế) → "Đê của tôi"
+🎬 Câu chuyện: Cái thìa màu trắng (白 + 勺) là CỦA tôi.
+📎 Ví dụ: 这是我的书 (Zhè shì wǒ de shū) - Đây là sách của tôi
+🔗 Liên quan: 百 (bǎi - trăm), 伯 (bó - bác), 拍 (pāi - vỗ), 泊 (bó - đỗ), 帕 (pà - khăn tay)
+
+VÍ DỤ SAI (KHÔNG làm theo):
 💡 Chiết tự: 我 (bộ khẩu 口 + bộ đao 刀) → Miệng cầm dao = NÓI LỜI KỆ THÙ
 ❌ 我 KHÔNG thuộc bộ 口 hay 刀.
-🔗 Liên quan: 我, 你, 他 ❌ SAI vì 你/他 KHÔNG có bộ 戈
+🔗 Liên quan: 你, 他, 她 ❌ SAI vì không chứa bộ 戈.
 
 RÀNG BUỘC:
-- BẮT BUỘC dùng bộ {rad_zh}. KHÔNG bịa bộ khác.
-- Câu chuyện CHỈ 1 CÂU, tối đa 25 chữ, PHẢI kết thúc bằng "... = {vi}".
-- Từ liên quan PHẢI có chứa bộ {rad_zh} trong cấu tạo.
+- Chiết tự: liệt kê ĐẦY ĐỦ thành phần, không bỏ sót.
+- Câu chuyện: CHỈ 1 CÂU, tối đa 25 chữ, PHẢI kết bằng "... = {vi.upper()}".
+- Từ liên quan: PHẢI chứa bộ {rad_zh} trong cấu tạo chữ Hán.
 - Giữ ĐÚNG 5 dòng, mỗi dòng 1 emoji.
 
 Output (đúng 5 dòng):"""
