@@ -1,114 +1,92 @@
-name: Fix Mnemonics với Qwen (Manual Test)
+name: Fix Mnemonics (Qwen)
 
 on:
-  # Chạy thủ công từ tab Actions
   workflow_dispatch:
     inputs:
       limit:
-        description: 'Số entries tối đa cần fix (0 = tất cả)'
+        description: "So entry can fix (0 = tat ca)"
         required: true
-        default: '10'
-        type: string
+        default: "20"
       only_hsk:
-        description: 'Chỉ fix HSK nào (VD: HSK1,HSK2). Để trống = tất cả'
+        description: "Chi fix HSK nao (VD: HSK1,HSK2). Trong = tat ca"
         required: false
-        default: ''
-        type: string
+        default: ""
       delay:
-        description: 'Delay giữa các request (giây)'
+        description: "Delay giua cac request (giay)"
         required: true
-        default: '2.0'
-        type: string
+        default: "2.0"
       auto_commit:
-        description: 'Tự động commit kết quả? (true/false)'
+        description: "Tu dong commit? (1=on, 0=off)"
         required: true
-        default: 'false'
-        type: choice
-        options:
-          - 'false'
-          - 'true'
-      model:
-        description: 'Qwen model'
+        default: "0"
+      qwen_model:
+        description: "Qwen model (VD: qwen-flash, qwen-plus-character)"
         required: true
-        default: 'qwen-plus-character'
-        type: string
+        default: "qwen-flash"
 
-  # (Tùy chọn) Chạy tự động mỗi tuần vào Chủ nhật 2h sáng
-  # schedule:
-  #   - cron: '0 2 * * 0'
-
-# Cho phép ghi vào repo nếu auto_commit = true
 permissions:
   contents: write
 
 jobs:
-  fix-mnemonics:
-    name: Fix Mnemonics
+  fix:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
 
     steps:
-      # 1. Checkout repo
-      - name: 📥 Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
-          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
-      # 2. Setup Python
-      - name: 🐍 Setup Python 3.11
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
 
-      # 3. Cài dependencies
-      - name: 📦 Install dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install openai
+          pip install openai openpyxl cn2an jieba
 
-      # 4. Kiểm tra file input tồn tại
-      - name: 🔍 Verify input file
+      - name: Verify input
         run: |
           if [ ! -f "data/ai_mnemonics.json" ]; then
-            echo "❌ Không tìm thấy data/ai_mnemonics.json"
+            echo "Khong tim thay data/ai_mnemonics.json"
             exit 1
           fi
-          echo "✅ Tìm thấy data/ai_mnemonics.json"
-          echo "📊 Số entries: $(python -c "import json; print(len(json.load(open('data/ai_mnemonics.json'))))")"
+          echo "Tim thay data/ai_mnemonics.json"
+          python -c "import json; d=json.load(open('data/ai_mnemonics.json')); print('Tong entries:', len(d))"
 
-      # 5. Test import các module
-      - name: 🧪 Test imports
+      - name: Test imports
         run: |
-          python -c "from vocab_data.radical_analyzer import get_radical_for_word; print('✅ radical_analyzer OK')"
-          python -c "from vocab_data.radicals_db import get_radical_info; print('✅ radicals_db OK')"
+          python -c "from vocab_data.radical_analyzer import get_radical_for_word; print('radical_analyzer OK')"
+          python -c "from vocab_data.radicals_db import get_radical_info; print('radicals_db OK')"
 
-      # 6. Chạy script fix
-      - name: 🚀 Run fix_mnemonics_qwen.py
+      - name: Run fix mnemonics
+        continue-on-error: true
         env:
           DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
           QWEN_BASE_URL: ${{ secrets.QWEN_BASE_URL }}
-          QWEN_MODEL: ${{ inputs.model }}
-          LIMIT: ${{ inputs.limit }}
-          ONLY_HSK: ${{ inputs.only_hsk }}
-          DELAY: ${{ inputs.delay }}
-          LOG_EVERY: '5'
-          MAX_RETRIES: '2'
+          QWEN_MODEL: ${{ github.event.inputs.qwen_model }}
+          LIMIT: ${{ github.event.inputs.limit }}
+          ONLY_HSK: ${{ github.event.inputs.only_hsk }}
+          DELAY: ${{ github.event.inputs.delay }}
+          LOG_EVERY: "5"
+          MAX_RETRIES: "2"
         run: |
-          echo "════════════════════════════════════════"
-          echo "🚀 Bắt đầu fix mnemonics"
-          echo "   Model:    $QWEN_MODEL"
-          echo "   LIMIT:    $LIMIT"
-          echo "   ONLY_HSK: ${ONLY_HSK:-'(tất cả)'}"
-          echo "   DELAY:    ${DELAY}s"
-          echo "════════════════════════════════════════"
+          echo "Model: $QWEN_MODEL"
+          echo "LIMIT: $LIMIT"
+          echo "ONLY_HSK: ${ONLY_HSK:-'(tat ca)'}"
+          echo "DELAY: ${DELAY}s"
+          echo "y" | python vocab_data/fix_mnemonics_qwen.py
 
-          # Chạy với input 'y' tự động
-          echo "y" | python fix_mnemonics_qwen.py
+      - name: Show diff summary
+        if: always()
+        run: |
+          echo "DIFF SUMMARY"
+          git diff --stat data/ai_mnemonics.json || true
 
-      # 7. Upload backup + output làm artifact
-      - name: 📤 Upload artifacts
+      - name: Upload artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -119,59 +97,20 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
-      # 8. Hiển thị diff
-      - name: 📊 Show diff summary
+      - name: Rebuild index.html
         if: always()
-        run: |
-          echo "════════════════════════════════════════"
-          echo "📊 DIFF SUMMARY"
-          echo "════════════════════════════════════════"
-          git diff --stat data/ai_mnemonics.json || true
-          echo ""
-          echo "📝 Số dòng thay đổi:"
-          git diff --numstat data/ai_mnemonics.json || true
+        continue-on-error: true
+        run: python fix.py
 
-      # 9. Commit nếu auto_commit = true
-      - name: 💾 Auto commit kết quả
-        if: inputs.auto_commit == 'true'
+      - name: Commit output
+        if: always() && github.event.inputs.auto_commit == '1'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Chỉ commit file ai_mnemonics.json, bỏ qua backup
-          git add data/ai_mnemonics.json
-
+          git add -A
           if git diff --cached --quiet; then
-            echo "⚠️ Không có thay đổi để commit"
+            echo "Khong co thay doi"
           else
-            TIMESTAMP=$(date +'%Y-%m-%d %H:%M:%S')
-            git commit -m "🤖 Auto-fix mnemonics với Qwen [skip ci]
-
-          - Model: ${{ inputs.model }}
-          - LIMIT: ${{ inputs.limit }}
-          - ONLY_HSK: ${{ inputs.only_hsk }}
-          - Thời gian: $TIMESTAMP
-          - Run: #${{ github.run_number }}"
-
-            git push
-            echo "✅ Đã commit và push"
+            git commit -m "Fix AI mnemonics (radical correct) [skip ci]"
+            git push origin HEAD:${{ github.ref_name }}
           fi
-
-      # 10. Summary
-      - name: 📋 Job summary
-        if: always()
-        run: |
-          {
-            echo "## 🤖 Fix Mnemonics với Qwen"
-            echo ""
-            echo "| Thông số | Giá trị |"
-            echo "|----------|---------|"
-            echo "| Model | \`${{ inputs.model }}\` |"
-            echo "| LIMIT | \`${{ inputs.limit }}\` |"
-            echo "| ONLY_HSK | \`${{ inputs.only_hsk || '(tất cả)' }}\` |"
-            echo "| DELAY | \`${{ inputs.delay }}s\` |"
-            echo "| Auto commit | \`${{ inputs.auto_commit }}\` |"
-            echo "| Run number | #${{ github.run_number }} |"
-            echo ""
-            echo "📥 **Artifacts**: Tải file output ở phần Artifacts bên dưới"
-          } >> $GITHUB_STEP_SUMMARY
