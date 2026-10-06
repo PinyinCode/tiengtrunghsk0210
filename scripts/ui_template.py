@@ -3725,7 +3725,15 @@ function parseSearchQuery(rawQuery) {
         original: q
     };
 }
-
+function waitForData(callback) {
+    if (window.__dataLoaded) {
+        callback();
+    } else if (window.__dataLoadPromise) {
+        window.__dataLoadPromise.then(callback);
+    } else {
+        window.addEventListener('dataLoaded', callback, { once: true });
+    }
+}
 /* ═══════════════════════════════════════════════════════════ */
 /* SHOW SEARCH TOAST — Thông báo kết quả tìm kiếm đặc biệt     */
 /* ═══════════════════════════════════════════════════════════ */
@@ -3840,9 +3848,13 @@ function autoFitLabel(el) {
 /* DATASET SWITCHING                                             */
 /* ============================================================ */
 function initDatasetSelector() {
-    if (typeof DATASET_REGISTRY === 'undefined' || !DATASET_REGISTRY) return;
+    if (typeof DATASET_REGISTRY === 'undefined' || !DATASET_REGISTRY) {
+        if (window.__dataLoadPromise) {
+            window.__dataLoadPromise.then(function() { initDatasetSelector(); });
+        }
+        return;
+    }
     if (!DATASET_REGISTRY.tonghop) return;
-
     var labelEl = $('dsTonghopLabel');
     if (labelEl) {
         var count = DATASET_REGISTRY.tonghop.count
@@ -4207,6 +4219,9 @@ function computeLockStats(selectedTopics, allowedHsk, maxQ, isUnlimited) {
 /* SỬA: GET LIMITED DATA — GIỚI HẠN SỐ CÂU MỖI CHỦ ĐỀ           */
 /* ═══════════════════════════════════════════════════════════ */
 function getLimitedData() {
+    if (!window.__dataLoaded || !RAW_DATA || RAW_DATA.length === 0) {
+        return [];
+    }
     if (window.__onboardingOverride && Array.isArray(window.__onboardingOverride)
         && window.__onboardingOverride.length > 0
         && !state.search && !state.hsk && !state.subject) {
@@ -4276,6 +4291,9 @@ function getAllowedHskList() {
 }
 
 function getAllowedSubjectList() {
+    if (!window.__dataLoaded || !RAW_DATA || RAW_DATA.length === 0) {
+        return [];
+    }
     var info = getTierInfo();
     if (info.tier === 'active') {
         var set = {};
@@ -5540,13 +5558,28 @@ function initApp() {
         applyFilter();
     });
 
-    try { buildFilters(); applyFilter(); }
-    catch(e) { console.error('Init error:', e); }
+    waitForData(function() {
+        try { buildFilters(); applyFilter(); }
+        catch(e) { console.error('Init error:', e); }
+    });
+
+    window.addEventListener('dataLoadError', function(e) {
+        console.error('Data load error:', e.detail);
+        mobileWrapper.innerHTML = '<div class="no-data">' +
+            '<i class="fas fa-exclamation-triangle"></i>' +
+            'Không tải được dữ liệu. Vui lòng thử lại sau.</div>';
+    });
 }
 /* ═══════════════════════════════════════════════════════════ */
 /* SỬA: REFRESH APP — VẼ LẠI BANNER SAU LOGIN/RELOAD            */
 /* ═══════════════════════════════════════════════════════════ */
 function refreshApp() {
+    if (!window.__dataLoaded) {
+        if (window.__dataLoadPromise) {
+            window.__dataLoadPromise.then(function() { refreshApp(); });
+        }
+        return;
+    }
     buildFilters();
     applyFilter();
     applyDisplayState();
@@ -7806,6 +7839,13 @@ function pfBuildDatasetSelect() {
     var sel = $('pfDatasetSelect');
     var row = $('pfDatasetRow');
     if (!sel) return;
+
+    if (!window.__dataLoaded) {
+        if (window.__dataLoadPromise) {
+            window.__dataLoadPromise.then(function() { pfBuildDatasetSelect(); });
+        }
+        return;
+    }
 
     var canAccessAll = canAccessChuyenNganh();
     var current = (typeof CURRENT_DATASET !== 'undefined') ? CURRENT_DATASET : 'tonghop';
