@@ -4219,6 +4219,9 @@ function computeLockStats(selectedTopics, allowedHsk, maxQ, isUnlimited) {
 /* SỬA: GET LIMITED DATA — GIỚI HẠN SỐ CÂU MỖI CHỦ ĐỀ           */
 /* ═══════════════════════════════════════════════════════════ */
 function getLimitedData() {
+    if (!window.__dataLoaded || !RAW_DATA || RAW_DATA.length === 0) {
+        return [];
+    }
     if (window.__onboardingOverride && Array.isArray(window.__onboardingOverride)
         && window.__onboardingOverride.length > 0
         && !state.search && !state.hsk && !state.subject) {
@@ -4288,6 +4291,9 @@ function getAllowedHskList() {
 }
 
 function getAllowedSubjectList() {
+    if (!window.__dataLoaded || !RAW_DATA || RAW_DATA.length === 0) {
+        return [];
+    }
     var info = getTierInfo();
     if (info.tier === 'active') {
         var set = {};
