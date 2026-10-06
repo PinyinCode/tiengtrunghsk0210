@@ -191,63 +191,71 @@ def mnemonic_has_radical(mnemonic, radical):
     return False
 
 
-def build_prompt(zh, hsk, vi, radical, old_mnemonic):
+def build_prompt_part1(zh, hsk, vi, radical):
+    """Prompt cho chiết tự + âm thanh + câu chuyện."""
     rad_zh = radical.get("zh", "")
-    rad_base = radical.get("base_zh", "")
-    rad_py = radical.get("pinyin", "")
     rad_mean = radical.get("meaning", "")
 
-    if rad_base and rad_base != rad_zh:
-        rad_line = f"{rad_zh} (biến thể của {rad_base} - {rad_py} - {rad_mean})"
-    else:
-        rad_line = f"{rad_zh} ({rad_py} - {rad_mean})"
-
-    return f"""Bạn là giáo viên tiếng Trung. Sửa lại mẹo nhớ cho chữ {zh}.
+    return f"""Bạn là giáo viên tiếng Trung. Viết mẹo nhớ cho chữ {zh}.
 
 CHỮ: {zh} ({hsk}) - nghĩa: {vi}
-BỘ THỦ CHÍNH: {rad_line}
+BỘ THỦ: {rad_zh} ({rad_mean})
 
-MẸO CŨ (SAI BỘ THỦ):
-{old_mnemonic}
+Viết 3 dòng:
 
-YÊU CẦU SỬA - viết lại đúng 5 dòng:
+💡 Chiết tự: Liệt kê ĐẦY ĐỦ các thành phần của {zh}. Format: {zh} = [A] + [B] + ... → [nghĩa]
+VD: 的 = 白 (bạch) + 勺 (chước) → "cái thìa trắng"
 
-💡 Chiết tự: Liệt kê ĐẦY ĐỦ các thành phần tạo nên chữ {zh}, trong đó có bộ {rad_zh} ({rad_mean}). Format: {zh} = [thành phần 1] + [thành phần 2] + ... → [nghĩa logic]. VD: 的 = 白 (bạch) + 勺 (chước) → "cái thìa màu trắng".
+📌 Âm thanh: 2-3 từ gần âm tiếng Việt
 
-📌 Âm thanh: 2-3 từ gần âm tiếng Việt của "{zh}". VD: "de" ≈ "đê", "dế".
+🎬 Câu chuyện: 1 CÂU ngắn (tối đa 25 chữ). PHẢI kết bằng "... = {vi.upper()}"
 
-🎬 Câu chuyện: 1 CÂU ngắn (tối đa 25 chữ). Phải kết thúc bằng: "... = {vi.upper()}". Câu chuyện phải liên kết bộ {rad_zh} với nghĩa "{vi}".
+Output (đúng 3 dòng):"""
 
-📎 Ví dụ: Câu tiếng Trung + pinyin + nghĩa Việt.
 
-🔗 Liên quan: 3-5 từ mà CHÍNH CHỮ ĐÓ CÓ CHỨA bộ {rad_zh} trong cấu tạo chữ Hán. TUYỆT ĐỐI KHÔNG liệt kê từ không có bộ này. Ghi rõ format: 字 (pinyin - nghĩa).
+def build_prompt_part2(zh, vi, radical):
+    """Prompt cho ví dụ + từ liên quan."""
+    rad_zh = radical.get("zh", "")
 
-VÍ DỤ ĐÚNG cho 我 (bộ 戈 - giáo mác):
-💡 Chiết tự: 我 = 戈 (bộ giáo mác - vũ khí) + 扌 (tay) → người cầm vũ khí tự vệ = TÔI
-📌 Âm thanh: "wǒ" ≈ "ủa" → "Ủa, tôi đây mà!"
-🎬 Câu chuyện: Người cầm giáo (戈) đứng gác — chính là TÔI.
-📎 Ví dụ: 我是学生 (Wǒ shì xuéshēng) - Tôi là học sinh
-🔗 Liên quan: 战 (zhàn - chiến), 或 (huò - hoặc), 成 (chéng - thành), 戚 (qī - thân thích)
+    return f"""Cho chữ {zh} (nghĩa: {vi}), bộ thủ {rad_zh}.
 
-VÍ DỤ ĐÚNG cho 的 (bộ 白 - trắng):
-💡 Chiết tự: 的 = 白 (bạch - trắng) + 勺 (chước - cái thìa) → "cái thìa màu trắng" → dùng để chỉ sự sở hữu = CỦA
-📌 Âm thanh: "de" ≈ "đê", "dế" (con dế) → "Đê của tôi"
-🎬 Câu chuyện: Cái thìa màu trắng (白 + 勺) là CỦA tôi.
-📎 Ví dụ: 这是我的书 (Zhè shì wǒ de shū) - Đây là sách của tôi
-🔗 Liên quan: 百 (bǎi - trăm), 伯 (bó - bác), 拍 (pāi - vỗ), 泊 (bó - đỗ), 帕 (pà - khăn tay)
+Viết 2 dòng:
 
-VÍ DỤ SAI (KHÔNG làm theo):
-💡 Chiết tự: 我 (bộ khẩu 口 + bộ đao 刀) → Miệng cầm dao = NÓI LỜI KỆ THÙ
-❌ 我 KHÔNG thuộc bộ 口 hay 刀.
-🔗 Liên quan: 你, 他, 她 ❌ SAI vì không chứa bộ 戈.
+📎 Ví dụ: 1 câu tiếng Trung + pinyin + nghĩa Việt
 
-RÀNG BUỘC:
-- Chiết tự: liệt kê ĐẦY ĐỦ thành phần, không bỏ sót.
-- Câu chuyện: CHỈ 1 CÂU, tối đa 25 chữ, PHẢI kết bằng "... = {vi.upper()}".
-- Từ liên quan: PHẢI chứa bộ {rad_zh} trong cấu tạo chữ Hán.
-- Giữ ĐÚNG 5 dòng, mỗi dòng 1 emoji.
+🔗 Liên quan: 3-5 từ CÓ CHỨA bộ {rad_zh} trong cấu tạo. Format: 字 (pinyin - nghĩa)
+VD với bộ 白: 百 (bǎi - trăm), 拍 (pāi - vỗ), 泊 (bó - đỗ)
 
-Output (đúng 5 dòng):"""
+Output (đúng 2 dòng):"""
+
+
+def fix_one(zh, hsk, vi, radical, old_mnemonic):
+    for retry in range(MAX_RETRIES + 1):
+        # Gọi 2 lần
+        p1 = build_prompt_part1(zh, hsk, vi, radical)
+        r1 = call_qwen(p1)
+
+        if not r1:
+            time.sleep(2)
+            continue
+
+        p2 = build_prompt_part2(zh, vi, radical)
+        r2 = call_qwen(p2)
+
+        if not r2:
+            time.sleep(2)
+            continue
+
+        # Ghép 2 phần
+        new_mn = r1.strip() + "\n" + r2.strip()
+
+        if mnemonic_has_radical(new_mn, radical):
+            return new_mn, "ok"
+        else:
+            print(f"      Verify fail (lan {retry+1}): meo moi khong chua bo {radical['zh']}")
+            time.sleep(2)
+
+    return old_mnemonic, "verify_fail"
 
 def call_qwen(prompt):
     if not API_KEY:
