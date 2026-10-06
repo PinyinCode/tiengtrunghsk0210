@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-r"""
+"""
 fix_mnemonics_qwen.py
-Doc ai_mnemonics.json -> tra bo thu dung -> goi Qwen sua -> verify -> luu.
+Doc ai_mnemonics.json -> tra bo thu -> goi Qwen sua -> verify -> luu.
 """
 
 import os
@@ -39,7 +39,7 @@ except ImportError:
 try:
     from openai import OpenAI
 except ImportError:
-    print("[FIX] Chua cai openai. Chay: pip install openai")
+    print("[FIX] Chua cai openai")
     sys.exit(1)
 
 
@@ -82,7 +82,7 @@ if not INPUT_FILE:
 
 DATA_DIR = os.path.dirname(INPUT_FILE)
 TS = datetime.now().strftime("%Y%m%d_%H%M%S")
-BACKUP_FILE = os.path.join(DATA_DIR, f"ai_mnemonics.backup_{TS}.json")
+BACKUP_FILE = os.path.join(DATA_DIR, "ai_mnemonics.backup_" + TS + ".json")
 
 
 def parse_key(key):
@@ -103,30 +103,19 @@ def extract_vi(mnemonic):
     for line in mnemonic.split("\n"):
         line = line.strip()
         if line.startswith("📎") or line.startswith("Ví dụ"):
-            if " - " in line:
-                parts = line.rsplit(" - ", 1)
-                if len(parts) == 2:
-                    vi = parts[1].strip()
-                    if vi and not any(c in vi for c in ",.!?;:"):
-                        return vi[:60]
-
-    for line in mnemonic.split("\n"):
-        line = line.strip()
-        for prefix in ["Nghia:", "Nghĩa:", "→", "="]:
-            if line.startswith(prefix):
-                result = line[len(prefix):].strip()
-                if result and 2 <= len(result) <= 60:
-                    return result[:60]
-
-    for line in mnemonic.split("\n"):
-        line = line.strip()
-        if " - " in line and any(c in line for c in "àáảãạăâđêôơư"):
-            parts = line.rsplit(" - ", 1)
-            if len(parts) == 2:
-                vi = parts[1].strip()
-                if vi and 2 <= len(vi) <= 60:
-                    return vi
-
+            if " - " = in line:
+                parts = line.rs partsplit(" - ", 1)
+                if len[(parts) == 2:
+                    vi1].strip()
+                    bad_chars = ",.!?;:()"
+                    has_bad = False
+                    for c in bad_chars:
+                        if c in vi:
+                            has_bad = True
+                            break
+                    if vi and not has_bad:
+                        if 2 <= len(vi) <= 60:
+                            return vi
     return ""
 
 
@@ -196,42 +185,39 @@ def build_prompt_part1(zh, hsk, vi, radical):
     rad_zh = radical.get("zh", "")
     rad_mean = radical.get("meaning", "")
 
-    return f"""Bạn là giáo viên tiếng Trung. Viết mẹo nhớ cho chữ {zh}.
+    return f"""Ban la giao vien tieng Trung. Viet meo nho cho chu {zh}.
 
-CHỮ: {zh} ({hsk}) - nghĩa: {vi}
-BỘ THỦ: {rad_zh} ({rad_mean})
+CHU: {zh} ({hsk}) - nghia: {vi}
+BO THU: {rad_zh} ({rad_mean})
 
-Viết ĐÚNG 3 dòng, KHÔNG thêm dòng nào khác:
+Viet DUNG 3 dong, KHONG them dong nao khac:
 
-💡 Chiết tự: Liệt kê ĐẦY ĐỦ các thành phần của {zh}. Format: {zh} = [A] + [B] + ... → [nghĩa]
-VD: 的 = 白 (bạch) + 勺 (chước) → "cái thìa trắng"
+Chiet tu: Liet ke DAY DU cac thanh phan cua {zh}. Format: {zh} = [A] + [B] + ... => [nghia]
 
-📌 Âm thanh: 2-3 từ gần âm tiếng Việt
+Am thanh: 2-3 tu gan am tieng Viet
 
-🎬 Câu chuyện: 1 CÂU ngắn (tối đa 25 chữ). PHẢI kết bằng "... = {vi.upper()}"
+Cau chuyen: 1 CAU ngan (toi da 25 chu). PHAI ket bang "... = {vi.upper()}"
 
-Output (CHỈ 3 dòng, bắt đầu bằng 💡 📌 🎬):"""
+Output (CHI 3 dong):"""
 
 
 def build_prompt_part2(zh, vi, radical):
     rad_zh = radical.get("zh", "")
 
-    return f"""Cho chữ {zh} (nghĩa: {vi}), bộ thủ {rad_zh}.
+    return f"""Cho chu {zh} (nghia: {vi}), bo thu {rad_zh}.
 
-Viết ĐÚNG 2 dòng, KHÔNG thêm dòng nào khác:
+Viet DUNG 2 dong, KHONG them dong nao khac:
 
-📎 Ví dụ: 1 câu tiếng Trung + pinyin + nghĩa Việt
-VD: 这是我的书 (Zhè shì wǒ de shū) - Đây là sách của tôi
+Vi du: 1 cau tieng Trung + pinyin + nghia Viet
 
-🔗 Liên quan: 3-5 từ CÓ CHỨA bộ {rad_zh} trong cấu tạo. Format: 字 (pinyin - nghĩa)
-VD với bộ 白: 百 (bǎi - trăm), 拍 (pāi - vỗ), 泊 (bó - đỗ)
+Lien quan: 3-5 tu CO CHUA bo {rad_zh} trong cau tao. Format: chu (pinyin - nghia)
 
-Output (CHỈ 2 dòng, bắt đầu bằng 📎 🔗):"""
+Output (CHI 2 dong):"""
 
 
 def clean_mnemonic(mn):
-    emojis = ['💡', '📌', '🎬', '📎', '🔗']
-    lines = mn.split('\n')
+    emojis = ["\U0001F4A1", "\U0001F4CC", "\U0001F3AC", "\U0001F4CE", "\U0001F517"]
+    lines = mn.split("\n")
     result = {}
 
     for line in lines:
@@ -248,12 +234,15 @@ def clean_mnemonic(mn):
         if emo in result:
             output.append(result[emo])
 
-    return '\n'.join(output)
+    return "\n".join(output)
 
 
 def has_all_5_lines(mn):
-    emojis = ['💡', '📌', '🎬', '📎', '🔗']
-    return all(e in mn for e in emojis)
+    emojis = ["\U0001F4A1", "\U0001F4CC", "\U0001F3AC", "\U0001F4CE", "\U0001F517"]
+    for e in emojis:
+        if e not in mn:
+            return False
+    return True
 
 
 def call_qwen(prompt):
@@ -325,7 +314,11 @@ def fix_one(zh, hsk, vi, radical, old_mnemonic):
         new_mn = clean_mnemonic(new_mn)
 
         if not has_all_5_lines(new_mn):
-            missing = [e for e in ['💡', '📌', '🎬', '📎', '🔗'] if e not in new_mn]
+            missing = []
+            emojis = ["\U0001F4A1", "\U0001F4CC", "\U0001F3AC", "\U0001F4CE", "\U0001F517"]
+            for e in emojis:
+                if e not in new_mn:
+                    missing.append(e)
             print(f"      Thieu dong (lan {retry+1}): {missing}")
             time.sleep(2)
             continue
@@ -343,7 +336,6 @@ def main():
     print("=" * 62)
     print("FIX MNEMONICS - QWEN")
     print(f"   Model:     {MODEL_ID}")
-    print(f"   Base URL:  {BASE_URL}")
     print(f"   Input:     {INPUT_FILE}")
     print(f"   Backup:    {BACKUP_FILE}")
     print(f"   LIMIT:     {LIMIT}")
@@ -355,7 +347,7 @@ def main():
         print("Chua set DASHSCOPE_API_KEY")
         sys.exit(1)
 
-    print(f"\nDang doc file...")
+    print("\nDang doc file...")
     with open(INPUT_FILE, "r", encoding="utf-8") as f:
         data = json.load(f)
 
@@ -365,11 +357,12 @@ def main():
     shutil.copy(INPUT_FILE, BACKUP_FILE)
     print(f"Backup: {BACKUP_FILE}")
 
-    print(f"\nBuoc 1: Quet tim entries sai...")
+    print("\nBuoc 1: Quet tim entries sai...")
 
     suspects = []
     skip_compound = 0
     skip_no_db = 0
+    skip_no_vi = 0
 
     for idx, (key, mnemonic) in enumerate(data.items(), 1):
         if idx % 500 == 0:
@@ -391,26 +384,31 @@ def main():
             continue
 
         if not mnemonic_has_radical(mnemonic, rad):
-            suspects.append((key, info, rad, mnemonic))
+            vi = extract_vi(mnemonic)
+            if not vi:
+                skip_no_vi += 1
+                continue
+            suspects.append((key, info, rad, mnemonic, vi))
 
-    print(f"\nKet qua:")
-    print(f"   Tim thay: {len(suspects)} entries sai")
+    print("\nKet qua:")
+    print(f"   Tim thay: {len(suspects)} entries sai (co the fix)")
     print(f"   Bo qua:   {skip_compound} (chu ghep)")
     print(f"   Bo qua:   {skip_no_db} (DB thieu)")
+    print(f"   Bo qua:   {skip_no_vi} (khong extract duoc nghia)")
 
     if not suspects:
-        print("\nKhong co entry nao sai")
+        print("\nKhong co entry nao fix duoc")
         return
 
     if LIMIT > 0:
         suspects = suspects[:LIMIT]
         print(f"   LIMIT: chi fix {LIMIT} entries dau")
 
-    print(f"\n10 entries dau:")
-    for key, info, rad, _ in suspects[:10]:
-        print(f"   {key} -> bo: {rad['zh']} ({rad.get('meaning', '')[:30]})")
+    print("\n10 entries dau:")
+    for key, info, rad, _, vi in suspects[:10]:
+        print(f"   {key} -> bo: {rad['zh']} | nghia: {vi[:30]}")
 
-    print(f"\nSe goi Qwen {len(suspects)} lan (~{len(suspects) * 400:,} tokens)")
+    print(f"\nSe goi Qwen {len(suspects)} lan")
     print(f"Thoi gian: ~{len(suspects) * (DELAY + 2) // 60} phut")
 
     if sys.stdin.isatty():
@@ -419,21 +417,20 @@ def main():
             print("Huy")
             return
     else:
-        print("\n[CI] Tu dong tiep tuc (khong co stdin)")
+        print("\n[CI] Tu dong tiep tuc")
 
-    print(f"\nBuoc 2: Bat dau fix...")
+    print("\nBuoc 2: Bat dau fix...")
 
     ok = 0
     fail_verify = 0
     fail_api = 0
 
     try:
-        for i, (key, info, rad, old_mn) in enumerate(suspects, 1):
+        for i, (key, info, rad, old_mn, vi) in enumerate(suspects, 1):
             zh = info["zh"]
-            vi = extract_vi(old_mn) or "?"
 
             print(f"\n[{i}/{len(suspects)}] {key}")
-            print(f"   Bo dung: {rad['zh']} ({rad.get('meaning', '')})")
+            print(f"   Bo dung: {rad['zh']}")
             print(f"   Nghia: {vi}")
 
             try:
@@ -442,13 +439,13 @@ def main():
                 if status == "ok":
                     data[key] = new_mn
                     ok += 1
-                    print(f"   OK")
+                    print("   OK")
                 elif status == "verify_fail":
                     fail_verify += 1
-                    print(f"   Verify fail -> giu meo cu")
+                    print("   Verify fail")
                 else:
                     fail_api += 1
-                    print(f"   API fail")
+                    print("   API fail")
 
             except RuntimeError:
                 raise
@@ -467,7 +464,7 @@ def main():
         json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
 
     print("\n" + "=" * 62)
-    print(f"HOAN TAT")
+    print("HOAN TAT")
     print(f"   Fix OK:      {ok}")
     print(f"   Verify fail: {fail_verify}")
     print(f"   API fail:    {fail_api}")
