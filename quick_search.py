@@ -247,30 +247,47 @@ def build_quick_search_js():
         var raw = input.value.trim();
         if(!raw){ showToast('Nhap gi do de tim...', true); input.focus(); return; }
 
-        // ⭐ O search tinh chinh
-        var si = $id('searchInput');
-        if(!si){
-            showToast('Khong co o search chinh', true);
-            return;
+        // ⭐ Kiem tra dang o Practice Full khong
+        var pfModal = $id('practiceFullModal');
+        var isPFOpen = pfModal && pfModal.classList.contains('show');
+
+        if(isPFOpen){
+            // ⭐ DANG O FULL -> ghi vao pfSearchInput
+            var pfsi = $id('pfSearchInput');
+            if(!pfsi){
+                showToast('Khong co o search Full', true);
+                return;
+            }
+            pfsi.value = raw;
+            try{
+                pfsi.dispatchEvent(new Event('input', { bubbles: true }));
+            }catch(e){
+                var ev2 = document.createEvent('Event');
+                ev2.initEvent('input', true, true);
+                pfsi.dispatchEvent(ev2);
+            }
+            var pfcb = $id('pfClearSearchBtn');
+            if(pfcb) pfcb.classList.add('show');
+        } else {
+            // ⭐ O TRANG CHU -> ghi vao searchInput (nhu cu)
+            var si = $id('searchInput');
+            if(!si){
+                showToast('Khong co o search chinh', true);
+                return;
+            }
+            si.value = raw;
+            try{
+                si.dispatchEvent(new Event('input', { bubbles: true }));
+            }catch(e){
+                var ev = document.createEvent('Event');
+                ev.initEvent('input', true, true);
+                si.dispatchEvent(ev);
+            }
+            var cb = $id('clearSearchBtn');
+            if(cb) cb.classList.add('show');
         }
 
-        // ⭐ Buoc 1: Ghi gia tri vao o search tinh
-        si.value = raw;
-
-        // ⭐ Buoc 2: Trigger event "input" - y het nguoi dung go tay
-        try{
-            si.dispatchEvent(new Event('input', { bubbles: true }));
-        }catch(e){
-            var ev = document.createEvent('Event');
-            ev.initEvent('input', true, true);
-            si.dispatchEvent(ev);
-        }
-
-        // ⭐ Buoc 3: Hien nut X cua o search tinh
-        var cb = $id('clearSearchBtn');
-        if(cb) cb.classList.add('show');
-
-        // ⭐ Buoc 4: Dong panel + scroll len
+        // ⭐ Dong panel
         closePanel();
 
         setTimeout(function(){
@@ -283,7 +300,6 @@ def build_quick_search_js():
 
         showToast('Da tim: ' + raw);
     }
-
     function openPanel(){
         QS.open = true;
         var p = $id('quickSearchPanel');
