@@ -102,19 +102,22 @@ def extract_vi(mnemonic):
 
     for line in mnemonic.split("\n"):
         line = line.strip()
-        if line.startswith("Ví dụ") or line.startswith("Vi du"):
+        if line.startswith("📎") or line.startswith("Ví dụ"):
             if " - " in line:
                 parts = line.rsplit(" - ", 1)
                 if len(parts) == 2:
                     vi = parts[1].strip()
-                    if vi and len(vi) >= 2 and len(vi) <= 60:
-                        bad = False
-                        for c in ",.!?;:()":
-                            if c in vi:
-                                bad = True
-                                break
-                        if not bad:
-                            return vi
+                    # Bỏ dấu câu ở CUỐI câu
+                    while vi and vi[-1] in ".!?,;:":
+                        vi = vi[:-1].strip()
+                    # Loại bỏ nếu còn dấu câu GIỮA câu
+                    bad = False
+                    for c in ",;:()":
+                        if c in vi:
+                            bad = True
+                            break
+                    if vi and not bad and 2 <= len(vi) <= 60:
+                        return vi
     return ""
 
 
