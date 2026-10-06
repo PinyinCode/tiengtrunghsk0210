@@ -29412,19 +29412,6 @@ window.__switchRawData = function(datasetId) {
         };
     };
 
-    window.__fixpyFilterByHskStt = function(parsed) {
-        var pool = window.__findByHskStt(parsed.hsk, null);
-        if (parsed.startStt === null) return pool;
-        return pool.filter(function(r) {
-            var sttStr = (r.stt_original != null && String(r.stt_original).trim() !== '')
-                       ? String(r.stt_original).trim()
-                       : String(r.stt || '').replace(/^[^0-9]*-/, '');
-            var n = parseInt(sttStr, 10);
-            if (isNaN(n)) return false;
-            return n >= parsed.startStt && n <= parsed.endStt;
-        });
-    };
-
     function patchApplyFilter() {
         if (window.__fixPyApplyFilterPatched) return;
         var origApply = window.applyFilter;
