@@ -602,22 +602,15 @@ def _split_components(char):
     if HAS_CJKRADLIB and _RADICAL_FINDER:
         try:
             obj = _RADICAL_FINDER.search(char)
-
-            # _RadicalObject có attributes, không phải dict
-            # Truy cập bằng getattr
-            compositions = getattr(obj, 'compositions', None)
-            if compositions is None:
-                # Thử convert sang dict
-                try:
-                    compositions = obj.__dict__.get('compositions', [])
-                except Exception:
-                    compositions = []
-
-            if not compositions:
-                return []
+            compositions = getattr(obj, 'compositions', [])
 
             result = []
             for comp in compositions:
+                if not comp:
+                    continue
+                if not ('\u4e00' <= comp[0] <= '\u9fff'):
+                    continue
+
                 info = get_radical_info(comp)
                 if info:
                     result.append({
@@ -640,39 +633,6 @@ def _split_components(char):
                 return result
         except Exception as e:
             print(f"[WARN] cjkradlib.search('{char}') error: {e}")
-
-    return []
-    if HAS_CJKRADLIB and _RADICAL_FINDER:
-        try:
-            # DÙNG .search() THAY VÌ .find()
-            data = _RADICAL_FINDER.search(char)
-            compositions = data.get("compositions", [])
-
-            result = []
-            for comp in compositions:
-                info = get_radical_info(comp)
-                if info:
-                    result.append({
-                        "zh": comp,
-                        "pinyin": info.get("pinyin", ""),
-                        "strokes": info.get("strokes", ""),
-                        "meaning": info.get("meaning", ""),
-                        "position": _get_position(comp),
-                    })
-                else:
-                    # Component không phải bộ thủ (VD: 勺) → vẫn thêm vào
-                    result.append({
-                        "zh": comp,
-                        "pinyin": "",
-                        "strokes": "",
-                        "meaning": "",
-                        "position": _get_position(comp),
-                    })
-
-            if result:
-                return result
-        except Exception as e:
-            print(f"      [WARN] cjkradlib.search('{char}') error: {e}")
 
     return []
 
