@@ -232,10 +232,20 @@ VD với bộ 白: 百 (bǎi - trăm), 拍 (pāi - vỗ), 泊 (bó - đỗ)
 
 Output (đúng 2 dòng):"""
 
-
+def clean_mnemonic(mn):
+    """Lọc bỏ dòng thừa, chỉ giữ dòng bắt đầu bằng emoji."""
+    emojis = ['💡', '📌', '🎬', '📎', '🔗']
+    lines = mn.split('\n')
+    cleaned = []
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        if any(line.startswith(e) for e in emojis):
+            cleaned.append(line)
+    return '\n'.join(cleaned)
 def fix_one(zh, hsk, vi, radical, old_mnemonic):
     for retry in range(MAX_RETRIES + 1):
-        # Gọi 2 lần
         p1 = build_prompt_part1(zh, hsk, vi, radical)
         r1 = call_qwen(p1)
 
@@ -252,6 +262,9 @@ def fix_one(zh, hsk, vi, radical, old_mnemonic):
 
         # Ghép 2 phần
         new_mn = r1.strip() + "\n" + r2.strip()
+
+        # Lọc bỏ dòng thừa
+        new_mn = clean_mnemonic(new_mn)
 
         if mnemonic_has_radical(new_mn, radical):
             return new_mn, "ok"
