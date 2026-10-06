@@ -306,22 +306,6 @@ def call_qwen(prompt):
     return ""
 
 
-def fix_one(zh, hsk, vi, radical, old_mnemonic):
-    for retry in range(MAX_RETRIES + 1):
-        prompt = build_prompt(zh, hsk, vi, radical, old_mnemonic)
-        new_mn = call_qwen(prompt)
-
-        if not new_mn:
-            time.sleep(2)
-            continue
-
-        if mnemonic_has_radical(new_mn, radical):
-            return new_mn, "ok"
-        else:
-            print(f"      Verify fail (lan {retry+1}): meo moi khong chua bo {radical['zh']}")
-            time.sleep(2)
-
-    return old_mnemonic, "verify_fail"
 
 
 def main():
