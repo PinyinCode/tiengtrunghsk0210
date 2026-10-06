@@ -233,38 +233,55 @@ VD với bộ 白: 百 (bǎi - trăm), 拍 (pāi - vỗ), 泊 (bó - đỗ)
 Output (đúng 2 dòng):"""
 
 def clean_mnemonic(mn):
-    """Lọc bỏ dòng thừa, chỉ giữ dòng bắt đầu bằng emoji."""
+    """Lọc bỏ dòng thừa, chỉ giữ 5 dòng có emoji đúng thứ tự."""
     emojis = ['💡', '📌', '🎬', '📎', '🔗']
     lines = mn.split('\n')
-    cleaned = []
+    result = {}
+    
     for line in lines:
         line = line.strip()
         if not line:
             continue
-        if any(line.startswith(e) for e in emojis):
-            cleaned.append(line)
-    return '\n'.join(cleaned)
+        for emo in emojis:
+            if line.startswith(emo) and emo not in result:
+                result[emo] = line
+                break
+    
+    # Trả về đúng thứ tự
+    output = []
+    for emo in emojis:
+        if emo in result:
+            output.append(result[emo])
+    
+    return '\n'.join(output)
+def has_all_5_lines(mn):
+    """Kiểm tra mnemonic có đủ 5 dòng emoji."""
+    emojis = ['💡', '📌', '🎬', '📎', '🔗']
+    return all(e in mn for e in emojis)
+
+
 def fix_one(zh, hsk, vi, radical, old_mnemonic):
     for retry in range(MAX_RETRIES + 1):
         p1 = build_prompt_part1(zh, hsk, vi, radical)
         r1 = call_qwen(p1)
-
         if not r1:
             time.sleep(2)
             continue
 
         p2 = build_prompt_part2(zh, vi, radical)
         r2 = call_qwen(p2)
-
         if not r2:
             time.sleep(2)
             continue
 
-        # Ghép 2 phần
         new_mn = r1.strip() + "\n" + r2.strip()
-
-        # Lọc bỏ dòng thừa
         new_mn = clean_mnemonic(new_mn)
+
+        # Kiểm tra đủ 5 dòng
+        if not has_all_5_lines(new_mn):
+            print(f"      Thieu dong (lan {retry+1}): {[e for e in ['💡','📌','🎬','📎','🔗'] if e not in new_mn]}")
+            time.sleep(2)
+            continue
 
         if mnemonic_has_radical(new_mn, radical):
             return new_mn, "ok"
@@ -273,7 +290,6 @@ def fix_one(zh, hsk, vi, radical, old_mnemonic):
             time.sleep(2)
 
     return old_mnemonic, "verify_fail"
-
 def call_qwen(prompt):
     if not API_KEY:
         return ""
