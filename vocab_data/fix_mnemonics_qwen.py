@@ -1,11 +1,7 @@
 # -*- coding: utf-8 -*-
 r"""
 fix_mnemonics_qwen.py
-Đọc ai_mnemonics.json -> tra bộ thủ đúng -> gọi Qwen sửa -> verify -> lưu.
-
-Chạy:
-    export DASHSCOPE_API_KEY="sk-..."
-    python vocab_data/fix_mnemonics_qwen.py
+Doc ai_mnemonics.json -> tra bo thu dung -> goi Qwen sua -> verify -> luu.
 """
 
 import os
@@ -37,13 +33,13 @@ except ImportError:
         )
         from radicals_db import get_radical_info
     except ImportError as e:
-        print(f"[FIX] Lỗi load radical: {e}")
+        print(f"[FIX] Loi load radical: {e}")
         sys.exit(1)
 
 try:
     from openai import OpenAI
 except ImportError:
-    print("[FIX] Chưa cài openai. Chạy: pip install openai")
+    print("[FIX] Chua cai openai. Chay: pip install openai")
     sys.exit(1)
 
 
@@ -81,7 +77,7 @@ def find_input_file():
 
 INPUT_FILE = find_input_file()
 if not INPUT_FILE:
-    print("[FIX] Không tìm thấy ai_mnemonics.json")
+    print("[FIX] Khong tim thay ai_mnemonics.json")
     sys.exit(1)
 
 DATA_DIR = os.path.dirname(INPUT_FILE)
@@ -101,11 +97,9 @@ def parse_key(key):
 
 
 def extract_vi(mnemonic):
-    """Trích xuất nghĩa tiếng Việt từ mnemonic cũ."""
     if not mnemonic:
         return ""
 
-    # 1. Ưu tiên dòng có 📎 hoặc Ví dụ — dùng rsplit để lấy phần SAU dấu " - " cuối
     for line in mnemonic.split("\n"):
         line = line.strip()
         if line.startswith("📎") or line.startswith("Ví dụ"):
@@ -113,20 +107,17 @@ def extract_vi(mnemonic):
                 parts = line.rsplit(" - ", 1)
                 if len(parts) == 2:
                     vi = parts[1].strip()
-                    # Loại bỏ nếu kết quả chứa dấu câu tiếng Trung hoặc quá dài
-                    if vi and not any(c in vi for c in "，。！？、；："):
+                    if vi and not any(c in vi for c in ",.!?;:"):
                         return vi[:60]
 
-    # 2. Fallback: dòng có Nghĩa:, →, =
     for line in mnemonic.split("\n"):
         line = line.strip()
-        for prefix in ["Nghĩa:", "→", "="]:
+        for prefix in ["Nghia:", "Nghĩa:", "→", "="]:
             if line.startswith(prefix):
                 result = line[len(prefix):].strip()
                 if result and 2 <= len(result) <= 60:
                     return result[:60]
 
-    # 3. Fallback cuối: dòng có tiếng Việt + " - "
     for line in mnemonic.split("\n"):
         line = line.strip()
         if " - " in line and any(c in line for c in "àáảãạăâđêôơư"):
@@ -239,7 +230,6 @@ Output (CHỈ 2 dòng, bắt đầu bằng 📎 🔗):"""
 
 
 def clean_mnemonic(mn):
-    """Lọc bỏ dòng thừa, chỉ giữ 5 dòng có emoji đúng thứ tự."""
     emojis = ['💡', '📌', '🎬', '📎', '🔗']
     lines = mn.split('\n')
     result = {}
@@ -262,7 +252,6 @@ def clean_mnemonic(mn):
 
 
 def has_all_5_lines(mn):
-    """Kiểm tra mnemonic có đủ 5 dòng emoji."""
     emojis = ['💡', '📌', '🎬', '📎', '🔗']
     return all(e in mn for e in emojis)
 
@@ -318,14 +307,14 @@ def call_qwen(prompt):
 
 def fix_one(zh, hsk, vi, radical, old_mnemonic):
     for retry in range(MAX_RETRIES + 1):
-        p1 = build _prompt_part1(zh, hsk, vi, { radical)
-        r1 = call_qwen(p1only)
+        p1 = build_prompt_part1(zh, hsk, vi, radical)
+        r1 = call_qwen(p1)
 
         if not r1:
-            time.sleep(_h2)
+            time.sleep(2)
             continue
 
-        p2 = buildsk_prompt_part2(zh, vi,_list radical)
+        p2 = build_prompt_part2(zh, vi, radical)
         r2 = call_qwen(p2)
 
         if not r2:
@@ -358,7 +347,7 @@ def main():
     print(f"   Input:     {INPUT_FILE}")
     print(f"   Backup:    {BACKUP_FILE}")
     print(f"   LIMIT:     {LIMIT}")
-    print(f"   ONLY_HSK: or '(tất cả)'}")
+    print(f"   ONLY_HSK:  {only_hsk_list or '(tat ca)'}")
     print(f"   DELAY:     {DELAY}s")
     print("=" * 62)
 
