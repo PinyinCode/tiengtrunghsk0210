@@ -185,11 +185,15 @@ def mnemonic_has_radical(mnemonic, radical):
     meaning = radical.get("meaning", "").strip().lower()
     if meaning:
         meaning_clean = meaning.split("(")[0].strip()
+
         if len(meaning_clean) >= 3 and meaning_clean in mnemonic_norm.lower():
             return True
 
-    return False
+        for keyword in meaning_clean.split():
+            if len(keyword) >= 3 and keyword in mnemonic_norm.lower():
+                return True
 
+    return False
 
 def build_prompt_part1(zh, hsk, vi, radical):
     """Prompt cho chiết tự + âm thanh + câu chuyện."""
