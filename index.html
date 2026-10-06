@@ -29207,7 +29207,7 @@ window.__switchRawData = function(datasetId) {
 
 
 <script>
-/* FIX.PY - Lazy load data tu JSON */
+/* FIX.PY */
 (function() {
     'use strict';
     var NEW_IDS = ["1k-cau-giao-tiep"];
@@ -29253,6 +29253,38 @@ window.__switchRawData = function(datasetId) {
         });
     };
 
+    window.__fixpyParseHskStt = function(rawQuery) {
+        if (!rawQuery) return null;
+        var m = rawQuery.toLowerCase().match(/^hsk\s*(7[-\s]*9|\d+)\s*(?:(\d+)(?:\s+(\d+))?)?$/);
+        if (!m) return null;
+        var hskNum = m[1].replace(/\s+/g, '');
+        if (hskNum === '7' || hskNum === '8' || hskNum === '9') hskNum = '7-9';
+        var startStt = m[2] ? parseInt(m[2], 10) : null;
+        var endStt = m[3] ? parseInt(m[3], 10) : (startStt !== null ? startStt : null);
+        if (startStt !== null && endStt < startStt) {
+            var tmp = startStt; startStt = endStt; endStt = tmp;
+        }
+        return {
+            hsk: (hskNum === '7-9') ? 'HSK7-9' : ('HSK' + hskNum),
+            hskNum: hskNum,
+            startStt: startStt,
+            endStt: endStt
+        };
+    };
+
+    window.__fixpyFilterByHskStt = function(parsed) {
+        var pool = window.__findByHskStt(parsed.hsk, null);
+        if (parsed.startStt === null) return pool;
+        return pool.filter(function(r) {
+            var sttStr = (r.stt_original != null && String(r.stt_original).trim() !== '')
+                       ? String(r.stt_original).trim()
+                       : String(r.stt || '').replace(/^[^0-9]*-/, '');
+            var n = parseInt(sttStr, 10);
+            if (isNaN(n)) return false;
+            return n >= parsed.startStt && n <= parsed.endStt;
+        });
+    };
+
     function patchSwitchRawData() {
         if (window.__fixPySwitchPatched) return;
         var origSwitch = window.__switchRawData;
@@ -29262,7 +29294,6 @@ window.__switchRawData = function(datasetId) {
         }
         window.__switchRawData = function(datasetId) {
             if (!window.__fixpyDataLoaded && window.__fixpyMeta && window.__fixpyMeta[datasetId]) {
-                console.log('[fix.py] data chua load, doi...');
                 if (!window.__fixpyPendingSwitch) window.__fixpyPendingSwitch = [];
                 window.__fixpyPendingSwitch.push(datasetId);
                 return true;
@@ -29270,7 +29301,6 @@ window.__switchRawData = function(datasetId) {
             if (window.FIXPY_DATASETS && window.FIXPY_DATASETS[datasetId]) {
                 RAW_DATA = window.FIXPY_DATASETS[datasetId].data || [];
                 CURRENT_DATASET = datasetId;
-                console.log('[fix.py] switch FIXPY:', datasetId, '->', RAW_DATA.length, 'cau');
                 return true;
             }
             return origSwitch.apply(this, arguments);
@@ -29377,33 +29407,11 @@ window.__switchRawData = function(datasetId) {
             }
             var si = document.getElementById('searchInput');
             var raw = si ? si.value.trim() : '';
-            var m = raw.toLowerCase().match(/^hsk\s*(7[-\s]*9|\d+)\s*(?:(\d+)(?:\s+(\d+))?)?$/);
-            if (!m) {
+            var parsed = window.__fixpyParseHskStt(raw);
+            if (!parsed) {
                 return origApply.apply(this, arguments);
             }
-            var hskRaw = m[1].replace(/\s+/g, '');
-            var hskNum = hskRaw;
-            if (hskNum === '7' || hskNum === '8' || hskNum === '9') {
-                hskNum = '7-9';
-            }
-            var startStt = m[2] ? parseInt(m[2], 10) : null;
-            var endStt = m[3] ? parseInt(m[3], 10) : (startStt !== null ? startStt : null);
-            if (startStt !== null && endStt < startStt) {
-                var tmp = startStt; startStt = endStt; endStt = tmp;
-            }
-            var targetHsk = (hskNum === '7-9') ? 'HSK7-9' : ('HSK' + hskNum);
-            var pool = window.__findByHskStt(targetHsk, null);
-            var result = pool;
-            if (startStt !== null) {
-                result = pool.filter(function(r) {
-                    var sttStr = (r.stt_original != null && String(r.stt_original).trim() !== '')
-                               ? String(r.stt_original).trim()
-                               : String(r.stt || '').replace(/^[^0-9]*-/, '');
-                    var n = parseInt(sttStr, 10);
-                    if (isNaN(n)) return false;
-                    return n >= startStt && n <= endStt;
-                });
-            }
+            var result = window.__fixpyFilterByHskStt(parsed);
             try {
                 filtered = result;
             } catch(e) {
@@ -29414,20 +29422,66 @@ window.__switchRawData = function(datasetId) {
             if (typeof updateFilterUI === 'function') updateFilterUI();
             var clearBtn = document.getElementById('clearSearchBtn');
             if (clearBtn) clearBtn.classList.add('show');
-            if (typeof showSearchToast === 'function') {
-                var hskDisplay = (hskNum === '7-9') ? '7-9' : hskNum;
-                var msg;
-                if (startStt === null) {
-                    msg = 'HSK' + hskDisplay + ': ' + result.length + ' cau';
-                } else if (startStt === endStt) {
-                    msg = 'HSK' + hskDisplay + ' cau ' + startStt + ': ' + result.length + ' ket qua';
-                } else {
-                    msg = 'HSK' + hskDisplay + ' cau ' + startStt + '->' + endStt + ': ' + result.length + ' ket qua';
-                }
-                showSearchToast(msg);
-            }
         };
         window.__fixPyApplyFilterPatched = true;
+    }
+
+    function patchPfApplyFilter() {
+        if (window.__fixPyPfApplyFilterPatched) return;
+        var origPfApply = window.pfApplyFilter;
+        if (typeof origPfApply !== 'function') {
+            setTimeout(patchPfApplyFilter, 100);
+            return;
+        }
+        window.pfApplyFilter = function() {
+            if (!window.__fixpyDataLoaded) return;
+            var curDs = (typeof CURRENT_DATASET !== 'undefined')
+                        ? CURRENT_DATASET : 'tonghop';
+            if (curDs === 'tonghop') {
+                return origPfApply.apply(this, arguments);
+            }
+            if (!window.FIXPY_DATASETS || !window.FIXPY_DATASETS[curDs]) {
+                return origPfApply.apply(this, arguments);
+            }
+            var si = document.getElementById('pfSearchInput');
+            var raw = si ? si.value.trim() : '';
+            var parsed = window.__fixpyParseHskStt(raw);
+            if (!parsed) {
+                return origPfApply.apply(this, arguments);
+            }
+            var si2 = document.getElementById('searchInput');
+            if (si2) si2.value = raw;
+            if (typeof state !== 'undefined' && state) {
+                state.search = raw.toLowerCase();
+            }
+            var result = window.__fixpyFilterByHskStt(parsed);
+            try {
+                filtered = result;
+            } catch(e) {
+                window.filtered = result;
+            }
+            if (typeof pfBuildQuickNav === 'function') pfBuildQuickNav();
+            if (typeof pfUpdateFilterUI === 'function') pfUpdateFilterUI();
+            var clearBtn = document.getElementById('pfClearSearchBtn');
+            if (clearBtn) clearBtn.classList.add('show');
+            if (result.length > 0) {
+                if (typeof loadPracticeFull === 'function') {
+                    loadPracticeFull(result[0].stt);
+                }
+            } else {
+                var pfViEl = document.getElementById('pfVi');
+                if (pfViEl) pfViEl.textContent = 'Khong tim thay cau nao';
+                var pfCounter = document.getElementById('pfCounter');
+                if (pfCounter) pfCounter.textContent = 'Cau 0 / 0';
+                var pfTags = document.getElementById('pfTags');
+                if (pfTags) pfTags.innerHTML = '';
+                var pfPrev = document.getElementById('pfPrevBtn');
+                if (pfPrev) pfPrev.disabled = true;
+                var pfNext = document.getElementById('pfNextBtn');
+                if (pfNext) pfNext.disabled = true;
+            }
+        };
+        window.__fixPyPfApplyFilterPatched = true;
     }
 
     function bindTab(dsId) {
@@ -29465,31 +29519,10 @@ window.__switchRawData = function(datasetId) {
                 var cb = document.getElementById('clearSearchBtn');
                 if (cb) cb.classList.remove('show');
             } catch(err) {}
-            var savedTopics = null;
-            if (typeof loadOnboardingSelection === 'function') {
-                try {
-                    var saved = loadOnboardingSelection();
-                    if (saved && saved.topics && saved.topics.length > 0) {
-                        savedTopics = saved.topics;
-                    }
-                } catch(e) {}
-            }
             try {
                 if (typeof buildFilters === 'function') buildFilters();
                 if (typeof applyFilter === 'function') applyFilter();
                 if (typeof updateResultCount === 'function') updateResultCount();
-                if (savedTopics && savedTopics.length > 0
-                    && typeof applyOnboardingSelection === 'function') {
-                    try {
-                        var cfg = (typeof getOnboardingConfig === 'function')
-                                  ? getOnboardingConfig() : null;
-                        if (cfg) {
-                            var saved2 = loadOnboardingSelection();
-                            window.__onboardingAutoPicked = saved2 ? !!saved2.auto_picked : false;
-                            applyOnboardingSelection(savedTopics, false);
-                        }
-                    } catch(e2) {}
-                }
                 document.querySelectorAll('.ds-btn, .ds-sub-btn').forEach(function(b) {
                     b.classList.remove('active');
                 });
@@ -29613,6 +29646,7 @@ window.__switchRawData = function(datasetId) {
         patchGetLimitedData();
         patchApplyOnboarding();
         patchApplyFilter();
+        patchPfApplyFilter();
         NEW_IDS.forEach(bindTab);
         patchMarkActive();
     }
@@ -31345,36 +31379,6 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
         main.insertBefore(banner, main.firstChild);
     }
 
-    function patchSubjectLock() {
-        if (window.__vocabSubjectLockPatched) return;
-        if (typeof window.buildFilters !== 'function') {
-            setTimeout(patchSubjectLock, 200);
-            return;
-        }
-        var orig = window.buildFilters;
-        window.buildFilters = function() {
-            var result = orig.apply(this, arguments);
-            try {
-                var sf = document.getElementById('subjectFilter');
-                if (!sf) return result;
-                if (_isVocabMode()) {
-                    sf.disabled = true;
-                    sf.value = '';
-                    sf.style.opacity = '0.5';
-                    sf.style.cursor = 'not-allowed';
-                    sf.title = 'Khong kha dung cho Tu vung';
-                } else {
-                    sf.disabled = false;
-                    sf.style.opacity = '';
-                    sf.style.cursor = '';
-                    sf.title = '';
-                }
-            } catch(e) {}
-            return result;
-        };
-        window.__vocabSubjectLockPatched = true;
-    }
-
     function watchVocabMode() {
         var isVocab = (typeof CURRENT_DATASET !== 'undefined') && CURRENT_DATASET === VOCAB_ID;
 
@@ -31438,50 +31442,6 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
         }
 
         window.vocabUpdateLockState = updateTabLockState;
-
-        if (!window.__vocabBuildFiltersPatched && typeof window.buildFilters === 'function') {
-            window.__vocabBuildFiltersPatched = true;
-            var origBuildFilters = window.buildFilters;
-            window.buildFilters = function() {
-                var result = origBuildFilters.apply(this, arguments);
-                if (_isVocabMode()) {
-                    var hf = document.getElementById('hskFilter');
-                    if (hf && !hf.querySelector('option[value="HSK7-9"]')) {
-                        var opt = document.createElement('option');
-                        opt.value = 'HSK7-9';
-                        opt.textContent = 'HSK7-9';
-                        hf.appendChild(opt);
-                    }
-                }
-                return result;
-            };
-        }
-
-        if (!window.__vocabPfFilterPatched && typeof window.pfBuildFilterOptions === 'function') {
-            window.__vocabPfFilterPatched = true;
-            var origPfBuild = window.pfBuildFilterOptions;
-            window.pfBuildFilterOptions = function() {
-                var result = origPfBuild.apply(this, arguments);
-                if (_isVocabMode()) {
-                    var pfHf = document.getElementById('pfHskFilter');
-                    if (pfHf && !pfHf.querySelector('option[value="HSK7-9"]')) {
-                        var opt = document.createElement('option');
-                        opt.value = 'HSK7-9';
-                        opt.textContent = 'HSK7-9';
-                        pfHf.appendChild(opt);
-                    }
-                    var pfSubj = document.getElementById('pfSubjectFilter');
-                    if (pfSubj) {
-                        pfSubj.disabled = true;
-                        pfSubj.value = '';
-                        pfSubj.style.opacity = '0.5';
-                        pfSubj.style.cursor = 'not-allowed';
-                        pfSubj.title = 'Khong kha dung cho Tu vung';
-                    }
-                }
-                return result;
-            };
-        }
 
         if (!vocabBtn.__vocabLimitHooked) {
             vocabBtn.__vocabLimitHooked = true;
