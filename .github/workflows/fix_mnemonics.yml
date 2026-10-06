@@ -20,9 +20,13 @@ on:
         required: true
         default: "0"
       qwen_model:
-        description: "Qwen model (VD: qwen-flash, qwen-plus-character)"
+        description: "Qwen model (VD: qwen-flash, qwen-plus)"
         required: true
         default: "qwen-flash"
+      debug_db:
+        description: "In danh sach chu bi thieu trong DB? (1=on, 0=off)"
+        required: true
+        default: "1"
 
 permissions:
   contents: write
@@ -62,6 +66,96 @@ jobs:
           python -c "from vocab_data.radical_analyzer import get_radical_for_word; print('radical_analyzer OK')"
           python -c "from vocab_data.radicals_db import get_radical_info; print('radicals_db OK')"
 
+      # ============================================================
+      # DEBUG 1: Liệt kê chữ Hán bị thiếu trong radicals_db
+      # ============================================================
+      - name: Debug DB missing chars
+        if: github.event.inputs.debug_db == '1'
+        continue-on-error: true
+        run: |
+          python - <<'PYEOF'
+          import os, sys, json
+          sys.path.insert(0, os.getcwd())
+          from vocab_data.radical_analyzer import get_radical_for_word
+
+          data = json.load(open('data/ai_mnemonics.json'))
+          missing = []
+          total_single = 0
+
+          for key in data:
+              parts = key.split('|')
+              if len(parts) != 3:
+                  continue
+              zh = parts[2].strip()
+              if len(zh) != 1:
+                  continue
+              total_single += 1
+              try:
+                  rad = get_radical_for_word(zh)
+                  if not rad or not rad.get('zh'):
+                      missing.append((key, zh))
+              except Exception:
+                  missing.append((key, zh))
+
+          print('=' * 60)
+          print('DEBUG: CHU HAN THIEU TRONG radicals_db')
+          print('=' * 60)
+          print(f'Tong chu don: {total_single}')
+          print(f'Tong DB thieu: {len(missing)}')
+          print()
+          print('20 chu dau tien bi thieu:')
+          for key, zh in missing[:20]:
+              print(f'  {key} -> {zh}')
+          print()
+          # In tat ca chu (khong key) de de bo sung DB
+          all_missing_chars = sorted(set(zh for _, zh in missing))
+          print(f'Tong so chu unique: {len(all_missing_chars)}')
+          print('Tat ca chu (de bo sung DB):')
+          print(''.join(all_missing_chars))
+          print()
+          # Ghi ra file de upload artifact
+          with open('debug_missing_chars.json', 'w', encoding='utf-8') as f:
+              json.dump({
+                  'total_single': total_single,
+                  'total_missing': len(missing),
+                  'missing_entries': [{'key': k, 'zh': z} for k, z in missing],
+                  'unique_chars': all_missing_chars,
+              }, f, ensure_ascii=False, indent=2)
+          print('Da ghi debug_missing_chars.json')
+          PYEOF
+
+      # ============================================================
+      # DEBUG 2: Xem 5 mnemonic da fix (neu co)
+      # ============================================================
+      - name: Debug sample mnemonics
+        if: github.event.inputs.debug_db == '1'
+        continue-on-error: true
+        run: |
+          python - <<'PYEOF'
+          import json
+          data = json.load(open('data/ai_mnemonics.json'))
+
+          print('=' * 60)
+          print('DEBUG: 3 MNEMONIC MAU')
+          print('=' * 60)
+
+          count = 0
+          for key, mnemonic in data.items():
+              if count >= 3:
+                  break
+              # Chi in nhung entry co format 5 dong
+              if mnemonic and '💡' in mnemonic and '📌' in mnemonic:
+                  print(f'\n--- {key} ---')
+                  print(mnemonic[:500])
+                  count += 1
+
+          if count == 0:
+              print('Chua co mnemonic nao dang 5 dong')
+          PYEOF
+
+      # ============================================================
+      # CHAY FIX CHINH
+      # ============================================================
       - name: Run fix mnemonics
         continue-on-error: true
         env:
@@ -94,6 +188,7 @@ jobs:
           path: |
             data/ai_mnemonics.json
             data/ai_mnemonics.backup_*.json
+            debug_missing_chars.json
           retention-days: 7
           if-no-files-found: warn
 
