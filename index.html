@@ -29719,64 +29719,6 @@ window.__switchRawData = function(datasetId) {
         window.__fixPyApplyOnbPatched = true;
     }
 
-    function patchPfApplyFilter() {
-        if (window.__fixPyPfApplyFilterPatched) return;
-        var origPfApply = window.pfApplyFilter;
-        if (typeof origPfApply !== 'function') {
-            setTimeout(patchPfApplyFilter, 100);
-            return;
-        }
-        window.pfApplyFilter = function() {
-            if (!window.__fixpyDataLoaded) return;
-            var curDs = (typeof CURRENT_DATASET !== 'undefined')
-                        ? CURRENT_DATASET : 'tonghop';
-            if (curDs === 'tonghop') {
-                return origPfApply.apply(this, arguments);
-            }
-            if (!window.FIXPY_DATASETS || !window.FIXPY_DATASETS[curDs]) {
-                return origPfApply.apply(this, arguments);
-            }
-            var si = document.getElementById('pfSearchInput');
-            var raw = si ? si.value.trim() : '';
-            var parsed = window.__fixpyParseHskStt(raw);
-            if (!parsed) {
-                return origPfApply.apply(this, arguments);
-            }
-            var si2 = document.getElementById('searchInput');
-            if (si2) si2.value = raw;
-            if (typeof state !== 'undefined' && state) {
-                state.search = raw.toLowerCase();
-            }
-            var result = window.__fixpyFilterByHskStt(parsed);
-            try {
-                filtered = result;
-            } catch(e) {
-                window.filtered = result;
-            }
-            if (typeof pfBuildQuickNav === 'function') pfBuildQuickNav();
-            if (typeof pfUpdateFilterUI === 'function') pfUpdateFilterUI();
-            var clearBtn = document.getElementById('pfClearSearchBtn');
-            if (clearBtn) clearBtn.classList.add('show');
-            if (result.length > 0) {
-                if (typeof loadPracticeFull === 'function') {
-                    loadPracticeFull(result[0].stt);
-                }
-            } else {
-                var pfViEl = document.getElementById('pfVi');
-                if (pfViEl) pfViEl.textContent = 'Khong tim thay cau nao';
-                var pfCounter = document.getElementById('pfCounter');
-                if (pfCounter) pfCounter.textContent = 'Cau 0 / 0';
-                var pfTags = document.getElementById('pfTags');
-                if (pfTags) pfTags.innerHTML = '';
-                var pfPrev = document.getElementById('pfPrevBtn');
-                if (pfPrev) pfPrev.disabled = true;
-                var pfNext = document.getElementById('pfNextBtn');
-                if (pfNext) pfNext.disabled = true;
-            }
-        };
-        window.__fixPyPfApplyFilterPatched = true;
-    }
-
     function bindAll() {
         patchSwitchRawData();
         patchGetLimitedData();
