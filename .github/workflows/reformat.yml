@@ -1,0 +1,59 @@
+name: Reformat JSON (khong goi AI)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/reformat_json.py'
+      - '.github/workflows/reformat.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  reformat:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Check file sizes truoc
+        run: |
+          echo "=== TRUOC KHI REFORMAT ==="
+          for f in data/ai_mnemonics.json data/similar_chars.json data/fixpy_datasets.json data/all_datasets.json; do
+            if [ -f "$f" ]; then
+              SIZE=$(stat -c%s "$f")
+              echo "$f: $((SIZE / 1024)) KB"
+            fi
+          done
+
+      - name: Reformat JSON files
+        run: python scripts/reformat_json.py
+
+      - name: Check file sizes sau
+        run: |
+          echo "=== SAU KHI REFORMAT ==="
+          for f in data/ai_mnemonics.json data/similar_chars.json data/fixpy_datasets.json data/all_datasets.json; do
+            if [ -f "$f" ]; then
+              SIZE=$(stat -c%s "$f")
+              echo "$f: $((SIZE / 1024)) KB"
+            fi
+          done
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/*.json
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "Khong co thay doi - file da duoc nen san"
+          else
+            git commit -m "Reformat JSON files (bo indent) [skip ci]"
+            git pull --rebase origin ${{ github.ref_name }} || true
+            git push origin HEAD:${{ github.ref_name }}
+          fi
