@@ -212,30 +212,35 @@ MẸO CŨ (SAI BỘ THỦ):
 
 YÊU CẦU SỬA - viết lại đúng 5 dòng:
 
-💡 Chiết tự: Dùng bộ {rad_zh} ({rad_mean}). KHÔNG bịa bộ khác.
+💡 Chiết tự: Dùng bộ {rad_zh} ({rad_mean}). Nếu chữ có nhiều thành phần, liệt kê ĐẦY ĐỦ các thành phần (VD: 的 = 白 + 勺). KHÔNG bịa bộ khác.
+
 📌 Âm thanh: 2-3 từ gần âm tiếng Việt.
-🎬 Câu chuyện: 1 CÂU ngắn (tối đa 25 chữ). Mô tả bộ {rad_zh} bằng hình ảnh dễ nhớ, kết bằng nghĩa "{vi}".
+
+🎬 Câu chuyện: 1 CÂU ngắn (tối đa 25 chữ). BẮT BUỘC kết thúc bằng: "... = {vi}". Câu chuyện phải liên kết bộ {rad_zh} với nghĩa "{vi}".
+
 📎 Ví dụ: Câu tiếng Trung + pinyin + nghĩa Việt.
-🔗 Liên quan: 3-5 từ cùng bộ {rad_zh}.
+
+🔗 Liên quan: 3-5 từ mà CHÍNH CHỮ ĐÓ có chứa bộ {rad_zh} trong cấu tạo chữ Hán. KHÔNG liệt kê từ chỉ có nghĩa tương tự. Ghi rõ từng từ theo format: 字 (pinyin - nghĩa).
 
 VÍ DỤ ĐÚNG cho 我 (bộ 戈 - giáo mác):
 💡 Chiết tự: 我 = 戈 (bộ giáo mác - vũ khí) → người cầm vũ khí tự vệ = TÔI
 📌 Âm thanh: "wǒ" ≈ "ủa" → "Ủa, tôi đây mà!"
 🎬 Câu chuyện: Người cầm giáo (戈) đứng gác — chính là TÔI (我).
 📎 Ví dụ: 我是学生 (Wǒ shì xuéshēng) - Tôi là học sinh
-🔗 Liên quan: 我们 (wǒmen - chúng tôi), 忘 (wàng - quên), 找 (zhǎo - tìm)
+🔗 Liên quan: 找 (zhǎo - tìm), 战 (zhàn - chiến), 成 (chéng - thành), 或 (huò - hoặc)
 
 VÍ DỤ SAI (không làm theo):
 💡 Chiết tự: 我 (bộ khẩu 口 + bộ đao 刀) → Miệng cầm dao = NÓI LỜI KỆ THÙ
 ❌ 我 KHÔNG thuộc bộ 口 hay 刀.
+🔗 Liên quan: 我, 你, 他 ❌ SAI vì 你/他 KHÔNG có bộ 戈
 
 RÀNG BUỘC:
 - BẮT BUỘC dùng bộ {rad_zh}. KHÔNG bịa bộ khác.
-- Câu chuyện CHỈ 1 CÂU, tối đa 25 chữ.
+- Câu chuyện CHỈ 1 CÂU, tối đa 25 chữ, PHẢI kết thúc bằng "... = {vi}".
+- Từ liên quan PHẢI có chứa bộ {rad_zh} trong cấu tạo.
 - Giữ ĐÚNG 5 dòng, mỗi dòng 1 emoji.
 
 Output (đúng 5 dòng):"""
-
 
 def call_qwen(prompt):
     if not API_KEY:
