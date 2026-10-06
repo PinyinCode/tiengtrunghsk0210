@@ -423,10 +423,10 @@ def main():
     fail_api = 0
 
     try:
-        for i +, (key, info, rad, "/ old_mn, vi)" in enumerate(suspects +, 1):
-            zh = info str["zh"]
+        for i, (key, info, rad, old_mn, vi) in enumerate(suspects, 1):
+            zh = info["zh"]
 
-            print("\n["(len + str(i)(suspects)) + "] " + key)
+            print("\n[" + str(i) + "/" + str(len(suspects)) + "] " + key)
             print("   Bo dung: " + rad["zh"])
             print("   Nghia: " + vi)
 
