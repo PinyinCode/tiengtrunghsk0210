@@ -128,12 +128,15 @@ jobs:
             echo "index.html not found"
             exit 1
           fi
-          SIZE=$(stat -c%s index.html)
-          if [ "$SIZE" -lt 500000 ]; then
-            echo "index.html too small"
+          if [ ! -f "data/all_datasets.json" ]; then
+            echo "data/all_datasets.json not found"
             exit 1
           fi
-          for el in RAW_DATA DATASET_REGISTRY FIREBASE_CONFIG CURRENT_DATASET; do
+          if [ ! -f "data/dataset_registry.json" ]; then
+            echo "data/dataset_registry.json not found"
+            exit 1
+          fi
+          for el in FIREBASE_CONFIG CURRENT_DATASET DATASET_REGISTRY_META window.__dataLoadPromise; do
             if grep -q "$el" index.html; then
               echo "OK $el"
             else
@@ -144,7 +147,13 @@ jobs:
           OPEN_SCRIPT=$(grep -o "<script" index.html | wc -l)
           CLOSE_SCRIPT=$(grep -o "</script>" index.html | wc -l)
           if [ "$OPEN_SCRIPT" -ne "$CLOSE_SCRIPT" ]; then
-            echo "script tags mismatch"
+            echo "script tags mismatch ($OPEN_SCRIPT vs $CLOSE_SCRIPT)"
+            exit 1
+          fi
+          SIZE=$(stat -c%s index.html)
+          echo "index.html size: $((SIZE / 1024)) KB"
+          if [ "$SIZE" -gt 2097152 ]; then
+            echo "index.html too large (>2MB), data still inline?"
             exit 1
           fi
 
@@ -216,7 +225,7 @@ jobs:
 
       - name: Verify datasets loaded
         run: |
-          if grep -q '"tonghop"' index.html; then
+          if grep -q '"tonghop"' data/dataset_registry.json; then
             echo "tonghop OK"
           else
             echo "tonghop MISSING"
@@ -234,6 +243,12 @@ jobs:
           if [ -f "data/ai_mnemonics.json" ]; then
             git add data/ai_mnemonics.json
           fi
+          if [ -f "data/all_datasets.json" ]; then
+            git add data/all_datasets.json
+          fi
+          if [ -f "data/dataset_registry.json" ]; then
+            git add data/dataset_registry.json
+          fi
           git add -A
           if git diff --quiet && git diff --staged --quiet; then
             echo "no changes"
@@ -250,15 +265,24 @@ jobs:
 
       - name: Prepare Pages artifact
         run: |
+          rm -rf _site
           mkdir -p _site
           cp index.html _site/
           [ -d "assets" ] && cp -r assets _site/ || true
           [ -d "static" ] && cp -r static _site/ || true
           [ -f "404.html" ] && cp 404.html _site/ || true
+          mkdir -p _site/data
           if [ -f "data/ai_mnemonics.json" ]; then
-            mkdir -p _site/data
             cp data/ai_mnemonics.json _site/data/
           fi
+          if [ -f "data/all_datasets.json" ]; then
+            cp data/all_datasets.json _site/data/
+          fi
+          if [ -f "data/dataset_registry.json" ]; then
+            cp data/dataset_registry.json _site/data/
+          fi
+          echo "=== _site contents ==="
+          find _site -type f | head -20
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
