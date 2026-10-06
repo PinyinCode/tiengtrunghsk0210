@@ -579,3 +579,46 @@ def _decompose(ch):
 
     # Fallback: trả về chính nó (coi là bộ thủ)
     return [ch]
+# ============================================================
+# ALIAS FUNCTIONS - Giữ tương thích với code cũ
+# ============================================================
+
+def analyze_word(word):
+    """
+    Phân tích chữ Hán (tương thích ngược).
+    Trả về dict chi tiết về bộ thủ + components.
+    """
+    if not word:
+        return None
+
+    word_norm = normalize_kangxi(word.strip())
+    radical = get_radical_for_word(word_norm)
+
+    result = {
+        "word": word_norm,
+        "radical": radical,
+        "components": find_components(word_norm),
+    }
+
+    return result
+
+
+def find_components(word):
+    """
+    Tìm các components của chữ Hán.
+    Trả về list các chữ Hán component.
+    """
+    if not word:
+        return []
+
+    word_norm = normalize_kangxi(word.strip())
+
+    # Chữ đơn
+    if len(word_norm) == 1:
+        return _decompose(word_norm)
+
+    # Chữ ghép → decompose từng ký tự
+    components = []
+    for ch in word_norm:
+        components.extend(_decompose(ch))
+    return components
