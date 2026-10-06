@@ -15044,7 +15044,36 @@ function updateResultCount() {
         else spanEl.innerHTML = 'Tìm thấy <b>' + total + '</b> kết quả';
     }
 }
+function parseSearchQuery(rawQuery) {
+    var q = (rawQuery || '').trim();
+    if (!q) return null;
 
+    var qLower = q.toLowerCase();
+
+    var match = qLower.match(/^hsk\s*(\d+)(?:\s+(\d+)(?:\s+(\d+))?)?$/);
+    if (!match) return null;
+
+    var hskNum = parseInt(match[1]);
+    if (isNaN(hskNum) || hskNum < 1 || hskNum > 6) return null;
+
+    var hskValue = 'HSK' + hskNum;
+    var startStt = match[2] ? parseInt(match[2]) : null;
+    var endStt   = match[3] ? parseInt(match[3]) : startStt;
+
+    if (startStt !== null && endStt !== null && endStt < startStt) {
+        var tmp = startStt;
+        startStt = endStt;
+        endStt = tmp;
+    }
+
+    return {
+        type: 'hsk_stt',
+        hsk: hskValue,
+        startStt: startStt,
+        endStt: endStt,
+        original: q
+    };
+}
 /* ============================================================ */
 /* APPLY FILTER — Lọc câu theo search/HSK/subject                */
 /* Đã tích hợp cú pháp đặc biệt: "hsk1 5", "hsk1", "hsk1 5 10"  */
