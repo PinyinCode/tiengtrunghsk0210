@@ -3403,7 +3403,7 @@ def build_ui_html():
 
 <div class="search-filter-row">
 <div class="search-bar"><i class="fas fa-search"></i>
-<input type="text" id="searchInput" placeholder="Tìm kiếm..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+<input type="text" id="searchInput" placeholder="Tìm kiếm... (VD: hsk1 5)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
 <button class="search-clear" id="clearSearchBtn" aria-label="Xóa"><i class="fas fa-times"></i></button>
 </div>
 <div class="filters">
@@ -3490,10 +3490,10 @@ def build_ui_html():
     <select class="pf-dataset-select" id="pfDatasetSelect"></select>
 
     <div class="pf-dataset-search">
-        <i class="fas fa-search"></i>
-        <input type="text" id="pfSearchInput" placeholder="Tìm kiếm..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-        <button class="pf-search-clear" id="pfClearSearchBtn" aria-label="Xóa"><i class="fas fa-times"></i></button>
-    </div>
+    <i class="fas fa-search"></i>
+    <input type="text" id="pfSearchInput" placeholder="Tìm kiếm... (VD: hsk1 5)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    <button class="pf-search-clear" id="pfClearSearchBtn" aria-label="Xóa"><i class="fas fa-times"></i></button>
+</div>
 
     <div class="pf-quick-nav" id="pfQuickNavWrap">
         <span class="pf-quick-nav-label">Câu:</span>
@@ -3688,7 +3688,81 @@ var displayState = { vi: true, pinyin: false, practice: false };
 function canAccessChuyenNganh() {
     return (typeof window.APP_TIER !== 'undefined' && window.APP_TIER === 'active');
 }
+/* ═══════════════════════════════════════════════════════════ */
+/* PARSE SEARCH QUERY — Nhận diện cú pháp đặc biệt              */
+/* Hỗ trợ CẢ CHỮ HOA VÀ CHỮ THƯỜNG:                             */
+/*   "hsk1 5"     = "HSK1 5"     = "Hsk1 5"                     */
+/*   "hsk1"       = "HSK1"       = "Hsk1"                       */
+/*   "hsk1 5 10"  = "HSK1 5 10"  = "Hsk1 5 10"                  */
+/* ═══════════════════════════════════════════════════════════ */
+function parseSearchQuery(rawQuery) {
+    var q = (rawQuery || '').trim();
+    if (!q) return null;
 
+    var qLower = q.toLowerCase();
+
+    var match = qLower.match(/^hsk\s*(\d+)(?:\s+(\d+)(?:\s+(\d+))?)?$/);
+    if (!match) return null;
+
+    var hskNum = parseInt(match[1]);
+    if (isNaN(hskNum) || hskNum < 1 || hskNum > 6) return null;
+
+    var hskValue = 'HSK' + hskNum;
+    var startStt = match[2] ? parseInt(match[2]) : null;
+    var endStt   = match[3] ? parseInt(match[3]) : startStt;
+
+    if (startStt !== null && endStt !== null && endStt < startStt) {
+        var tmp = startStt;
+        startStt = endStt;
+        endStt = tmp;
+    }
+
+    return {
+        type: 'hsk_stt',
+        hsk: hskValue,
+        startStt: startStt,
+        endStt: endStt,
+        original: q
+    };
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* SHOW SEARCH TOAST — Thông báo kết quả tìm kiếm đặc biệt     */
+/* ═══════════════════════════════════════════════════════════ */
+function showSearchToast(message) {
+    var old = document.getElementById('searchToast');
+    if (old) old.remove();
+
+    var toast = document.createElement('div');
+    toast.id = 'searchToast';
+    toast.textContent = message;
+    toast.style.cssText = [
+        'position:fixed','top:80px','left:50%',
+        'transform:translateX(-50%) translateY(-20px)',
+        'padding:.7rem 1.2rem',
+        'background:linear-gradient(135deg,#2563eb,#7c3aed)',
+        'color:#fff','border-radius:50px',
+        'font-size:.85rem','font-weight:700','font-family:inherit',
+        'box-shadow:0 8px 24px rgba(37,99,235,.45)',
+        'z-index:9999','opacity:0',
+        'transition:opacity .25s ease, transform .3s cubic-bezier(.34,1.56,.64,1)',
+        'pointer-events:none','max-width:90vw',
+        'text-overflow:ellipsis','overflow:hidden','white-space:nowrap'
+    ].join(';');
+
+    document.body.appendChild(toast);
+
+    requestAnimationFrame(function() {
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+    });
+
+    setTimeout(function() {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(-20px)';
+        setTimeout(function() { if (toast.parentNode) toast.remove(); }, 300);
+    }, 2200);
+}
 /* THONG BAO KHOA CHUYEN NGANH */
 function showChuyenNganhLockMessage() {
     if (typeof currentUser === 'undefined' || !currentUser) {
@@ -6072,20 +6146,23 @@ function updateResultCount() {
     }
 }
 
+/* ============================================================ */
+/* APPLY FILTER — Lọc câu theo search/HSK/subject                */
+/* Đã tích hợp cú pháp đặc biệt: "hsk1 5", "hsk1", "hsk1 5 10"  */
+/* ============================================================ */
 function applyFilter() {
     /* ═══ 1. ĐỌC FILTER TỪ UI ═══ */
-    state.search = $('searchInput').value.trim().toLowerCase();
-    state.hsk = $('hskFilter').value;
+    var rawSearch = $('searchInput').value.trim();
+    state.search  = rawSearch.toLowerCase();
+    state.hsk     = $('hskFilter').value;
     state.subject = $('subjectFilter').value;
     updateFilterUI();
 
     var clearBtn = $('clearSearchBtn');
     if (state.search) clearBtn.classList.add('show');
-    else clearBtn.classList.remove('show');
+    else              clearBtn.classList.remove('show');
 
-    /* ═══════════════════════════════════════════════════════════
-       ❤️ 2. NẾU ĐANG Ở TAB YÊ THÍCH → GỌI favRenderCurrentTab()
-       ═══════════════════════════════════════════════════════════ */
+    /* ═══ 2. TAB YÊU THÍCH → RENDER RIÊNG ═══ */
     if (typeof favState !== 'undefined'
         && favState
         && favState.currentView === true
@@ -6094,24 +6171,99 @@ function applyFilter() {
         return;
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       3. CHẾ ĐỘ BÌNH THƯỜNG — LỌC TẤT CẢ CÂU
-       ═══════════════════════════════════════════════════════════ */
-    var baseData = getLimitedData();
+    /* ═══ 3. LẤY TOÀN BỘ KHO — KHÔNG GIỚI HẠN TIER ═══ */
+    var baseData = (typeof RAW_DATA !== 'undefined' && Array.isArray(RAW_DATA))
+                   ? RAW_DATA
+                   : getLimitedData();
+
+    /* ⭐ Lấy danh sách HSK mà user được phép xem */
+    var info = getTierInfo();
+    var allowedHsk = getAllowedHskList();
+    var isUnlimited = (info.tier === 'active');
+
+    /* ═══ 4. KIỂM TRA CÚ PHÁP ĐẶC BIỆT ═══ */
+    var parsed = parseSearchQuery(rawSearch);
+
+    if (parsed && parsed.type === 'hsk_stt') {
+        var targetHsk = String(parsed.hsk || '').toUpperCase().replace(/\s+/g, '');
+
+        /* ⭐ CHECK QUYỀN: HSK này có trong quyền của user không? */
+        if (!isUnlimited && allowedHsk.indexOf(parsed.hsk) === -1) {
+            var lockMsg = info.tier === 'trial'
+                ? '⚠️ ' + parsed.hsk + ' chưa mở khoá (cần gia hạn)'
+                : '⚠️ ' + parsed.hsk + ' chưa mở khoá (cần đăng nhập)';
+            showSearchToast(lockMsg);
+            filtered = [];
+            updateResultCount();
+            render(true);
+            return;
+        }
+
+        filtered = baseData.filter(function(r) {
+            var rHsk = String(r.hsk || '').toUpperCase().replace(/\s+/g, '');
+            if (rHsk !== targetHsk) return false;
+            if (parsed.startStt === null) return true;
+
+            var sttNum = parseInt(String(r.stt).trim(), 10);
+            if (isNaN(sttNum)) return false;
+
+            return sttNum >= parsed.startStt && sttNum <= parsed.endStt;
+        });
+
+        updateResultCount();
+        render(true);
+
+        if (filtered.length === 0) {
+            if (parsed.startStt === null) {
+                showSearchToast('⚠️ Không có câu nào trong ' + parsed.hsk);
+            } else if (parsed.startStt === parsed.endStt) {
+                showSearchToast('⚠️ Không có câu số ' + parsed.startStt + ' trong ' + parsed.hsk);
+            } else {
+                showSearchToast('⚠️ Không có câu nào từ ' + parsed.startStt + ' → ' + parsed.endStt + ' trong ' + parsed.hsk);
+            }
+        } else {
+            var foundMsg = parsed.startStt === null
+                ? '✅ Tìm thấy ' + filtered.length + ' câu trong ' + parsed.hsk
+                : (parsed.startStt === parsed.endStt
+                    ? '✅ ' + parsed.hsk + ' câu số ' + parsed.startStt + ' (' + filtered.length + ' kết quả)'
+                    : '✅ ' + parsed.hsk + ' câu ' + parsed.startStt + ' → ' + parsed.endStt + ' (' + filtered.length + ' kết quả)');
+            showSearchToast(foundMsg);
+        }
+
+        setTimeout(function() {
+            var mainEl = $('mainContent');
+            if (mainEl) {
+                var yOffset = mainEl.getBoundingClientRect().top + window.scrollY - 100;
+                window.scrollTo({ top: yOffset, behavior: 'smooth' });
+            }
+        }, 100);
+
+        return;
+    }
+
+    /* ═══ 5. LỌC TEXT THÔNG THƯỜNG (TRÊN TOÀN BỘ KHO) ═══ */
     filtered = baseData.filter(function(r) {
         if (state.search) {
             var s = state.search;
-            var inVi = (r.vi || '').toLowerCase().indexOf(s) !== -1;
-            var inZh = (r.zh || '').toLowerCase().indexOf(s) !== -1;
-            var inPinyin = (r.pinyin || '').toLowerCase().indexOf(s) !== -1;
-            var inTopic = (r.topic || '').toLowerCase().indexOf(s) !== -1;
+            var inVi      = (r.vi      || '').toLowerCase().indexOf(s) !== -1;
+            var inZh      = (r.zh      || '').toLowerCase().indexOf(s) !== -1;
+            var inPinyin  = (r.pinyin  || '').toLowerCase().indexOf(s) !== -1;
+            var inTopic   = (r.topic   || '').toLowerCase().indexOf(s) !== -1;
             var inSubject = (r.subject || '').toLowerCase().indexOf(s) !== -1;
             if (!inVi && !inZh && !inPinyin && !inTopic && !inSubject) return false;
         }
-        if (state.hsk && r.hsk !== state.hsk) return false;
+        if (state.hsk     && r.hsk     !== state.hsk)     return false;
         if (state.subject && r.subject !== state.subject) return false;
         return true;
     });
+
+    /* ⭐ LỌC LẦN 2: CHỈ GIỮ CÂU THUỘC QUYỀN USER */
+    if (!isUnlimited && allowedHsk.length > 0) {
+        filtered = filtered.filter(function(r) {
+            return allowedHsk.indexOf(r.hsk) !== -1;
+        });
+    }
+
     updateResultCount();
     render(true);
 
@@ -6878,51 +7030,134 @@ function pfUpdateFilterUI() {
     else $('pfClearSearchBtn').classList.remove('show');
 }
 
+/* ============================================================ */
+/* PF APPLY FILTER — Lọc trong modal Practice Full               */
+/* Đã tích hợp cú pháp đặc biệt: "hsk1 5", "hsk1", "hsk1 5 10"  */
+/* ============================================================ */
 function pfApplyFilter() {
-    $('searchInput').value = $('pfSearchInput').value;
-    $('hskFilter').value = $('pfHskFilter').value;
-    $('subjectFilter').value = $('pfSubjectFilter').value;
-    state.search = $('pfSearchInput').value.trim().toLowerCase();
-    state.hsk = $('pfHskFilter').value;
+    /* ═══ Đồng bộ filter ra ngoài ═══ */
+    var rawSearch = $('pfSearchInput').value.trim();
+    $('searchInput').value     = $('pfSearchInput').value;
+    $('hskFilter').value       = $('pfHskFilter').value;
+    $('subjectFilter').value   = $('pfSubjectFilter').value;
+
+    state.search  = rawSearch.toLowerCase();
+    state.hsk     = $('pfHskFilter').value;
     state.subject = $('pfSubjectFilter').value;
-    var baseData = getLimitedData();
-    filtered = baseData.filter(function(r) {
-        if (state.search) {
-            var s = state.search;
-            var inVi = (r.vi || '').toLowerCase().indexOf(s) !== -1;
-            var inZh = (r.zh || '').toLowerCase().indexOf(s) !== -1;
-            var inPinyin = (r.pinyin || '').toLowerCase().indexOf(s) !== -1;
-            var inTopic = (r.topic || '').toLowerCase().indexOf(s) !== -1;
-            var inSubject = (r.subject || '').toLowerCase().indexOf(s) !== -1;
-            if (!inVi && !inZh && !inPinyin && !inTopic && !inSubject) return false;
+
+    /* ═══ LẤY TOÀN BỘ KHO — KHÔNG GIỚI HẠN TIER ═══ */
+    var baseData = (typeof RAW_DATA !== 'undefined' && Array.isArray(RAW_DATA))
+                   ? RAW_DATA
+                   : getLimitedData();
+
+    var parsed = parseSearchQuery(rawSearch);
+
+    /* ⭐ Lấy danh sách HSK mà user được phép xem */
+    var info = getTierInfo();
+    var allowedHsk = getAllowedHskList();
+    var isUnlimited = (info.tier === 'active');
+
+    /* ═══ NHÁNH 1: CÚ PHÁP ĐẶC BIỆT ═══ */
+    if (parsed && parsed.type === 'hsk_stt') {
+        var targetHsk = String(parsed.hsk || '').toUpperCase().replace(/\s+/g, '');
+
+        /* ⭐ CHECK QUYỀN */
+        if (!isUnlimited && allowedHsk.indexOf(parsed.hsk) === -1) {
+            var lockMsg = info.tier === 'trial'
+                ? '⚠️ ' + parsed.hsk + ' chưa mở khoá (cần gia hạn)'
+                : '⚠️ ' + parsed.hsk + ' chưa mở khoá (cần đăng nhập)';
+            showSearchToast(lockMsg);
+            filtered = [];
+        } else {
+            filtered = baseData.filter(function(r) {
+                var rHsk = String(r.hsk || '').toUpperCase().replace(/\s+/g, '');
+                if (rHsk !== targetHsk) return false;
+                if (parsed.startStt === null) return true;
+
+                var sttNum = parseInt(String(r.stt).trim(), 10);
+                if (isNaN(sttNum)) return false;
+
+                return sttNum >= parsed.startStt && sttNum <= parsed.endStt;
+            });
+
+            if (filtered.length === 0) {
+                if (parsed.startStt === null) {
+                    showSearchToast('⚠️ Không có câu nào trong ' + parsed.hsk);
+                } else if (parsed.startStt === parsed.endStt) {
+                    showSearchToast('⚠️ Không có câu số ' + parsed.startStt + ' trong ' + parsed.hsk);
+                } else {
+                    showSearchToast('⚠️ Không có câu nào từ ' + parsed.startStt + ' → ' + parsed.endStt + ' trong ' + parsed.hsk);
+                }
+            } else {
+                var foundMsg = parsed.startStt === null
+                    ? '✅ Tìm thấy ' + filtered.length + ' câu trong ' + parsed.hsk
+                    : (parsed.startStt === parsed.endStt
+                        ? '✅ ' + parsed.hsk + ' câu số ' + parsed.startStt
+                        : '✅ ' + parsed.hsk + ' câu ' + parsed.startStt + ' → ' + parsed.endStt + ' (' + filtered.length + ' kết quả)');
+                showSearchToast(foundMsg);
+            }
         }
-        if (state.hsk && r.hsk !== state.hsk) return false;
-        if (state.subject && r.subject !== state.subject) return false;
-        return true;
-    });
+    }
+    /* ═══ NHÁNH 2: TEXT THÔNG THƯỜNG ═══ */
+    else {
+        filtered = baseData.filter(function(r) {
+            if (state.search) {
+                var s = state.search;
+                var inVi      = (r.vi      || '').toLowerCase().indexOf(s) !== -1;
+                var inZh      = (r.zh      || '').toLowerCase().indexOf(s) !== -1;
+                var inPinyin  = (r.pinyin  || '').toLowerCase().indexOf(s) !== -1;
+                var inTopic   = (r.topic   || '').toLowerCase().indexOf(s) !== -1;
+                var inSubject = (r.subject || '').toLowerCase().indexOf(s) !== -1;
+                if (!inVi && !inZh && !inPinyin && !inTopic && !inSubject) return false;
+            }
+            if (state.hsk     && r.hsk     !== state.hsk)     return false;
+            if (state.subject && r.subject !== state.subject) return false;
+            return true;
+        });
+
+        /* ⭐ LỌC LẦN 2: CHỈ GIỮ CÂU THUỘC QUYỀN USER */
+        if (!isUnlimited && allowedHsk.length > 0) {
+            filtered = filtered.filter(function(r) {
+                return allowedHsk.indexOf(r.hsk) !== -1;
+            });
+        }
+    }
+
+    /* ═══ Cập nhật UI ═══ */
     updateFilterUI();
     pfUpdateFilterUI();
     pfBuildQuickNav();
     render(true);
-    if (state.hsk || state.subject) {
+
+    if (state.hsk || state.subject || parsed) {
         setTimeout(function() {
             var bodyEl = document.querySelector('.practice-full-body');
             if (bodyEl) bodyEl.scrollTo({ top: 0, behavior: 'smooth' });
         }, 100);
     }
+
+    /* ═══ Xử lý câu hiện tại ═══ */
     var activeEl = document.activeElement;
     var isTypingInSearch = activeEl && activeEl.id === 'pfSearchInput';
     var currentStillValid = false;
+
     if (pfCurrentStt) {
         for (var i = 0; i < filtered.length; i++) {
-            if (String(filtered[i].stt) === String(pfCurrentStt)) { currentStillValid = true; break; }
+            if (String(filtered[i].stt) === String(pfCurrentStt)) {
+                currentStillValid = true;
+                break;
+            }
         }
     }
+
     if (filtered.length > 0) {
         if (isTypingInSearch && currentStillValid) {
             var idx = -1;
             for (var j = 0; j < filtered.length; j++) {
-                if (String(filtered[j].stt) === String(pfCurrentStt)) { idx = j; break; }
+                if (String(filtered[j].stt) === String(pfCurrentStt)) {
+                    idx = j;
+                    break;
+                }
             }
             if (idx !== -1) {
                 var rNow = filtered[idx];
@@ -6933,6 +7168,7 @@ function pfApplyFilter() {
             }
             return;
         }
+
         loadPracticeFull(filtered[0].stt);
     } else {
         pfCurrentStt = null;
