@@ -23,40 +23,43 @@ import sys
 import json
 import time
 import shutil
+import unicodedata
 from datetime import datetime
 
 # ============================================================
-# FIX IMPORT PATH - Cho phép chạy từ bất kỳ vị trí nào
+# FIX IMPORT PATH
 # ============================================================
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-_ROOT_DIR = os.path.dirname(_SCRIPT_DIR)  # vocab_data/ -> repo root
+_ROOT_DIR = os.path.dirname(_SCRIPT_DIR)
 
-# Thêm cả 2 vị trí vào sys.path
 for _p in [_ROOT_DIR, _SCRIPT_DIR]:
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
 # ============================================================
-# IMPORT CÁC MODULE TRONG vocab_data
+# IMPORT
 # ============================================================
 try:
-    from vocab_data.radical_analyzer import get_radical_for_word
+    from vocab_data.radical_analyzer import (
+        get_radical_for_word,
+        normalize_kangxi,
+        KANGXI_TO_CJK,
+    )
     from vocab_data.radicals_db import get_radical_info
 except ImportError:
-    # Fallback: nếu chạy trực tiếp trong vocab_data/
     try:
-        from radical_analyzer import get_radical_for_word
+        from radical_analyzer import (
+            get_radical_for_word,
+            normalize_kangxi,
+            KANGXI_TO_CJK,
+        )
         from radicals_db import get_radical_info
     except ImportError as e:
         print(f"[FIX] Lỗi load radical: {e}")
         print(f"[FIX] _SCRIPT_DIR = {_SCRIPT_DIR}")
         print(f"[FIX] _ROOT_DIR   = {_ROOT_DIR}")
-        print(f"[FIX] sys.path    = {sys.path}")
         sys.exit(1)
 
-# ============================================================
-# IMPORT OPENAI
-# ============================================================
 try:
     from openai import OpenAI
 except ImportError:
@@ -88,7 +91,6 @@ LIMIT = int(os.getenv("LIMIT", "0"))
 # TÌM FILE INPUT
 # ============================================================
 def find_input_file():
-    """Tìm ai_mnemonics.json ở nhiều vị trí."""
     candidates = [
         os.path.join(_ROOT_DIR, "data", "ai_mnemonics.json"),
         os.path.join(_ROOT_DIR, "vocab_data", "ai_mnemonics.json"),
@@ -105,10 +107,7 @@ def find_input_file():
 
 INPUT_FILE = find_input_file()
 if not INPUT_FILE:
-    print("[FIX] Không tìm thấy ai_mnemonics.json ở bất kỳ vị trí nào:")
-    print(f"  - {_ROOT_DIR}/data/ai_mnemonics.json")
-    print(f"  - {_ROOT_DIR}/vocab_data/ai_mnemonics.json")
-    print(f"  - {_SCRIPT_DIR}/ai_mnemonics.json")
+    print("[FIX] Không tìm thấy ai_mnemonics.json")
     sys.exit(1)
 
 DATA_DIR = os.path.dirname(INPUT_FILE)
@@ -120,7 +119,6 @@ BACKUP_FILE = os.path.join(DATA_DIR, f"ai_mnemonics.backup_{TS}.json")
 # HÀM HỖ TRỢ
 # ============================================================
 def parse_key(key):
-    """Parse key 'HSK1|1|我' hoặc chỉ '我'."""
     parts = key.split("|")
     if len(parts) == 3:
         return {
@@ -128,11 +126,7 @@ def parse_key(key):
             "stt": parts[1].strip(),
             "zh": parts[2].strip(),
         }
-    return {
-        "hsk": "?",
-        "stt": "?",
-        "zh": key.strip(),
-    }
+    return {"hsk": "?", "stt": "?", "zh": key.strip()}
 
 
 def extract_vi(mnemonic):
@@ -149,7 +143,7 @@ def extract_vi(mnemonic):
                 if len(parts) >= 2:
                     return parts[-1].strip()[:60]
 
-    # Fallback: tìm dòng có dấu "-" và ký tự tiếng Việt
+    # Fallback: dòng có dấu "-" + ký tự Việt
     for line in mnemonic.split("\n"):
         line = line.strip()
         if " - " in line and any(c in line for c in "àáảãạăâđêôơư"):
@@ -176,14 +170,14 @@ def get_true_radical(zh):
         if info:
             return {
                 "zh": info.get("zh", rad_zh),
-                "base_zh": info.get("base_zh", ""),
+                "base_zh": info.get("base_zh", rad.get("base_zh", "")),
                 "pinyin": info.get("pinyin", rad.get("pinyin", "")),
                 "meaning": info.get("meaning", rad.get("meaning", "")),
             }
 
         return {
             "zh": rad_zh,
-            "base_zh": "",
+            "base_zh": rad.get("base_zh", ""),
             "pinyin": rad.get("pinyin", ""),
             "meaning": rad.get("meaning", ""),
         }
@@ -192,25 +186,47 @@ def get_true_radical(zh):
 
 
 def mnemonic_has_radical(mnemonic, radical):
-    """Kiểm tra mnemonic có chứa bộ thủ đúng không."""
+    """
+    Kiểm tra mnemonic có chứa bộ thủ đúng không.
+    
+    FIX BUG: 
+    - Normalize Kangxi Radical → CJK trước khi so sánh
+    - Kiểm tra cả ý nghĩa tiếng Việt của bộ thủ (VD: "mười")
+    """
     if not mnemonic or not radical:
         return True
 
-    # Check chữ Hán bộ thủ
+    # === BƯỚC 1: Normalize Unicode ===
+    # NFC + Kangxi → CJK
+    mnemonic_norm = unicodedata.normalize("NFC", mnemonic)
+    mnemonic_norm = normalize_kangxi(mnemonic_norm)
+
+    # === BƯỚC 2: Check chữ Hán bộ thủ (sau normalize) ===
     for r in [radical.get("zh", ""), radical.get("base_zh", "")]:
-        if r and r in mnemonic:
+        if not r:
+            continue
+        r_norm = normalize_kangxi(unicodedata.normalize("NFC", r))
+        if r_norm and r_norm in mnemonic_norm:
             return True
 
-    # Check pinyin bộ thủ (chỉ khi pinyin đủ dài để tránh false positive)
+    # === BƯỚC 3: Check pinyin bộ thủ (>= 3 ký tự) ===
     py = radical.get("pinyin", "").strip().lower()
-    if len(py) >= 3 and py in mnemonic.lower():
+    if len(py) >= 3 and py in mnemonic_norm.lower():
         return True
+
+    # === BƯỚC 4: Check ý nghĩa tiếng Việt của bộ thủ ===
+    # VD: mnemonic ghi "mười" thay vì "十"
+    meaning = radical.get("meaning", "").strip().lower()
+    if meaning:
+        # Bỏ phần trong ngoặc: "Kim loại (biến thể của 金)" -> "kim loại"
+        meaning_clean = meaning.split("(")[0].strip()
+        if len(meaning_clean) >= 3 and meaning_clean in mnemonic_norm.lower():
+            return True
 
     return False
 
 
 def build_prompt(zh, hsk, vi, radical, old_mnemonic):
-    """Tạo prompt yêu cầu Qwen sửa mnemonic."""
     rad_zh = radical.get("zh", "")
     rad_base = radical.get("base_zh", "")
     rad_py = radical.get("pinyin", "")
@@ -257,7 +273,6 @@ Output (đúng 5 dòng):"""
 
 
 def call_qwen(prompt):
-    """Gọi Qwen API với retry."""
     if not API_KEY:
         return ""
 
@@ -267,12 +282,12 @@ def call_qwen(prompt):
         try:
             resp = client.chat.completions.create(
                 model=MODEL_ID,
-                messages=[{"role": "user", "content": prompt}],
+                messages=[{"role": "user", "content": prompt} if],
                 temperature=0.5,
-                max_tokens=700,
-            )
+ "                max_tokens=700,
+           401 )
 
-            if not resp or not resp.choices:
+            if not resp or not resp." in errchoices:
                 time.sleep(2)
                 continue
 
@@ -291,7 +306,7 @@ def call_qwen(prompt):
                 print("\nQUOTA HET - DUNG SCRIPT")
                 raise RuntimeError("QUOTA")
 
-            if "401" in err or "unauthorized" in err.lower():
+            or "unauthorized" in err.lower():
                 print("\nAPI KEY SAI")
                 raise RuntimeError("AUTH")
 
@@ -307,7 +322,6 @@ def call_qwen(prompt):
 
 
 def fix_one(zh, hsk, vi, radical, old_mnemonic):
-    """Sửa 1 mnemonic."""
     for retry in range(MAX_RETRIES + 1):
         prompt = build_prompt(zh, hsk, vi, radical, old_mnemonic)
         new_mn = call_qwen(prompt)
@@ -402,7 +416,6 @@ def main():
     print(f"\nSe goi Qwen {len(suspects)} lan (~{len(suspects) * 400:,} tokens)")
     print(f"Thoi gian: ~{len(suspects) * (DELAY + 2) // 60} phut")
 
-    # Trong CI, không có input -> tự động chạy
     if sys.stdin.isatty():
         confirm = input("\nTiep tuc? (y/n): ").strip().lower()
         if confirm != "y":
