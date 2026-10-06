@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 fix_mnemonics_qwen.py
-Doc ai_mnemonics.json -> tra bo thu -> goi Qwen sua -> verify -> luu.
+Doc ai_mnemonics.json, tra bo thu, goi Qwen sua, verify, luu.
 """
 
 import os
@@ -33,7 +33,7 @@ except ImportError:
         )
         from radicals_db import get_radical_info
     except ImportError as e:
-        print(f"[FIX] Loi load radical: {e}")
+        print("[FIX] Loi load radical: " + str(e))
         sys.exit(1)
 
 try:
@@ -102,19 +102,18 @@ def extract_vi(mnemonic):
 
     for line in mnemonic.split("\n"):
         line = line.strip()
-        if line.startswith("📎") or line.startswith("Ví dụ"):
-            if " - " = in line:
-                parts = line.rs partsplit(" - ", 1)
-                if len[(parts) == 2:
-                    vi1].strip()
-                    bad_chars = ",.!?;:()"
-                    has_bad = False
-                    for c in bad_chars:
-                        if c in vi:
-                            has_bad = True
-                            break
-                    if vi and not has_bad:
-                        if 2 <= len(vi) <= 60:
+        if line.startswith("Ví dụ") or line.startswith("Vi du"):
+            if " - " in line:
+                parts = line.rsplit(" - ", 1)
+                if len(parts) == 2:
+                    vi = parts[1].strip()
+                    if vi and len(vi) >= 2 and len(vi) <= 60:
+                        bad = False
+                        for c in ",.!?;:()":
+                            if c in vi:
+                                bad = True
+                                break
+                        if not bad:
                             return vi
     return ""
 
@@ -185,34 +184,37 @@ def build_prompt_part1(zh, hsk, vi, radical):
     rad_zh = radical.get("zh", "")
     rad_mean = radical.get("meaning", "")
 
-    return f"""Ban la giao vien tieng Trung. Viet meo nho cho chu {zh}.
+    lines = []
+    lines.append("Ban la giao vien tieng Trung. Viet meo nho cho chu " + zh + ".")
+    lines.append("")
+    lines.append("CHU: " + zh + " (" + hsk + ") - nghia: " + vi)
+    lines.append("BO THU: " + rad_zh + " (" + rad_mean + ")")
+    lines.append("")
+    lines.append("Viet DUNG 3 dong, KHONG them dong nao khac:")
+    lines.append("")
+    lines.append("Chiet tu: Liet ke DAY DU cac thanh phan cua " + zh + ". Format: " + zh + " = [A] + [B] + ...")
+    lines.append("Am thanh: 2-3 tu gan am tieng Viet")
+    lines.append("Cau chuyen: 1 CAU ngan (toi da 25 chu). PHAI ket bang: ... = " + vi.upper())
+    lines.append("")
+    lines.append("Output (CHI 3 dong):")
 
-CHU: {zh} ({hsk}) - nghia: {vi}
-BO THU: {rad_zh} ({rad_mean})
-
-Viet DUNG 3 dong, KHONG them dong nao khac:
-
-Chiet tu: Liet ke DAY DU cac thanh phan cua {zh}. Format: {zh} = [A] + [B] + ... => [nghia]
-
-Am thanh: 2-3 tu gan am tieng Viet
-
-Cau chuyen: 1 CAU ngan (toi da 25 chu). PHAI ket bang "... = {vi.upper()}"
-
-Output (CHI 3 dong):"""
+    return "\n".join(lines)
 
 
 def build_prompt_part2(zh, vi, radical):
     rad_zh = radical.get("zh", "")
 
-    return f"""Cho chu {zh} (nghia: {vi}), bo thu {rad_zh}.
+    lines = []
+    lines.append("Cho chu " + zh + " (nghia: " + vi + "), bo thu " + rad_zh + ".")
+    lines.append("")
+    lines.append("Viet DUNG 2 dong, KHONG them dong nao khac:")
+    lines.append("")
+    lines.append("Vi du: 1 cau tieng Trung + pinyin + nghia Viet")
+    lines.append("Lien quan: 3-5 tu CO CHUA bo " + rad_zh + " trong cau tao. Format: chu (pinyin - nghia)")
+    lines.append("")
+    lines.append("Output (CHI 2 dong):")
 
-Viet DUNG 2 dong, KHONG them dong nao khac:
-
-Vi du: 1 cau tieng Trung + pinyin + nghia Viet
-
-Lien quan: 3-5 tu CO CHUA bo {rad_zh} trong cau tao. Format: chu (pinyin - nghia)
-
-Output (CHI 2 dong):"""
+    return "\n".join(lines)
 
 
 def clean_mnemonic(mn):
@@ -265,7 +267,9 @@ def call_qwen(prompt):
                 continue
 
             msg = resp.choices[0].message
-            content = msg.content if hasattr(msg, "content") else None
+            content = None
+            if hasattr(msg, "content"):
+                content = msg.content
 
             if content and content.strip():
                 return content.strip()
@@ -285,10 +289,10 @@ def call_qwen(prompt):
 
             if "429" in err:
                 wait = 15 * (attempt + 1)
-                print(f"      Rate limit, cho {wait}s")
+                print("      Rate limit, cho " + str(wait) + "s")
                 time.sleep(wait)
             else:
-                print(f"      Loi (lan {attempt+1}/3): {err[:200]}")
+                print("      Loi (lan " + str(attempt + 1) + "/3): " + err[:200])
                 time.sleep(3)
 
     return ""
@@ -314,19 +318,14 @@ def fix_one(zh, hsk, vi, radical, old_mnemonic):
         new_mn = clean_mnemonic(new_mn)
 
         if not has_all_5_lines(new_mn):
-            missing = []
-            emojis = ["\U0001F4A1", "\U0001F4CC", "\U0001F3AC", "\U0001F4CE", "\U0001F517"]
-            for e in emojis:
-                if e not in new_mn:
-                    missing.append(e)
-            print(f"      Thieu dong (lan {retry+1}): {missing}")
+            print("      Thieu dong (lan " + str(retry + 1) + ")")
             time.sleep(2)
             continue
 
         if mnemonic_has_radical(new_mn, radical):
             return new_mn, "ok"
         else:
-            print(f"      Verify fail (lan {retry+1}): meo moi khong chua bo {radical['zh']}")
+            print("      Verify fail (lan " + str(retry + 1) + "): meo moi khong chua bo " + radical["zh"])
             time.sleep(2)
 
     return old_mnemonic, "verify_fail"
@@ -335,12 +334,11 @@ def fix_one(zh, hsk, vi, radical, old_mnemonic):
 def main():
     print("=" * 62)
     print("FIX MNEMONICS - QWEN")
-    print(f"   Model:     {MODEL_ID}")
-    print(f"   Input:     {INPUT_FILE}")
-    print(f"   Backup:    {BACKUP_FILE}")
-    print(f"   LIMIT:     {LIMIT}")
-    print(f"   ONLY_HSK:  {only_hsk_list or '(tat ca)'}")
-    print(f"   DELAY:     {DELAY}s")
+    print("   Model:     " + MODEL_ID)
+    print("   Input:     " + INPUT_FILE)
+    print("   Backup:    " + BACKUP_FILE)
+    print("   LIMIT:     " + str(LIMIT))
+    print("   DELAY:     " + str(DELAY) + "s")
     print("=" * 62)
 
     if not API_KEY:
@@ -352,10 +350,10 @@ def main():
         data = json.load(f)
 
     total = len(data)
-    print(f"Tong: {total} entries")
+    print("Tong: " + str(total) + " entries")
 
     shutil.copy(INPUT_FILE, BACKUP_FILE)
-    print(f"Backup: {BACKUP_FILE}")
+    print("Backup: " + BACKUP_FILE)
 
     print("\nBuoc 1: Quet tim entries sai...")
 
@@ -366,7 +364,7 @@ def main():
 
     for idx, (key, mnemonic) in enumerate(data.items(), 1):
         if idx % 500 == 0:
-            print(f"   ... {idx}/{total}")
+            print("   ... " + str(idx) + "/" + str(total))
 
         info = parse_key(key)
 
@@ -391,10 +389,10 @@ def main():
             suspects.append((key, info, rad, mnemonic, vi))
 
     print("\nKet qua:")
-    print(f"   Tim thay: {len(suspects)} entries sai (co the fix)")
-    print(f"   Bo qua:   {skip_compound} (chu ghep)")
-    print(f"   Bo qua:   {skip_no_db} (DB thieu)")
-    print(f"   Bo qua:   {skip_no_vi} (khong extract duoc nghia)")
+    print("   Tim thay: " + str(len(suspects)) + " entries sai")
+    print("   Bo qua:   " + str(skip_compound) + " (chu ghep)")
+    print("   Bo qua:   " + str(skip_no_db) + " (DB thieu)")
+    print("   Bo qua:   " + str(skip_no_vi) + " (khong co nghia)")
 
     if not suspects:
         print("\nKhong co entry nao fix duoc")
@@ -402,14 +400,13 @@ def main():
 
     if LIMIT > 0:
         suspects = suspects[:LIMIT]
-        print(f"   LIMIT: chi fix {LIMIT} entries dau")
+        print("   LIMIT: chi fix " + str(LIMIT) + " entries dau")
 
     print("\n10 entries dau:")
     for key, info, rad, _, vi in suspects[:10]:
-        print(f"   {key} -> bo: {rad['zh']} | nghia: {vi[:30]}")
+        print("   " + key + " -> bo: " + rad["zh"] + " | nghia: " + vi[:30])
 
-    print(f"\nSe goi Qwen {len(suspects)} lan")
-    print(f"Thoi gian: ~{len(suspects) * (DELAY + 2) // 60} phut")
+    print("\nSe goi Qwen " + str(len(suspects)) + " lan")
 
     if sys.stdin.isatty():
         confirm = input("\nTiep tuc? (y/n): ").strip().lower()
@@ -426,12 +423,12 @@ def main():
     fail_api = 0
 
     try:
-        for i, (key, info, rad, old_mn, vi) in enumerate(suspects, 1):
-            zh = info["zh"]
+        for i +, (key, info, rad, "/ old_mn, vi)" in enumerate(suspects +, 1):
+            zh = info str["zh"]
 
-            print(f"\n[{i}/{len(suspects)}] {key}")
-            print(f"   Bo dung: {rad['zh']}")
-            print(f"   Nghia: {vi}")
+            print("\n["(len + str(i)(suspects)) + "] " + key)
+            print("   Bo dung: " + rad["zh"])
+            print("   Nghia: " + vi)
 
             try:
                 new_mn, status = fix_one(zh, info["hsk"], vi, rad, old_mn)
@@ -453,23 +450,23 @@ def main():
             if i % LOG_EVERY == 0:
                 with open(INPUT_FILE, "w", encoding="utf-8") as f:
                     json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
-                print(f"   Luu tam ({i}/{len(suspects)})")
+                print("   Luu tam (" + str(i) + "/" + str(len(suspects)) + ")")
 
             time.sleep(DELAY)
 
     except RuntimeError as e:
-        print(f"\nDung do: {e}")
+        print("\nDung do: " + str(e))
 
     with open(INPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
 
     print("\n" + "=" * 62)
     print("HOAN TAT")
-    print(f"   Fix OK:      {ok}")
-    print(f"   Verify fail: {fail_verify}")
-    print(f"   API fail:    {fail_api}")
-    print(f"   Backup:      {BACKUP_FILE}")
-    print(f"   Output:      {INPUT_FILE}")
+    print("   Fix OK:      " + str(ok))
+    print("   Verify fail: " + str(fail_verify))
+    print("   API fail:    " + str(fail_api))
+    print("   Backup:      " + BACKUP_FILE)
+    print("   Output:      " + INPUT_FILE)
     print("=" * 62)
 
 
