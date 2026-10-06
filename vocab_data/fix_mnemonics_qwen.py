@@ -1,11 +1,21 @@
 # -*- coding: utf-8 -*-
 r"""
-fix_mnemonics_qwen.py (v2 - tối ưu cho cấu trúc data/ + vocab_data/)
-Đọc data/ai_mnemonics.json -> tra bộ thủ đúng -> gọi Qwen sửa -> verify -> lưu.
+fix_mnemonics_qwen.py
+Đọc ai_mnemonics.json -> tra bộ thủ đúng -> gọi Qwen sửa -> verify -> lưu.
 
-Chạy TỪ THƯ MỤC GỐC (thư mục cha của data/ và vocab_data/):
+Chạy:
     export DASHSCOPE_API_KEY="sk-..."
-    python fix_mnemonics_qwen.py
+    python vocab_data/fix_mnemonics_qwen.py
+
+Hỗ trợ biến môi trường:
+    DASHSCOPE_API_KEY   (bắt buộc)
+    QWEN_BASE_URL       (tùy chọn)
+    QWEN_MODEL          (mặc định: qwen-flash)
+    LIMIT               (0 = tất cả)
+    ONLY_HSK            (VD: "HSK1,HSK2")
+    DELAY               (mặc định: 2.0)
+    MAX_RETRIES         (mặc định: 2)
+    LOG_EVERY           (mặc định: 10)
 """
 
 import os
@@ -14,38 +24,55 @@ import json
 import time
 import shutil
 from datetime import datetime
-from openai import OpenAI
 
-# ============ FIX IMPORT PATH ============
-# Thêm thư mục gốc vào sys.path để import được vocab_data
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-if BASE_DIR not in sys.path:
-    sys.path.insert(0, BASE_DIR)
+# ============================================================
+# FIX IMPORT PATH - Cho phép chạy từ bất kỳ vị trí nào
+# ============================================================
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_ROOT_DIR = os.path.dirname(_SCRIPT_DIR)  # vocab_data/ -> repo root
 
-# Thử import từ nhiều vị trí
+# Thêm cả 2 vị trí vào sys.path
+for _p in [_ROOT_DIR, _SCRIPT_DIR]:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
+# ============================================================
+# IMPORT CÁC MODULE TRONG vocab_data
+# ============================================================
 try:
     from vocab_data.radical_analyzer import get_radical_for_word
     from vocab_data.radicals_db import get_radical_info
 except ImportError:
+    # Fallback: nếu chạy trực tiếp trong vocab_data/
     try:
-        # Fallback: nếu script nằm trong vocab_data/
-        sys.path.insert(0, os.path.dirname(BASE_DIR))
-        from vocab_data.radical_analyzer import get_radical_for_word
-        from vocab_data.radicals_db import get_radical_info
+        from radical_analyzer import get_radical_for_word
+        from radicals_db import get_radical_info
     except ImportError as e:
         print(f"[FIX] Lỗi load radical: {e}")
-        print(f"[FIX] BASE_DIR = {BASE_DIR}")
-        print(f"[FIX] sys.path = {sys.path}")
+        print(f"[FIX] _SCRIPT_DIR = {_SCRIPT_DIR}")
+        print(f"[FIX] _ROOT_DIR   = {_ROOT_DIR}")
+        print(f"[FIX] sys.path    = {sys.path}")
         sys.exit(1)
 
+# ============================================================
+# IMPORT OPENAI
+# ============================================================
+try:
+    from openai import OpenAI
+except ImportError:
+    print("[FIX] Chưa cài openai. Chạy: pip install openai")
+    sys.exit(1)
 
-# ============ CẤU HÌNH ============
+
+# ============================================================
+# CẤU HÌNH
+# ============================================================
 API_KEY = os.getenv("DASHSCOPE_API_KEY")
 BASE_URL = os.getenv(
     "QWEN_BASE_URL",
-    "https://ws-8lcqaxwxdv0h9xzy.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1"
+    "https://dashscope.aliyuncs.com/compatible-mode/v1"
 )
-MODEL_ID = os.getenv("QWEN_MODEL", "qwen-plus-character")
+MODEL_ID = os.getenv("QWEN_MODEL", "qwen-flash")
 
 DELAY = float(os.getenv("DELAY", "2.0"))
 MAX_RETRIES = int(os.getenv("MAX_RETRIES", "2"))
@@ -56,16 +83,42 @@ only_hsk_list = [x.strip() for x in ONLY_HSK.split(",") if x.strip()]
 
 LIMIT = int(os.getenv("LIMIT", "0"))
 
-# ============ ĐƯỜNG DẪN ============
-# BASE_DIR = thư mục gốc chứa script (cũng là thư mục cha của data/ và vocab_data/)
-DATA_DIR = os.path.join(BASE_DIR, "data")
-INPUT_FILE = os.path.join(DATA_DIR, "ai_mnemonics.json")
 
+# ============================================================
+# TÌM FILE INPUT
+# ============================================================
+def find_input_file():
+    """Tìm ai_mnemonics.json ở nhiều vị trí."""
+    candidates = [
+        os.path.join(_ROOT_DIR, "data", "ai_mnemonics.json"),
+        os.path.join(_ROOT_DIR, "vocab_data", "ai_mnemonics.json"),
+        os.path.join(_SCRIPT_DIR, "data", "ai_mnemonics.json"),
+        os.path.join(_SCRIPT_DIR, "ai_mnemonics.json"),
+        "data/ai_mnemonics.json",
+        "ai_mnemonics.json",
+    ]
+    for p in candidates:
+        if os.path.exists(p):
+            return os.path.abspath(p)
+    return None
+
+
+INPUT_FILE = find_input_file()
+if not INPUT_FILE:
+    print("[FIX] Không tìm thấy ai_mnemonics.json ở bất kỳ vị trí nào:")
+    print(f"  - {_ROOT_DIR}/data/ai_mnemonics.json")
+    print(f"  - {_ROOT_DIR}/vocab_data/ai_mnemonics.json")
+    print(f"  - {_SCRIPT_DIR}/ai_mnemonics.json")
+    sys.exit(1)
+
+DATA_DIR = os.path.dirname(INPUT_FILE)
 TS = datetime.now().strftime("%Y%m%d_%H%M%S")
 BACKUP_FILE = os.path.join(DATA_DIR, f"ai_mnemonics.backup_{TS}.json")
 
 
-# ============ HÀM HỖ TRỢ ============
+# ============================================================
+# HÀM HỖ TRỢ
+# ============================================================
 def parse_key(key):
     """Parse key 'HSK1|1|我' hoặc chỉ '我'."""
     parts = key.split("|")
@@ -75,20 +128,19 @@ def parse_key(key):
             "stt": parts[1].strip(),
             "zh": parts[2].strip(),
         }
-    # Fallback: key chỉ là chữ Hán
     return {
         "hsk": "?",
         "stt": "?",
         "zh": key.strip(),
-   ng }
+    }
 
 
-def extract_vi(mnemonic Vi):
-    """Trích xuấtệt nghĩa tiế từ mnemonic cũ (cải tiến)."""
+def extract_vi(mnemonic):
+    """Trích xuất nghĩa tiếng Việt từ mnemonic cũ."""
     if not mnemonic:
         return ""
 
-    # Ưu tiên tìm dòng có 📎 hoặc Ví dụ
+    # Ưu tiên dòng có 📎 hoặc Ví dụ
     for line in mnemonic.split("\n"):
         line = line.strip()
         if line.startswith("📎") or line.startswith("Ví dụ"):
@@ -97,7 +149,7 @@ def extract_vi(mnemonic Vi):
                 if len(parts) >= 2:
                     return parts[-1].strip()[:60]
 
-    # Fallback: tìm dòng có dấu "-" và chữ Việt
+    # Fallback: tìm dòng có dấu "-" và ký tự tiếng Việt
     for line in mnemonic.split("\n"):
         line = line.strip()
         if " - " in line and any(c in line for c in "àáảãạăâđêôơư"):
@@ -135,7 +187,7 @@ def get_true_radical(zh):
             "pinyin": rad.get("pinyin", ""),
             "meaning": rad.get("meaning", ""),
         }
-    except Exception as e:
+    except Exception:
         return None
 
 
@@ -248,7 +300,7 @@ def call_qwen(prompt):
                 print(f"      Rate limit, cho {wait}s")
                 time.sleep(wait)
             else:
-                print(f"      Loi (lan {attempt+1}/3): {err[:120]}")
+                print(f"      Loi (lan {attempt+1}/3): {err[:200]}")
                 time.sleep(3)
 
     return ""
@@ -273,22 +325,23 @@ def fix_one(zh, hsk, vi, radical, old_mnemonic):
     return old_mnemonic, "verify_fail"
 
 
-# ============ MAIN ============
+# ============================================================
+# MAIN
+# ============================================================
 def main():
     print("=" * 62)
     print("FIX MNEMONICS - QWEN")
-    print(f"   Model: {MODEL_ID}")
-    print(f"   BASE_DIR: {BASE_DIR}")
-    print(f"   Input: {INPUT_FILE}")
+    print(f"   Model:     {MODEL_ID}")
+    print(f"   Base URL:  {BASE_URL}")
+    print(f"   Input:     {INPUT_FILE}")
+    print(f"   Backup:    {BACKUP_FILE}")
+    print(f"   LIMIT:     {LIMIT}")
+    print(f"   ONLY_HSK:  {only_hsk_list or '(tất cả)'}")
+    print(f"   DELAY:     {DELAY}s")
     print("=" * 62)
 
     if not API_KEY:
         print("Chua set DASHSCOPE_API_KEY")
-        sys.exit(1)
-
-    if not os.path.exists(INPUT_FILE):
-        print(f"Khong tim thay {INPUT_FILE}")
-        print(f"Hay dam bao ban chay script tu thu muc goc cua project")
         sys.exit(1)
 
     print(f"\nDang doc file...")
@@ -312,8 +365,6 @@ def main():
             print(f"   ... {idx}/{total}")
 
         info = parse_key(key)
-        if not info:
-            continue
 
         if only_hsk_list and info["hsk"] not in only_hsk_list:
             continue
@@ -333,8 +384,8 @@ def main():
 
     print(f"\nKet qua:")
     print(f"   Tim thay: {len(suspects)} entries sai")
-    print(f"   Bo qua:  {skip_compound} (chu ghep)")
-    print(f"   Bo qua:  {skip_no_db} (DB thieu)")
+    print(f"   Bo qua:   {skip_compound} (chu ghep)")
+    print(f"   Bo qua:   {skip_no_db} (DB thieu)")
 
     if not suspects:
         print("\nKhong co entry nao sai")
@@ -351,10 +402,14 @@ def main():
     print(f"\nSe goi Qwen {len(suspects)} lan (~{len(suspects) * 400:,} tokens)")
     print(f"Thoi gian: ~{len(suspects) * (DELAY + 2) // 60} phut")
 
-    confirm = input("\nTiep tuc? (y/n): ").strip().lower()
-    if confirm != "y":
-        print("Huy")
-        return
+    # Trong CI, không có input -> tự động chạy
+    if sys.stdin.isatty():
+        confirm = input("\nTiep tuc? (y/n): ").strip().lower()
+        if confirm != "y":
+            print("Huy")
+            return
+    else:
+        print("\n[CI] Tu dong tiep tuc (khong co stdin)")
 
     print(f"\nBuoc 2: Bat dau fix...")
 
