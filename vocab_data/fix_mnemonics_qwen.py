@@ -99,9 +99,9 @@ def parse_key(key):
 
 def load_vietnamese_meaning_from_excel():
     """
-    Doc nghia tieng Viet tu file Excel tu_vung_hsk.xlsx.
-    Cot 4 = nghia tieng Viet, cot 5 = chu Han.
-    Tra ve dict: {chu_han: nghia}
+    Doc nghia tieng Viet tu file Excel.
+    Doc TAT CA sheets, chữ Han luon o cot 1 (B), 
+    nghia o cot 5 (F) cho HSK 1-6, cot 4 (E) cho HSK 7-9.
     """
     try:
         import openpyxl
@@ -112,11 +112,9 @@ def load_vietnamese_meaning_from_excel():
     candidates = [
         os.path.join(_ROOT_DIR, "data", "tu_vung_hsk.xlsx"),
         os.path.join(_ROOT_DIR, "tu_vung_hsk.xlsx"),
-        os.path.join(_SCRIPT_DIR, "..", "data", "tu_vung_hsk.xlsx"),
         "data/tu_vung_hsk.xlsx",
         "tu_vung_hsk.xlsx",
     ]
-
     excel_path = None
     for p in candidates:
         if os.path.exists(p):
@@ -135,47 +133,103 @@ def load_vietnamese_meaning_from_excel():
         print("[EXCEL] Loi mo Excel: " + str(e))
         return {}
 
-    try:
-        ws = wb.worksheets[0]
-    except Exception as e:
-        print("[EXCEL] Loi lay sheet: " + str(e))
-        wb.close()
-        return {}
-
-    COL_VI = 4
-    COL_ZH = 5
-    DATA_START = 2
-
     result = {}
-    skipped = 0
+    COL_ZH = 1
 
-    try:
-        for row in ws.iter_rows(min_row=DATA_START, values_only=True):
+    for sheet_name in wb.sheetnames:
+        try:
+            ws = wb[sheet_name]
+        except Exception as e:
+            print("[EXCEL] Loi sheet " + sheet_name + ": " + str(e))
+            continue
+
+        # Doc 5 dong dau de tim header
+        first_rows = []
+        try:
+            for i, row in enumerate(ws.iter_rows(values_only=True)):
+                first_rows.append(row)
+                if i >= 4:
+                    break
+        except Exception:
+            pass
+
+        # Tim dong header (dong co nhieu text nhat, chua "Nghia" hoac "意思")
+        header_idx = 0
+        col_vi = None
+        for i, row in enumerate(first_rows):
             if not row:
                 continue
+            header_str = " ".join([str(c).lower() if c else "" for c in row])
+            # HSK 1-6: header chua "nghia tieng viet"
+            if "nghia" in header_str or "nghĩa" in header_str:
+                header_idx = i
+                # Tim cot "nghia tieng viet"
+                for j, c in enumerate(row):
+                    if c and ("nghia" in str(c).lower() or "nghĩa" in str(c).lower()):
+                        col_vi = j
+                        break
+                break
+            # HSK 7-9: header chua "意思"
+            if "意思" in header_str:
+                header_idx = i
+                for j, c in enumerate(row):
+                    if c and "意思" in str(c):
+                        col_vi = j
+                        break
+                break
 
-            if len(row) <= max(COL_VI, COL_ZH):
-                skipped += 1
-                continue
+        # Fallback: neu khong tim thay header
+        if col_vi is None:
+            # Doan theo sheet
+            if "7-9" in sheet_name:
+                col_vi = 4  # cot E
+            else:
+                col_vi = 5  # cot F
+            header_idx = 0
 
-            vi = row[COL_VI]
-            zh = row[COL_ZH]
+        # Data bat dau tu dong sau header + 1 (bo 1 dong trong)
+        data_start = header_idx + 2
 
-            if not vi or not zh:
-                skipped += 1
-                continue
+        sheet_count = 0
+        sheet_skip = 0
 
-            vi_str = str(vi).strip()
-            zh_str = str(zh).strip()
+        try:
+            for row in ws.iter_rows(min_row=data_start, values_only=True):
+                if not row:
+                    sheet_skip += 1
+                    continue
 
-            if vi_str and zh_str:
-                result[zh_str] = vi_str
-    except Exception as e:
-        print("[EXCEL] Loi doc du lieu: " + str(e))
-    finally:
+                if len(row) <= max(COL_ZH, col_vi):
+                    sheet_skip += 1
+                    continue
+
+                zh = row[COL_ZH]
+                vi = row[col_vi]
+
+                if not zh or not vi:
+                    sheet_skip += 1
+                    continue
+
+                zh_str = str(zh).strip()
+                vi_str = str(vi).strip()
+
+                if zh_str and vi_str:
+                    result[zh_str] = vi_str
+                    sheet_count += 1
+                else:
+                    sheet_skip += 1
+
+        except Exception as e:
+            print("[EXCEL] Loi doc sheet " + sheet_name + ": " + str(e))
+
+        print("[EXCEL] Sheet " + sheet_name + ": nghia cot " + str(col_vi) + " -> " + str(sheet_count) + " entries (bo qua " + str(sheet_skip) + ")")
+
+    try:
         wb.close()
+    except Exception:
+        pass
 
-    print("[EXCEL] Doc duoc " + str(len(result)) + " entries (bo qua " + str(skipped) + " dong)")
+    print("[EXCEL] TONG: " + str(len(result)) + " entries")
     return result
 
 
