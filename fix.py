@@ -1030,28 +1030,6 @@ def build_js_override(ids_js, datasets_meta_json):
     add("        });")
     add("    };")
     add("")
-
-
-    add("    window.__fixpyParseHskStt = function(rawQuery) {")
-    add("        if (!rawQuery) return null;")
-    add("        var m = rawQuery.toLowerCase().match(/^hsk\\s*(7[-\\s]*9|\\d+)\\s*(?:(\\d+)(?:\\s+(\\d+))?)?$/);")
-    add("        if (!m) return null;")
-    add("        var hskNum = m[1].replace(/\\s+/g, '');")
-    add("        if (hskNum === '7' || hskNum === '8' || hskNum === '9') hskNum = '7-9';")
-    add("        var startStt = m[2] ? parseInt(m[2], 10) : null;")
-    add("        var endStt = m[3] ? parseInt(m[3], 10) : (startStt !== null ? startStt : null);")
-    add("        if (startStt !== null && endStt < startStt) {")
-    add("            var tmp = startStt; startStt = endStt; endStt = tmp;")
-    add("        }")
-    add("        return {")
-    add("            hsk: (hskNum === '7-9') ? 'HSK7-9' : ('HSK' + hskNum),")
-    add("            hskNum: hskNum,")
-    add("            startStt: startStt,")
-    add("            endStt: endStt")
-    add("        };")
-    add("    };")
-    add("")
-
     
 
     add("    function patchApplyFilter() {")
