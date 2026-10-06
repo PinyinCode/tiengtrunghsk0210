@@ -323,19 +323,23 @@ def build_prompt_part1(zh, hsk, vi, radical):
     rad_zh = radical.get("zh", "")
     rad_mean = radical.get("meaning", "")
 
+    e1 = "\U0001F4A1"  # 💡
+    e2 = "\U0001F4CC"  # 📌
+    e3 = "\U0001F3AC"  # 🎬
+
     lines = []
     lines.append("Ban la giao vien tieng Trung. Viet meo nho cho chu " + zh + ".")
     lines.append("")
     lines.append("CHU: " + zh + " (" + hsk + ") - nghia: " + vi)
     lines.append("BO THU: " + rad_zh + " (" + rad_mean + ")")
     lines.append("")
-    lines.append("Viet DUNG 3 dong, KHONG them dong nao khac:")
+    lines.append("Viet DUNG 3 dong, BAT DAU bang emoji nhu sau:")
     lines.append("")
-    lines.append("Chiet tu: Liet ke DAY DU cac thanh phan cua " + zh + ". Format: " + zh + " = [A] + [B] + ... => [nghia]")
-    lines.append("Am thanh: 2-3 tu gan am tieng Viet")
-    lines.append("Cau chuyen: 1 CAU ngan (toi da 25 chu). PHAI ket bang: ... = " + vi.upper())
+    lines.append(e1 + " Chiet tu: Liet ke DAY DU cac thanh phan cua " + zh + ". Format: " + zh + " = [A] + [B] + ... => [nghia]")
+    lines.append(e2 + " Am thanh: 2-3 tu gan am tieng Viet")
+    lines.append(e3 + " Cau chuyen: 1 CAU ngan (toi da 25 chu). PHAI ket bang: ... = " + vi.upper())
     lines.append("")
-    lines.append("Output (CHI 3 dong):")
+    lines.append("Output (CHI 3 dong, moi dong BAT DAU bang emoji " + e1 + " " + e2 + " " + e3 + "):")
 
     return "\n".join(lines)
 
@@ -343,15 +347,18 @@ def build_prompt_part1(zh, hsk, vi, radical):
 def build_prompt_part2(zh, vi, radical):
     rad_zh = radical.get("zh", "")
 
+    e4 = "\U0001F4CE"  # 📎
+    e5 = "\U0001F517"  # 🔗
+
     lines = []
     lines.append("Cho chu " + zh + " (nghia: " + vi + "), bo thu " + rad_zh + ".")
     lines.append("")
-    lines.append("Viet DUNG 2 dong, KHONG them dong nao khac:")
+    lines.append("Viet DUNG 2 dong, BAT DAU bang emoji nhu sau:")
     lines.append("")
-    lines.append("Vi du: 1 cau tieng Trung + pinyin + nghia Viet")
-    lines.append("Lien quan: 3-5 tu CO CHUA bo " + rad_zh + " trong cau tao. Format: chu (pinyin - nghia)")
+    lines.append(e4 + " Vi du: 1 cau tieng Trung + pinyin + nghia Viet")
+    lines.append(e5 + " Lien quan: 3-5 tu CO CHUA bo " + rad_zh + " trong cau tao. Format: chu (pinyin - nghia)")
     lines.append("")
-    lines.append("Output (CHI 2 dong):")
+    lines.append("Output (CHI 2 dong, moi dong BAT DAU bang emoji " + e4 + " " + e5 + "):")
 
     return "\n".join(lines)
 
