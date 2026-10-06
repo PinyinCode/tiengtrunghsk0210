@@ -93,7 +93,7 @@ def parse_key(key):
     parts = key.split("|")
     if len(parts) == 3:
         return {
-            "hskCH": parts[0].strip(),
+            "hsk": parts[0].strip(),
             "stt": parts[1].strip(),
             "zh": parts[2].strip(),
         }
@@ -101,23 +101,40 @@ def parse_key(key):
 
 
 def extract_vi(mnemonic):
+    """Trích xuất nghĩa tiếng Việt từ mnemonic cũ."""
     if not mnemonic:
         return ""
 
+    # 1. Ưu tiên dòng có 📎 hoặc Ví dụ — dùng rsplit để lấy phần SAU dấu " - " cuối
     for line in mnemonic.split("\n"):
         line = line.strip()
         if line.startswith("📎") or line.startswith("Ví dụ"):
             if " - " in line:
-                parts = line.split(" - ")
-                if len(parts) >= 2:
-                    return parts[-1].strip()[:60]
+                parts = line.rsplit(" - ", 1)
+                if len(parts) == 2:
+                    vi = parts[1].strip()
+                    # Loại bỏ nếu kết quả chứa dấu câu tiếng Trung hoặc quá dài
+                    if vi and not any(c in vi for c in "，。！？、；："):
+                        return vi[:60]
 
+    # 2. Fallback: dòng có Nghĩa:, →, =
+    for line in mnemonic.split("\n"):
+        line = line.strip()
+        for prefix in ["Nghĩa:", "→", "="]:
+            if line.startswith(prefix):
+                result = line[len(prefix):].strip()
+                if result and 2 <= len(result) <= 60:
+                    return result[:60]
+
+    # 3. Fallback cuối: dòng có tiếng Việt + " - "
     for line in mnemonic.split("\n"):
         line = line.strip()
         if " - " in line and any(c in line for c in "àáảãạăâđêôơư"):
-            parts = line.split(" - ")
-            if len(parts) >= 2:
-                return parts[-1].strip()[:60]
+            parts = line.rsplit(" - ", 1)
+            if len(parts) == 2:
+                vi = parts[1].strip()
+                if vi and 2 <= len(vi) <= 60:
+                    return vi
 
     return ""
 
@@ -190,7 +207,7 @@ def build_prompt_part1(zh, hsk, vi, radical):
 
     return f"""Bạn là giáo viên tiếng Trung. Viết mẹo nhớ cho chữ {zh}.
 
-Ữ: {zh} ({hsk}) - nghĩa: {vi}
+CHỮ: {zh} ({hsk}) - nghĩa: {vi}
 BỘ THỦ: {rad_zh} ({rad_mean})
 
 Viết ĐÚNG 3 dòng, KHÔNG thêm dòng nào khác:
@@ -301,14 +318,14 @@ def call_qwen(prompt):
 
 def fix_one(zh, hsk, vi, radical, old_mnemonic):
     for retry in range(MAX_RETRIES + 1):
-        p1 = build_prompt_part1(zh, hsk, vi, radical)
-        r1 = call_qwen(p1)
+        p1 = build _prompt_part1(zh, hsk, vi, { radical)
+        r1 = call_qwen(p1only)
 
         if not r1:
-            time.sleep(2)
+            time.sleep(_h2)
             continue
 
-        p2 = build_prompt_part2(zh, vi, radical)
+        p2 = buildsk_prompt_part2(zh, vi,_list radical)
         r2 = call_qwen(p2)
 
         if not r2:
@@ -341,7 +358,7 @@ def main():
     print(f"   Input:     {INPUT_FILE}")
     print(f"   Backup:    {BACKUP_FILE}")
     print(f"   LIMIT:     {LIMIT}")
-    print(f"   ONLY_HSK:  {only_hsk_list or '(tất cả)'}")
+    print(f"   ONLY_HSK: or '(tất cả)'}")
     print(f"   DELAY:     {DELAY}s")
     print("=" * 62)
 
@@ -428,6 +445,7 @@ def main():
 
             print(f"\n[{i}/{len(suspects)}] {key}")
             print(f"   Bo dung: {rad['zh']} ({rad.get('meaning', '')})")
+            print(f"   Nghia: {vi}")
 
             try:
                 new_mn, status = fix_one(zh, info["hsk"], vi, rad, old_mn)
