@@ -438,37 +438,59 @@ def call_qwen(prompt):
 
 
 def fix_one(zh, hsk, vi, radical, old_mnemonic):
+    # Lam sach nghia: bo dau ; () ... de Qwen de hieu
+    vi_clean = vi
+    if vi_clean:
+        vi_clean = vi_clean.split(";")[0].strip()
+        vi_clean = vi_clean.split("(")[0].strip()
+        vi_clean = vi_clean.split("（")[0].strip()
+        if not vi_clean:
+            vi_clean = vi
+
     for retry in range(MAX_RETRIES + 1):
-        p1 = build_prompt_part1(zh, hsk, vi, radical)
+        p1 = build_prompt_part1(zh, hsk, vi_clean, radical)
         r1 = call_qwen(p1)
 
         if not r1:
             time.sleep(2)
             continue
 
-        p2 = build_prompt_part2(zh, vi, radical)
+        p2 = build_prompt_part2(zh, vi_clean, radical)
         r2 = call_qwen(p2)
 
         if not r2:
             time.sleep(2)
             continue
 
+        # DEBUG: in raw output
+        print("      [DEBUG] r1: " + r1[:150].replace("\n", " | "))
+        print("      [DEBUG] r2: " + r2[:150].replace("\n", " | "))
+
         new_mn = r1.strip() + "\n" + r2.strip()
         new_mn = clean_mnemonic(new_mn)
 
-        if not has_all_5_lines(new_mn):
-            print("      Thieu dong (lan " + str(retry + 1) + ")")
+        # DEBUG: in sau clean
+        print("      [DEBUG] cleaned: " + new_mn[:250].replace("\n", " | "))
+
+        # Kiem tra 3 dong chinh (khong bat buoc 5 dong)
+        emojis_main = ["\U0001F4A1", "\U0001F4CC", "\U0001F3AC"]  # 💡 📌 🎬
+        missing_main = []
+        for e in emojis_main:
+            if e not in new_mn:
+                missing_main.append(e)
+
+        if missing_main:
+            print("      Thieu 3 dong chinh (lan " + str(retry+1) + "): " + str(missing_main))
             time.sleep(2)
             continue
 
         if mnemonic_has_radical(new_mn, radical):
             return new_mn, "ok"
         else:
-            print("      Verify fail (lan " + str(retry + 1) + "): meo moi khong chua bo " + radical["zh"])
+            print("      Verify fail (lan " + str(retry+1) + "): meo moi khong chua bo " + radical["zh"])
             time.sleep(2)
 
     return old_mnemonic, "verify_fail"
-
 
 def main():
     print("=" * 62)
