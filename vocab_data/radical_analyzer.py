@@ -580,6 +580,7 @@ MANUAL_DECOMPOSITIONS = {
 
 
 def _split_components(char):
+    """Phân tích chữ thành bộ thủ."""
     char = normalize_kangxi(char)
 
     if char in MANUAL_DECOMPOSITIONS:
@@ -600,23 +601,35 @@ def _split_components(char):
 
     if HAS_CJKRADLIB and _RADICAL_FINDER:
         try:
-            findings = _RADICAL_FINDER.find(char)
+            # DÙNG .search() THAY VÌ .find()
+            data = _RADICAL_FINDER.search(char)
+            compositions = data.get("compositions", [])
+
             result = []
-            for f in findings:
-                rad_char = f.radical
-                info = get_radical_info(rad_char)
+            for comp in compositions:
+                info = get_radical_info(comp)
                 if info:
                     result.append({
-                        "zh": rad_char,
+                        "zh": comp,
                         "pinyin": info.get("pinyin", ""),
                         "strokes": info.get("strokes", ""),
                         "meaning": info.get("meaning", ""),
-                        "position": _get_position(rad_char),
+                        "position": _get_position(comp),
                     })
+                else:
+                    # Component không phải bộ thủ (VD: 勺) → vẫn thêm vào
+                    result.append({
+                        "zh": comp,
+                        "pinyin": "",
+                        "strokes": "",
+                        "meaning": "",
+                        "position": _get_position(comp),
+                    })
+
             if result:
                 return result
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"      [WARN] cjkradlib.search('{char}') error: {e}")
 
     return []
 
