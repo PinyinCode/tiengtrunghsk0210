@@ -1052,19 +1052,7 @@ def build_js_override(ids_js, datasets_meta_json):
     add("    };")
     add("")
 
-    add("    window.__fixpyFilterByHskStt = function(parsed) {")
-    add("        var pool = window.__findByHskStt(parsed.hsk, null);")
-    add("        if (parsed.startStt === null) return pool;")
-    add("        return pool.filter(function(r) {")
-    add("            var sttStr = (r.stt_original != null && String(r.stt_original).trim() !== '')")
-    add("                       ? String(r.stt_original).trim()")
-    add("                       : String(r.stt || '').replace(/^[^0-9]*-/, '');")
-    add("            var n = parseInt(sttStr, 10);")
-    add("            if (isNaN(n)) return false;")
-    add("            return n >= parsed.startStt && n <= parsed.endStt;")
-    add("        });")
-    add("    };")
-    add("")
+    
 
     add("    function patchApplyFilter() {")
     add("        if (window.__fixPyApplyFilterPatched) return;")
