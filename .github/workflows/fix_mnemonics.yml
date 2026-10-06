@@ -67,89 +67,66 @@ jobs:
           python -c "from vocab_data.radicals_db import get_radical_info; print('radicals_db OK')"
 
       # ============================================================
-      # DEBUG CJKRADLIB - Kiem tra cjkradlib co hoat dong khong
+      # DEBUG 1: Liet ke API cua cjkradlib
       # ============================================================
-      - name: Debug cjkradlib
+      - name: Debug cjkradlib API
         continue-on-error: true
         run: |
           python - <<'PYEOF'
-          import sys
-          sys.path.insert(0, '.')
-
           print("=" * 60)
-          print("DEBUG CJKRADLIB")
+          print("DEBUG CJKRADLIB API")
           print("=" * 60)
 
-          # 1. Test import
           try:
               from cjkradlib import RadicalFinder
               finder = RadicalFinder()
               print("cjkradlib import OK")
           except ImportError as e:
               print(f"cjkradlib KHONG available: {e}")
-              sys.exit(0)
+              exit(0)
 
-          # 2. Test decompose vai chu dai dien
-          test_chars = ['八', '吧', '白', '百', '班', '爱', '的', '错', '读', '对']
-          print(f"\nTest decompose {len(test_chars)} chu:")
-          for ch in test_chars:
-              try:
-                  findings = finder.find(ch)
-                  if findings:
-                      radicals = [f.radical for f in findings]
-                      print(f"  {ch} -> {radicals}")
-                  else:
-                      print(f"  {ch} -> EMPTY (khong decompose duoc)")
-              except Exception as e:
-                  print(f"  {ch} -> ERROR: {e}")
+          # 1. Liet ke cac attribute/method co san
+          print("\nCac attribute/method co san trong RadicalFinder:")
+          methods = [m for m in dir(finder) if not m.startswith('_')]
+          for m in methods:
+              print(f"  {m}")
 
-          # 3. Test logic cua radical_analyzer
+          # 2. Thu tung method voi chữ "的"
           print("\n" + "=" * 60)
-          print("TEST LOGIC radical_analyzer")
+          print("THU NGHIEM CAC METHOD voi '的'")
           print("=" * 60)
 
-          from vocab_data.radical_analyzer import (
-              get_radical_for_word,
-              HAS_CJKRADLIB,
-              _RADICAL_FINDER,
-          )
-          print(f"HAS_CJKRADLIB = {HAS_CJKRADLIB}")
-          print(f"_RADICAL_FINDER = {_RADICAL_FINDER}")
+          test_char = "的"
 
-          print(f"\nget_radical_for_word() voi cac chu thieu:")
-          for ch in test_chars:
+          for method_name in methods:
               try:
-                  rad = get_radical_for_word(ch)
-                  if rad:
-                      print(f"  {ch} -> bo: {rad.get('zh', '?')} ({rad.get('meaning', '')[:30]})")
+                  method = getattr(finder, method_name)
+                  if callable(method):
+                      try:
+                          result = method(test_char)
+                          print(f"  {method_name}('{test_char}') = {result}")
+                      except Exception as e:
+                          print(f"  {method_name}('{test_char}') ERROR: {type(e).__name__}: {e}")
                   else:
-                      print(f"  {ch} -> None (khong tra duoc)")
+                      print(f"  {method_name} = {method} (not callable)")
               except Exception as e:
-                  print(f"  {ch} -> ERROR: {e}")
+                  print(f"  {method_name} FAILED: {e}")
 
-          # 4. Test 20 chu dau tien bi thieu
+          # 3. In source code de xem chi tiet
           print("\n" + "=" * 60)
-          print("TEST 20 CHU THIEU DAU TIEN")
+          print("SOURCE CODE cjkradlib.core (RadicalFinder)")
           print("=" * 60)
-          missing_chars = "八吧白百班帮杯北本比别差常出穿床次从打到"
-          for ch in missing_chars:
-              rad = get_radical_for_word(ch)
-              if rad:
-                  print(f"  OK  {ch} -> {rad.get('zh', '?')}")
-              else:
-                  # Thu truc tiep cjkradlib
-                  try:
-                      findings = finder.find(ch)
-                      if findings:
-                          print(f"  ??? {ch} -> cjkradlib tra duoc {[f.radical for f in findings]} nhung analyzer return None")
-                      else:
-                          print(f"  NO  {ch} -> cjkradlib cung EMPTY")
-                  except Exception as e:
-                      print(f"  ERR {ch} -> cjkradlib ERROR: {e}")
+          try:
+              import inspect
+              import cjkradlib.core as core
+              source = inspect.getsource(core.RadicalFinder)
+              print(source[:3000])  # In 3000 ky tu dau
+          except Exception as e:
+              print(f"Khong lay duoc source: {e}")
           PYEOF
 
       # ============================================================
-      # DEBUG 1: Liet ke chu Han bi thieu trong radicals_db
+      # DEBUG 2: Liet ke chu Han bi thieu trong radicals_db
       # ============================================================
       - name: Debug DB missing chars
         if: github.event.inputs.debug_db == '1'
@@ -205,7 +182,7 @@ jobs:
           PYEOF
 
       # ============================================================
-      # DEBUG 2: Xem 3 mnemonic mau
+      # DEBUG 3: Xem 3 mnemonic mau
       # ============================================================
       - name: Debug sample mnemonics
         if: github.event.inputs.debug_db == '1'
