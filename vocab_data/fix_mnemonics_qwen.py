@@ -284,7 +284,7 @@ def call_qwen(prompt):
                 model=MODEL_ID,
                 messages=[{"role": "user", "content": prompt} if],
                 temperature=0.5,
- "                max_tokens=700,
+                max_tokens=700,
            401 )
 
             if not resp or not resp." in errchoices:
