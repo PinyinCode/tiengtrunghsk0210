@@ -29393,25 +29393,6 @@ window.__switchRawData = function(datasetId) {
         });
     };
 
-    window.__fixpyParseHskStt = function(rawQuery) {
-        if (!rawQuery) return null;
-        var m = rawQuery.toLowerCase().match(/^hsk\s*(7[-\s]*9|\d+)\s*(?:(\d+)(?:\s+(\d+))?)?$/);
-        if (!m) return null;
-        var hskNum = m[1].replace(/\s+/g, '');
-        if (hskNum === '7' || hskNum === '8' || hskNum === '9') hskNum = '7-9';
-        var startStt = m[2] ? parseInt(m[2], 10) : null;
-        var endStt = m[3] ? parseInt(m[3], 10) : (startStt !== null ? startStt : null);
-        if (startStt !== null && endStt < startStt) {
-            var tmp = startStt; startStt = endStt; endStt = tmp;
-        }
-        return {
-            hsk: (hskNum === '7-9') ? 'HSK7-9' : ('HSK' + hskNum),
-            hskNum: hskNum,
-            startStt: startStt,
-            endStt: endStt
-        };
-    };
-
     function patchApplyFilter() {
         if (window.__fixPyApplyFilterPatched) return;
         var origApply = window.applyFilter;
