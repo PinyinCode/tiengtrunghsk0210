@@ -3848,9 +3848,13 @@ function autoFitLabel(el) {
 /* DATASET SWITCHING                                             */
 /* ============================================================ */
 function initDatasetSelector() {
-    if (typeof DATASET_REGISTRY === 'undefined' || !DATASET_REGISTRY) return;
+    if (typeof DATASET_REGISTRY === 'undefined' || !DATASET_REGISTRY) {
+        if (window.__dataLoadPromise) {
+            window.__dataLoadPromise.then(function() { initDatasetSelector(); });
+        }
+        return;
+    }
     if (!DATASET_REGISTRY.tonghop) return;
-
     var labelEl = $('dsTonghopLabel');
     if (labelEl) {
         var count = DATASET_REGISTRY.tonghop.count
@@ -7829,6 +7833,13 @@ function pfBuildDatasetSelect() {
     var sel = $('pfDatasetSelect');
     var row = $('pfDatasetRow');
     if (!sel) return;
+
+    if (!window.__dataLoaded) {
+        if (window.__dataLoadPromise) {
+            window.__dataLoadPromise.then(function() { pfBuildDatasetSelect(); });
+        }
+        return;
+    }
 
     var canAccessAll = canAccessChuyenNganh();
     var current = (typeof CURRENT_DATASET !== 'undefined') ? CURRENT_DATASET : 'tonghop';
