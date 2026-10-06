@@ -211,8 +211,35 @@ if os.path.isdir(DATA_DIR):
 else:
     print(f"\nℹ️  Chưa có thư mục '{DATA_DIR}/'.")
 
-dataset_registry_json = _json_blob(DATASET_REGISTRY)
-json_data = _json_blob(data_tonghop)
+DATA_OUTPUT_DIR = "data"
+os.makedirs(DATA_OUTPUT_DIR, exist_ok=True)
+
+dataset_registry_meta = {}
+for _ds_id, _ds in DATASET_REGISTRY.items():
+    dataset_registry_meta[_ds_id] = {
+        "id": _ds["id"],
+        "name": _ds["name"],
+        "icon": _ds["icon"],
+        "color": _ds["color"],
+        "count": _ds["count"],
+        "source": _ds["source"],
+    }
+
+all_datasets_data = {}
+for _ds_id, _ds in DATASET_REGISTRY.items():
+    all_datasets_data[_ds_id] = _ds["data"]
+
+with open(os.path.join(DATA_OUTPUT_DIR, "all_datasets.json"), "w", encoding="utf-8") as _f:
+    json.dump(all_datasets_data, _f, ensure_ascii=False, separators=(",", ":"))
+
+with open(os.path.join(DATA_OUTPUT_DIR, "dataset_registry.json"), "w", encoding="utf-8") as _f:
+    json.dump(dataset_registry_meta, _f, ensure_ascii=False, separators=(",", ":"))
+
+print(f"💾 Ghi data/all_datasets.json ({os.path.getsize(os.path.join(DATA_OUTPUT_DIR, 'all_datasets.json'))/1024:.1f} KB)")
+print(f"💾 Ghi data/dataset_registry.json")
+
+dataset_registry_json = _json_blob(dataset_registry_meta)
+json_data = "[]"
 firebase_config_json = _json_blob(CONFIG["firebase_config"])
 synonyms_json = _json_blob(CONFIG["synonyms"])
 fillers_json = _json_blob(CONFIG["filler_words"])
@@ -1038,8 +1065,9 @@ __CSS__
 __BODY__
 
 <script>
-var RAW_DATA = __DATA__;
-var DATASET_REGISTRY = __DATASET_REGISTRY__;
+var DATASET_REGISTRY_META = __DATASET_REGISTRY__;
+var DATASET_REGISTRY = {};
+var RAW_DATA = [];
 var CURRENT_DATASET = 'tonghop';
 
 var FIREBASE_CONFIG = __FIREBASE_CONFIG__;
@@ -1067,6 +1095,56 @@ var ONBOARDING_CONFIG = __ONBOARDING_CONFIG__;
 var $ = function(id) { return document.getElementById(id); };
 
 __JS__
+
+window.__dataLoaded = false;
+window.__dataLoadPromise = (async function() {
+    try {
+        var datasetsRes = await fetch('data/all_datasets.json');
+        var registryRes = await fetch('data/dataset_registry.json');
+
+        if (!datasetsRes.ok || !registryRes.ok) {
+            throw new Error('Không tải được dữ liệu JSON');
+        }
+
+        var allDatasets = await datasetsRes.json();
+        var registryMeta = await registryRes.json();
+
+        for (var dsId in registryMeta) {
+            var meta = registryMeta[dsId];
+            DATASET_REGISTRY[dsId] = {
+                id: meta.id,
+                name: meta.name,
+                icon: meta.icon,
+                color: meta.color,
+                count: meta.count,
+                source: meta.source,
+                data: allDatasets[dsId] || []
+            };
+        }
+
+        if (DATASET_REGISTRY['tonghop']) {
+            RAW_DATA = DATASET_REGISTRY['tonghop'].data || [];
+        }
+
+        window.__dataLoaded = true;
+        console.log('[DataLoader] Đã tải xong ' + Object.keys(DATASET_REGISTRY).length + ' datasets');
+
+        window.dispatchEvent(new CustomEvent('dataLoaded', {
+            detail: { registry: DATASET_REGISTRY, rawData: RAW_DATA }
+        }));
+
+        return DATASET_REGISTRY;
+    } catch (err) {
+        console.error('[DataLoader] Lỗi:', err);
+        window.dispatchEvent(new CustomEvent('dataLoadError', { detail: err }));
+        throw err;
+    }
+})();
+
+function waitForData(callback) {
+    if (window.__dataLoaded) return callback();
+    window.__dataLoadPromise.then(callback).catch(function() {});
+}
 
 window.__switchRawData = function(datasetId) {
     if (!DATASET_REGISTRY || !DATASET_REGISTRY[datasetId]) return false;
@@ -1127,12 +1205,11 @@ window.__switchRawData = function(datasetId) {
 </body>
 </html>'''
 
-
 html_output = (HTML_SHELL
     .replace("__CSS__",  full_css)
     .replace("__BODY__", full_body)
     .replace("__JS__",   full_js)
-    .replace("__DATA__",              json_data)
+    .replace("__DATA__",              "[]")
     .replace("__DATASET_REGISTRY__",  dataset_registry_json)
     .replace("__FIREBASE_CONFIG__",   firebase_config_json)
     .replace("__SYNONYMS__",          synonyms_json)
