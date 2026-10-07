@@ -7768,9 +7768,6 @@ body.has-floating-group #chatFloatWrap{bottom:calc(16px + env(safe-area-inset-bo
 
 /* ADMIN CHAT */
 
-/* ═══════════════════════════════════════════════════════════════
-   📋 ADMIN CHAT MANAGER — Trình quản lý chat cho admin
-   ═══════════════════════════════════════════════════════════════ */
 .acm-modal{
     position:fixed;inset:0;
     background:rgba(15,23,42,.75);
@@ -7802,7 +7799,6 @@ body.has-floating-group #chatFloatWrap{bottom:calc(16px + env(safe-area-inset-bo
     box-shadow:0 30px 80px rgba(0,0,0,.8);
 }
 
-/* ─── HEADER ─── */
 .acm-header{
     padding:1rem 1.25rem;
     background:linear-gradient(135deg,#4f46e5,#7c3aed);
@@ -7834,7 +7830,6 @@ body.has-floating-group #chatFloatWrap{bottom:calc(16px + env(safe-area-inset-bo
 }
 .acm-close:hover{background:rgba(255,255,255,.35);transform:scale(1.05);}
 
-/* ⭐ Nút toggle bulk mode trên header */
 .acm-bulk-toggle{
     width:36px;height:36px;border-radius:50%;
     border:none;background:rgba(255,255,255,.2);
@@ -7851,7 +7846,6 @@ body.has-floating-group #chatFloatWrap{bottom:calc(16px + env(safe-area-inset-bo
     box-shadow:0 0 0 3px rgba(251,191,36,.3);
 }
 
-/* ─── STATS BAR ─── */
 .acm-stats{
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
@@ -7889,7 +7883,6 @@ body.has-floating-group #chatFloatWrap{bottom:calc(16px + env(safe-area-inset-bo
 .acm-stat[data-filter="online"].active{background:linear-gradient(135deg,#16a34a,#22c55e);}
 .acm-stat[data-filter="online"].active .acm-stat-value{color:#fff;}
 
-/* ─── SEARCH BAR ─── */
 .acm-search{
     padding:.75rem 1.25rem;
     background:#fff;
@@ -7922,7 +7915,6 @@ body.has-floating-group #chatFloatWrap{bottom:calc(16px + env(safe-area-inset-bo
 .acm-refresh-btn.spinning{animation:acmSpin .6s linear infinite;}
 @keyframes acmSpin{to{transform:rotate(360deg);}}
 
-/* ⭐ BULK TOOLBAR */
 .acm-bulk-toolbar{
     display:none;
     padding:.65rem 1.25rem;
@@ -8002,7 +7994,6 @@ body.has-floating-group #chatFloatWrap{bottom:calc(16px + env(safe-area-inset-bo
     border-color:rgba(124,58,237,.4);
 }
 
-/* ⭐ CHECKBOX user */
 .acm-user-checkbox{
     width:24px;height:24px;flex-shrink:0;
     display:none;
@@ -8017,7 +8008,6 @@ body.acm-bulk-mode .acm-user-checkbox{display:flex;}
     margin:0;
 }
 
-/* User được chọn */
 .acm-user.selected{
     border-color:#4f46e5;
     background:linear-gradient(90deg, rgba(79,70,229,.08), rgba(124,58,237,.05));
@@ -8027,7 +8017,6 @@ body.acm-bulk-mode .acm-user-checkbox{display:flex;}
     background:linear-gradient(90deg, rgba(79,70,229,.2), rgba(124,58,237,.12));
 }
 
-/* ⭐ SELECT ALL ROW */
 .acm-select-all-row{
     display:none;
     padding:.5rem .85rem;
@@ -8060,7 +8049,6 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
     margin:0;
 }
 
-/* ─── LIST ─── */
 .acm-list{
     flex:1;min-height:0;overflow-y:auto;
     padding:.75rem 1.25rem;
@@ -8174,7 +8162,6 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
     50%{transform:scale(1.15);}
 }
 
-/* ⭐ Actions cho mỗi user */
 .acm-user-actions{
     display:flex;gap:.3rem;flex-shrink:0;margin-left:.5rem;
 }
@@ -8191,7 +8178,6 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
 .acm-user-btn.history{background:#eff6ff;color:#4f46e5;}
 .acm-user-btn.history:hover{background:#4f46e5;color:#fff;box-shadow:0 4px 12px rgba(79,70,229,.4);}
 
-/* ⭐ Nút xoá lịch sử */
 .acm-user-btn.delete-history{
     background:#fef2f2;
     color:#dc2626;
@@ -8203,7 +8189,6 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
     transform:scale(1.1);
 }
 
-/* ─── EMPTY ─── */
 .acm-empty{
     display:flex;flex-direction:column;
     align-items:center;justify-content:center;
@@ -8217,16 +8202,12 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
 [data-theme="dark"] .acm-empty .acm-empty-title{color:#cbd5e1;}
 .acm-empty .acm-empty-desc{font-size:.8rem;max-width:300px;line-height:1.5;}
 
-/* ─── LOADING ─── */
 .acm-loading{
     display:flex;align-items:center;justify-content:center;
     padding:3rem;color:#94a3b8;gap:.5rem;
     font-size:.85rem;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   📜 HISTORY VIEW — Lịch sử hoạt động của user
-   ═══════════════════════════════════════════════════════════════ */
 .acm-history{
     display:none;
     flex:1;min-height:0;overflow-y:auto;
@@ -8379,18 +8360,15 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
 }
 [data-theme="dark"] .acm-tl-body code{background:#0f172a;color:#f87171;}
 
-/* ─── MOBILE ─── */
 @media (max-width:768px){
     .acm-modal{
         padding:0;
         align-items:flex-end;
-        /* ⭐ FIX: dùng dvh để trừ address bar mobile */
         height:100vh;
         height:100dvh;
     }
     .acm-box{
         max-width:100%;
-        /* ⭐ FIX: dùng dvh + fallback vh cho browser cũ */
         height:92vh;
         height:92dvh;
         max-height:calc(100vh - 8px);
@@ -8420,50 +8398,6 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
     .acm-tl-item{padding:.6rem .75rem;}
 }
 
-/* ─── FAB MỞ ADMIN CHAT MANAGER ─── */
-.acm-fab{
-    position:fixed;
-    right:80px;
-    bottom:calc(30px + env(safe-area-inset-bottom));
-    z-index:9997;
-    width:56px;height:56px;
-    border-radius:50%;
-    border:3px solid #fff;
-    background:linear-gradient(135deg,#059669,#10b981);
-    color:#fff;
-    cursor:pointer;
-    display:none;
-    align-items:center;justify-content:center;
-    font-size:1.3rem;
-    box-shadow:0 8px 24px rgba(16,185,129,.5);
-    transition:all .3s cubic-bezier(.34,1.56,.64,1);
-}
-.acm-fab.show{display:flex;}
-.acm-fab:hover{transform:scale(1.1) rotate(-8deg);box-shadow:0 12px 32px rgba(16,185,129,.7);}
-.acm-fab .acm-fab-badge{
-    position:absolute;top:-6px;right:-6px;
-    min-width:22px;height:22px;padding:0 .35rem;
-    border-radius:50px;
-    background:#dc2626;color:#fff;
-    font-size:.65rem;font-weight:900;
-    display:none;align-items:center;justify-content:center;
-    border:2px solid #fff;
-    animation:acmBadgeBounce .8s infinite;
-}
-.acm-fab .acm-fab-badge.show{display:flex;}
-
-@media (max-width:768px){
-    .acm-fab{
-        width:48px;height:48px;
-        right:70px;
-        bottom:calc(16px + env(safe-area-inset-bottom));
-        font-size:1.1rem;
-    }
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   ⭐ CONFIRM MODAL — Xoá lịch sử chat
-   ═══════════════════════════════════════════════════════════════ */
 .acm-confirm-overlay{
     position:fixed;inset:0;
     background:rgba(15,23,42,.8);
@@ -8535,9 +8469,6 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
     background:#334155;color:#f1f5f9;border-color:#475569;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   ⭐ BULK COMPOSE MODAL
-   ═══════════════════════════════════════════════════════════════ */
 .acm-bulk-compose{
     position:fixed;inset:0;
     background:rgba(15,23,42,.8);
@@ -11968,13 +11899,9 @@ body.has-floating-group #quickSearchRoot{
 </div>
 
 
-<!-- ═══════════════════════════════════════════════════════════════
-     📋 ADMIN CHAT MANAGER — Trình quản lý chat riêng cho admin
-     ═══════════════════════════════════════════════════════════════ -->
 <div class="acm-modal" id="acmModal">
     <div class="acm-box">
 
-        <!-- ═══ VIEW 1: DANH SÁCH USER ═══ -->
         <div class="acm-header" id="acmHeaderList">
             <h3><i class="fas fa-users-cog"></i> Quản lý Chat — Tất cả User</h3>
             <button class="acm-bulk-toggle" id="acmBulkToggle" type="button" title="Chọn nhiều user để gửi hàng loạt">
@@ -12010,13 +11937,12 @@ body.has-floating-group #quickSearchRoot{
 
         <div class="acm-search" id="acmSearchBar">
             <input type="text" class="acm-search-input" id="acmSearchInput"
-                   placeholder="🔍 Tìm theo tên hoặc email..." autocomplete="off">
+                   placeholder="Tìm theo tên hoặc email..." autocomplete="off">
             <button class="acm-refresh-btn" id="acmRefreshBtn" type="button" title="Làm mới">
                 <i class="fas fa-sync-alt"></i>
             </button>
         </div>
 
-        <!-- ⭐ BULK TOOLBAR -->
         <div class="acm-bulk-toolbar" id="acmBulkToolbar">
             <div class="acm-bulk-info">
                 <i class="fas fa-check-circle"></i>
@@ -12040,7 +11966,6 @@ body.has-floating-group #quickSearchRoot{
             </div>
         </div>
 
-        <!-- ═══ VIEW 2: LỊCH SỬ HOẠT ĐỘNG ═══ -->
         <div class="acm-header" id="acmHeaderHistory" style="display:none;">
             <button class="acm-header-back show" id="acmHistoryBack" type="button" title="Quay lại">
                 <i class="fas fa-arrow-left"></i>
@@ -12061,7 +11986,6 @@ body.has-floating-group #quickSearchRoot{
     </div>
 </div>
 
-<!-- ⭐ Confirm xoá lịch sử chat -->
 <div class="acm-confirm-overlay" id="acmConfirmDelete">
     <div class="acm-confirm-box">
         <div class="acm-confirm-icon">
@@ -12082,7 +12006,6 @@ body.has-floating-group #quickSearchRoot{
     </div>
 </div>
 
-<!-- ⭐ BULK MESSAGE COMPOSE MODAL -->
 <div class="acm-bulk-compose" id="acmBulkCompose">
     <div class="acm-bulk-compose-box">
         <div class="acm-bulk-compose-header">
@@ -12108,10 +12031,10 @@ body.has-floating-group #quickSearchRoot{
             </div>
 
             <div class="acm-bulk-templates">
-                <button class="acm-bulk-template" type="button" data-text="Chào bạn, admin đã xác nhận thanh toán và gia hạn tài khoản cho bạn. Chúc bạn học tốt! 🎓">✅ Đã gia hạn</button>
-                <button class="acm-bulk-template" type="button" data-text="Chào bạn, admin đã nhận được yêu cầu gia hạn của bạn. Vui lòng chuyển khoản và xác nhận để được kích hoạt nhé!">💰 Nhắc thanh toán</button>
-                <button class="acm-bulk-template" type="button" data-text="Chào bạn, tài khoản của bạn sắp hết hạn. Vui lòng gia hạn để tiếp tục sử dụng đầy đủ tính năng nhé! ⏰">⏰ Nhắc gia hạn</button>
-                <button class="acm-bulk-template" type="button" data-text="Cảm ơn bạn đã ủng hộ. Chúc bạn học tiếng Trung hiệu quả! 🎉">🎉 Cảm ơn</button>
+                <button class="acm-bulk-template" type="button" data-text="Chào bạn, admin đã xác nhận thanh toán và gia hạn tài khoản cho bạn. Chúc bạn học tốt!">Đã gia hạn</button>
+                <button class="acm-bulk-template" type="button" data-text="Chào bạn, admin đã nhận được yêu cầu gia hạn của bạn. Vui lòng chuyển khoản và xác nhận để được kích hoạt nhé!">Nhắc thanh toán</button>
+                <button class="acm-bulk-template" type="button" data-text="Chào bạn, tài khoản của bạn sắp hết hạn. Vui lòng gia hạn để tiếp tục sử dụng đầy đủ tính năng nhé!">Nhắc gia hạn</button>
+                <button class="acm-bulk-template" type="button" data-text="Cảm ơn bạn đã ủng hộ. Chúc bạn học tiếng Trung hiệu quả!">Cảm ơn</button>
             </div>
         </div>
         <div class="acm-bulk-progress" id="acmBulkProgress">
@@ -12134,11 +12057,7 @@ body.has-floating-group #quickSearchRoot{
     </div>
 </div>
 
-<!-- FAB mở Admin Chat Manager (chỉ admin thấy) -->
-<button class="acm-fab" id="acmFab" type="button" title="Quản lý Chat (Admin)">
-    <i class="fas fa-users-cog"></i>
-    <span class="acm-fab-badge" id="acmFabBadge">0</span>
-</button>
+<span id="acmFabBadge" style="display:none;">0</span>
 
 </div>
 
@@ -25896,22 +25815,15 @@ window.gradeWithAPI = gradeWithAPI;
 
 /* ADMIN CHAT */
 
-/* ═══════════════════════════════════════════════════════════════
-   📋 ADMIN CHAT MANAGER — Trình quản lý chat + Lịch sử hoạt động
-   + Xoá lịch sử + Nhắn tin hàng loạt
-   ═══════════════════════════════════════════════════════════════ */
 (function() {
     'use strict';
 
-    /* ⭐ CẤU HÌNH ONLINE: 20 PHÚT
-       User được coi là ONLINE nếu timestamp presence
-       trong vòng 20 phút gần nhất. */
-    var ACM_PRESENCE_CUTOFF_MS = 20 * 60 * 1000;  // 20 phút = 1,200,000 ms
+    var ACM_PRESENCE_CUTOFF_MS = 20 * 60 * 1000;
 
     var ACM = {
         inited: false,
         isOpen: false,
-        view: 'list',           // 'list' | 'history'
+        view: 'list',
         usersUnsub: null,
         threadsUnsub: null,
         presenceUnsub: null,
@@ -25923,13 +25835,12 @@ window.gradeWithAPI = gradeWithAPI;
         threadsMap: {},
         onlineMap: {},
         loginLogsMap: {},
-        activityMap: {},
         filter: 'all',
         searchTerm: '',
         renderTimer: null,
         pendingDelete: null,
-        bulkMode: false,        // ⭐ bulk
-        selectedUsers: []       // ⭐ bulk
+        bulkMode: false,
+        selectedUsers: []
     };
 
     function $id(id) { return document.getElementById(id); }
@@ -25984,13 +25895,9 @@ window.gradeWithAPI = gradeWithAPI;
         return 'DEMO';
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       MERGE DATA
-       ═══════════════════════════════════════════════════════════ */
     function rebuildList() {
         var map = {};
 
-        // 1. Từ allowed_users
         Object.keys(ACM.usersMap).forEach(function(email) {
             var u = ACM.usersMap[email];
             var emailLower = (email || '').toLowerCase();
@@ -26008,11 +25915,8 @@ window.gradeWithAPI = gradeWithAPI;
             };
         });
 
-        // 2. Merge với chat_threads
         Object.keys(ACM.threadsMap).forEach(function(email) {
             var t = ACM.threadsMap[email];
-
-            // ⭐ Chỉ coi "có tin nhắn" nếu lastMessage có nội dung thực
             var threadHasMessages = !!(t.lastMessage && t.lastMessage.trim());
 
             if (!map[email]) {
@@ -26021,7 +25925,7 @@ window.gradeWithAPI = gradeWithAPI;
                     name: t.userName || email.split('@')[0],
                     role: 'user',
                     tier: 'demo',
-                    thread: threadHasMessages ? t : null,   // ⭐ null nếu rỗng
+                    thread: threadHasMessages ? t : null,
                     unread: 0,
                     lastMessage: '',
                     lastMessageAt: 0,
@@ -26047,10 +25951,8 @@ window.gradeWithAPI = gradeWithAPI;
             }
         });
 
-        // 3. Array
         ACM.allUsers = Object.keys(map).map(function(k) { return map[k]; });
 
-        // 4. Sort: unread > online > login gần đây > có tin gần đây > alphabet
         ACM.allUsers.sort(function(a, b) {
             if (a.unread > 0 && b.unread === 0) return -1;
             if (a.unread === 0 && b.unread > 0) return 1;
@@ -26070,10 +25972,7 @@ window.gradeWithAPI = gradeWithAPI;
             return (a.name || '').localeCompare(b.name || '');
         });
 
-        // 5. Stats
         updateStats();
-
-        // 6. Render
         scheduleRender();
     }
 
@@ -26082,7 +25981,6 @@ window.gradeWithAPI = gradeWithAPI;
         var unread = 0, hasThread = 0, noThread = 0, online = 0;
 
         ACM.allUsers.forEach(function(u) {
-            // ⭐ Chỉ đếm "có tin nhắn" nếu thread có lastMessage thực
             var threadHasMessages = false;
             if (u.thread) {
                 var t = u.thread;
@@ -26102,21 +26000,14 @@ window.gradeWithAPI = gradeWithAPI;
         if ((el = $id('acmCountHasThread'))) el.textContent = hasThread;
         if ((el = $id('acmCountNoThread'))) el.textContent = noThread;
 
-        // ⭐ Badge FAB
         var fabBadge = $id('acmFabBadge');
         if (fabBadge) {
-            if (unread > 0) {
-                fabBadge.textContent = unread > 99 ? '99+' : unread;
-                fabBadge.classList.add('show');
-            } else {
-                fabBadge.classList.remove('show');
-            }
+            fabBadge.textContent = unread > 99 ? '99+' : unread;
         }
 
-        console.log('📊 ACM Stats:', {
-            all: all, online: online, unread: unread,
-            hasThread: hasThread, noThread: noThread
-        });
+        if (typeof window.__syncChatSubBadges === 'function') {
+            window.__syncChatSubBadges();
+        }
     }
 
     function scheduleRender() {
@@ -26124,9 +26015,6 @@ window.gradeWithAPI = gradeWithAPI;
         ACM.renderTimer = setTimeout(renderList, 100);
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       🎨 RENDER LIST
-       ═══════════════════════════════════════════════════════════ */
     function renderList() {
         var el = $id('acmList');
         if (!el) return;
@@ -26165,7 +26053,6 @@ window.gradeWithAPI = gradeWithAPI;
 
         var html = '';
 
-        // ⭐ Select all row (chỉ hiện trong bulk mode)
         var allSelected = list.length > 0 && list.every(function(u) {
             return ACM.selectedUsers.indexOf(u.email) !== -1;
         });
@@ -26198,13 +26085,13 @@ window.gradeWithAPI = gradeWithAPI;
             var timeText = '';
             var timeClass = '';
             if (isOnline) {
-                timeText = '🟢 Online';
+                timeText = 'Online';
                 timeClass = 'online-now';
             } else if (u.lastLoginAt > 0) {
-                timeText = '🕐 ' + timeAgo(Date.now() - u.lastLoginAt);
+                timeText = timeAgo(Date.now() - u.lastLoginAt);
                 timeClass = 'recent-login';
             } else if (u.lastMessageAt > 0) {
-                timeText = '💬 ' + timeAgo(Date.now() - u.lastMessageAt);
+                timeText = timeAgo(Date.now() - u.lastMessageAt);
             }
 
             html += '<div class="acm-user' +
@@ -26263,9 +26150,6 @@ window.gradeWithAPI = gradeWithAPI;
         el.innerHTML = html;
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       ⭐ BULK MODE
-       ═══════════════════════════════════════════════════════════ */
     function toggleBulkMode() {
         ACM.bulkMode = !ACM.bulkMode;
         document.body.classList.toggle('acm-bulk-mode', ACM.bulkMode);
@@ -26341,7 +26225,7 @@ window.gradeWithAPI = gradeWithAPI;
     function openBulkCompose() {
         var count = ACM.selectedUsers.length;
         if (count === 0) {
-            alert('⚠️ Vui lòng chọn ít nhất 1 user!');
+            alert('Vui lòng chọn ít nhất 1 user!');
             return;
         }
 
@@ -26395,18 +26279,18 @@ window.gradeWithAPI = gradeWithAPI;
         var text = (ta && ta.value.trim()) || '';
 
         if (!text) {
-            alert('⚠️ Vui lòng nhập nội dung tin nhắn!');
+            alert('Vui lòng nhập nội dung tin nhắn!');
             if (ta) ta.focus();
             return;
         }
 
         var recipients = ACM.selectedUsers.slice();
         if (recipients.length === 0) {
-            alert('⚠️ Không có user nào để gửi!');
+            alert('Không có user nào để gửi!');
             return;
         }
 
-        if (!confirm('📤 GỬI TIN NHẮN HÀNG LOẠT\n\n' +
+        if (!confirm('GỬI TIN NHẮN HÀNG LOẠT\n\n' +
                      'Số người nhận: ' + recipients.length + '\n' +
                      'Nội dung: ' + text.substring(0, 100) + (text.length > 100 ? '...' : '') +
                      '\n\nTiếp tục?')) return;
@@ -26467,11 +26351,9 @@ window.gradeWithAPI = gradeWithAPI;
                 }, { merge: true });
 
                 success++;
-                console.log('✅ Bulk sent to:', email);
 
             } catch (e) {
                 failed++;
-                console.error('❌ Bulk send failed:', email, e);
             }
 
             if (i < recipients.length - 1) {
@@ -26494,15 +26376,12 @@ window.gradeWithAPI = gradeWithAPI;
         if (cancelBtn) cancelBtn.disabled = false;
         if (closeBtn) closeBtn.disabled = false;
 
-        showSmallToast('✅ Đã gửi ' + success + '/' + recipients.length + ' tin' +
+        showSmallToast('Đã gửi ' + success + '/' + recipients.length + ' tin' +
                        (failed > 0 ? ' (' + failed + ' lỗi)' : ''));
 
         closeBulkCompose();
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       ⭐ XOÁ LỊCH SỬ CHAT
-       ═══════════════════════════════════════════════════════════ */
     window.__acmDeleteHistory = function(email, userName, unread) {
         if (!isAdmin()) {
             alert('Chỉ admin mới có quyền xoá!');
@@ -26517,7 +26396,7 @@ window.gradeWithAPI = gradeWithAPI;
             descEl.innerHTML =
                 'Xoá toàn bộ tin nhắn của <b>' + esc(userName || email) + '</b>' +
                 '<br><span style="font-size:.78rem;color:#94a3b8">' + esc(email) + '</span>' +
-                (unread > 0 ? '<br><br>⚠️ Có <b>' + unread + '</b> tin chưa đọc cũng sẽ bị xoá.' : '') +
+                (unread > 0 ? '<br><br>Có <b>' + unread + '</b> tin chưa đọc cũng sẽ bị xoá.' : '') +
                 '<br><br>Hành động này <b>không thể khôi phục</b>.';
         }
 
@@ -26544,7 +26423,6 @@ window.gradeWithAPI = gradeWithAPI;
             var userName = ACM.pendingDelete.userName;
             var threadRef = db.collection('chat_threads').doc(email);
 
-            // ⭐ Ghi Firestore
             await threadRef.set({
                 messages: [],
                 lastMessage: '',
@@ -26558,9 +26436,6 @@ window.gradeWithAPI = gradeWithAPI;
                 historyClearedBy: (getCu() && getCu().email) || 'admin'
             }, { merge: true });
 
-            console.log('✅ Đã xoá lịch sử chat:', email);
-
-            // ⭐ Cập nhật LOCAL state NGAY — UI phản hồi tức thì
             if (ACM.threadsMap && ACM.threadsMap[email]) {
                 ACM.threadsMap[email].lastMessage = '';
                 ACM.threadsMap[email].lastMessageAt = null;
@@ -26568,27 +26443,19 @@ window.gradeWithAPI = gradeWithAPI;
                 ACM.threadsMap[email].unreadByAdmin = 0;
             }
 
-            // ⭐ Bỏ khỏi danh sách đã chọn (nếu đang bulk mode)
             var selIdx = ACM.selectedUsers.indexOf(email);
             if (selIdx !== -1) ACM.selectedUsers.splice(selIdx, 1);
             updateBulkCount();
 
-            // ⭐ Xoá cache
             try { localStorage.removeItem('admin_users_cache'); } catch(e) {}
 
-            // ⭐ Render lại NGAY (dùng local state đã cập nhật)
             rebuildList();
             updateStats();
-
-            // ⭐ Đóng confirm + đóng chat nếu đang mở với user này
             hideDeleteConfirm();
 
-            // ⭐ Nếu chat đang mở với user này → reset chat body
             try {
-                var chatBox = document.querySelector('.chat-box');
                 var chatBody = $id('chatBody');
                 if (chatBody && chatBody.offsetParent !== null) {
-                    // Kiểm tra xem có đang mở chat với user này không
                     var headerInfo = $id('chatHeaderInfo');
                     if (headerInfo && headerInfo.textContent && headerInfo.textContent.indexOf(email) !== -1) {
                         chatBody.innerHTML = '<div class="chat-empty">' +
@@ -26600,7 +26467,6 @@ window.gradeWithAPI = gradeWithAPI;
                 }
             } catch(e) {}
 
-            // ⭐ Ghi log admin action
             try {
                 db.collection('activity_logs').add({
                     email: email,
@@ -26611,7 +26477,6 @@ window.gradeWithAPI = gradeWithAPI;
                 });
             } catch(e) {}
 
-            // ⭐ Sau khi Firestore sync → rebuild lần cuối
             setTimeout(function() {
                 rebuildList();
                 updateStats();
@@ -26622,16 +26487,16 @@ window.gradeWithAPI = gradeWithAPI;
                 updateStats();
             }, 2000);
 
-            showSmallToast('✅ Đã xoá lịch sử chat của ' + userName);
+            showSmallToast('Đã xoá lịch sử chat của ' + userName);
 
         } catch (err) {
-            console.error('❌ Lỗi xoá lịch sử:', err);
-            alert('❌ Lỗi: ' + err.message);
+            alert('Lỗi: ' + err.message);
         } finally {
             btn.disabled = false;
             btn.innerHTML = originalHTML;
         }
     }
+
     function showSmallToast(msg) {
         var toast = document.getElementById('acmSmallToast');
         if (!toast) {
@@ -26658,9 +26523,6 @@ window.gradeWithAPI = gradeWithAPI;
         }, 3000);
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       📜 LỊCH SỬ HOẠT ĐỘNG
-       ═══════════════════════════════════════════════════════════ */
     function showHistory(email) {
         if (!email) return;
         var db = getDb();
@@ -26709,7 +26571,6 @@ window.gradeWithAPI = gradeWithAPI;
             });
             renderHistory(email, activities);
         }, function(err) {
-            console.error('History watch error:', err);
             renderHistory(email, []);
         });
     }
@@ -26748,7 +26609,7 @@ window.gradeWithAPI = gradeWithAPI;
                     '<div class="acm-hist-name">' +
                         esc(name) +
                         ' <span class="acm-tier ' + tierClass + '">' + tierLabel + '</span>' +
-                        (isOnline ? ' <span style="color:#16a34a;font-size:.7rem;font-weight:700;">🟢 Online</span>' : '') +
+                        (isOnline ? ' <span style="color:#16a34a;font-size:.7rem;font-weight:700;">Online</span>' : '') +
                     '</div>' +
                     '<div class="acm-hist-email">' + esc(email) + '</div>' +
                     '<div class="acm-hist-meta">' +
@@ -26877,9 +26738,6 @@ window.gradeWithAPI = gradeWithAPI;
         }
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       🔌 WATCHERS
-       ═══════════════════════════════════════════════════════════ */
     function startWatchers() {
         stopWatchers();
         var db = getDb();
@@ -26908,7 +26766,6 @@ window.gradeWithAPI = gradeWithAPI;
                         };
                     }
                 });
-                console.log('✅ ACM: Loaded', Object.keys(ACM.usersMap).length, 'users');
                 rebuildList();
             }, function(err) {
                 console.error('ACM users watch error:', err);
@@ -26931,7 +26788,6 @@ window.gradeWithAPI = gradeWithAPI;
                         };
                     }
                 });
-                console.log('✅ ACM: Loaded', Object.keys(ACM.threadsMap).length, 'threads');
                 rebuildList();
             }, function(err) {
                 console.error('ACM threads watch error:', err);
@@ -26940,9 +26796,6 @@ window.gradeWithAPI = gradeWithAPI;
         if (typeof firebase !== 'undefined' && firebase.database) {
             try {
                 var presenceRef = firebase.database().ref('presence');
-
-                // ⭐ CUTOFF 20 PHÚT — user được coi là online nếu
-                // timestamp presence trong vòng 20 phút gần nhất.
                 var PRESENCE_CUTOFF = ACM_PRESENCE_CUTOFF_MS;
 
                 var handler = presenceRef.on('value', function(snap) {
@@ -26958,8 +26811,6 @@ window.gradeWithAPI = gradeWithAPI;
                         }
                     });
 
-                    console.log('👥 ACM: Online users (cutoff ' + (PRESENCE_CUTOFF / 60000) + ' phút):',
-                                Object.keys(ACM.onlineMap).length);
                     rebuildList();
                 }, function(err) {
                     console.error('ACM presence watch error:', err);
@@ -26968,9 +26819,7 @@ window.gradeWithAPI = gradeWithAPI;
                 ACM.presenceUnsub = function() {
                     try { presenceRef.off('value', handler); } catch(e) {}
                 };
-            } catch(e) {
-                console.warn('ACM: Không thể watch presence:', e);
-            }
+            } catch(e) {}
         }
 
         ACM.loginLogsUnsub = db.collection('login_logs')
@@ -26983,12 +26832,11 @@ window.gradeWithAPI = gradeWithAPI;
                     var email = (d.email || '').toLowerCase();
                     if (!email) return;
                     if (!ACM.loginLogsMap[email] && d.time) {
-                        var ts = d.time.toMillis ? d.time.toMillis() : 
+                        var ts = d.time.toMillis ? d.time.toMillis() :
                                  (d.time.seconds ? d.time.seconds * 1000 : 0);
                         ACM.loginLogsMap[email] = ts;
                     }
                 });
-                console.log('✅ ACM: Loaded', Object.keys(ACM.loginLogsMap).length, 'login logs');
                 rebuildList();
             }, function(err) {
                 console.error('ACM login_logs watch error:', err);
@@ -27003,9 +26851,6 @@ window.gradeWithAPI = gradeWithAPI;
         if (ACM.loginLogsUnsub) { try { ACM.loginLogsUnsub(); } catch(e){} ACM.loginLogsUnsub = null; }
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       🪟 OPEN / CLOSE
-       ═══════════════════════════════════════════════════════════ */
     function openModal() {
         if (!isAdmin()) return;
         ACM.isOpen = true;
@@ -27021,7 +26866,6 @@ window.gradeWithAPI = gradeWithAPI;
         $id('acmModal').classList.remove('show');
         document.body.style.overflow = '';
         if (ACM.view === 'history') hideHistory();
-        // Reset bulk mode khi đóng
         if (ACM.bulkMode) {
             ACM.bulkMode = false;
             document.body.classList.remove('acm-bulk-mode');
@@ -27038,9 +26882,10 @@ window.gradeWithAPI = gradeWithAPI;
         else openModal();
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       🔗 EXPOSE GLOBAL
-       ═══════════════════════════════════════════════════════════ */
+    window.__acmToggleModal = toggleModal;
+    window.__acmOpenModal = openModal;
+    window.__acmCloseModal = closeModal;
+
     window.__acmOpenThread = function(email) {
         closeModal();
         setTimeout(function() {
@@ -27061,9 +26906,6 @@ window.gradeWithAPI = gradeWithAPI;
         showHistory(email);
     };
 
-    /* ═══════════════════════════════════════════════════════════
-       🚀 INIT
-       ═══════════════════════════════════════════════════════════ */
     function init() {
         if (ACM.inited) return;
         ACM.inited = true;
@@ -27095,9 +26937,6 @@ window.gradeWithAPI = gradeWithAPI;
                 }
             }
         });
-
-        var fab = $id('acmFab');
-        if (fab) fab.addEventListener('click', toggleModal);
 
         var searchInput = $id('acmSearchInput');
         if (searchInput) {
@@ -27131,7 +26970,6 @@ window.gradeWithAPI = gradeWithAPI;
             });
         });
 
-        /* ⭐ Bind confirm xoá lịch sử */
         var confirmCancel = $id('acmConfirmCancel');
         if (confirmCancel) confirmCancel.addEventListener('click', hideDeleteConfirm);
 
@@ -27143,7 +26981,6 @@ window.gradeWithAPI = gradeWithAPI;
             if (e.target === this) hideDeleteConfirm();
         });
 
-        /* ⭐ BULK MODE */
         var bulkToggle = $id('acmBulkToggle');
         if (bulkToggle) bulkToggle.addEventListener('click', toggleBulkMode);
 
@@ -27199,18 +27036,9 @@ window.gradeWithAPI = gradeWithAPI;
             });
         });
 
-        /* ⭐ Auto-open chat khi URL có ?admin_chat=email (từ nút Telegram) */
         handleAutoOpenFromUrl();
-
-        console.log('✅ Admin Chat Manager: init (presence cutoff = ' +
-                    (ACM_PRESENCE_CUTOFF_MS / 60000) + ' phút)');
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       ⭐ AUTO-OPEN CHAT TỪ URL (link Telegram copy)
-       - Nếu admin đã login → mở chat ngay
-       - Nếu chưa login → lưu email vào localStorage, đợi login xong
-       ═══════════════════════════════════════════════════════════ */
     function handleAutoOpenFromUrl() {
         try {
             var urlParams = new URLSearchParams(window.location.search);
@@ -27218,55 +27046,38 @@ window.gradeWithAPI = gradeWithAPI;
 
             if (!targetEmail) return;
 
-            console.log('🎯 Phát hiện ?admin_chat=', targetEmail);
-
-            // ⭐ Lưu email vào localStorage (không mất khi đóng WebView)
             try { localStorage.setItem('acm_pending_email', targetEmail); } catch(e) {}
 
-            // Đợi 2s cho Firebase init
             setTimeout(function() {
                 if (isAdmin()) {
                     openAutoChat(targetEmail);
                 }
-                // Nếu chưa login → để checkPendingEmail() xử lý sau
             }, 2000);
-
-        } catch(e) {
-            console.warn('handleAutoOpenFromUrl error:', e);
-        }
+        } catch(e) {}
     }
 
     function openAutoChat(targetEmail) {
-        console.log('🎯 Auto-open chat cho:', targetEmail);
-
-        // Mở modal admin chat manager
         openModal();
 
-        // Đợi data load xong rồi mở thread
         setTimeout(function() {
             if (typeof window.__acmOpenThread === 'function') {
                 window.__acmOpenThread(targetEmail);
             }
 
-            // Xoá param khỏi URL để không mở lại khi F5
             try {
                 var url = new URL(window.location.href);
                 url.searchParams.delete('admin_chat');
                 window.history.replaceState({}, '', url.pathname + url.hash);
             } catch(e) {}
 
-            // Xoá pending email
             try { localStorage.removeItem('acm_pending_email'); } catch(e) {}
-
         }, 1500);
     }
 
-    /* ⭐ Sau khi login admin xong → kiểm tra pending email */
     function checkPendingEmail() {
         try {
             var pending = localStorage.getItem('acm_pending_email');
             if (pending && isAdmin()) {
-                console.log('🎯 Có pending email sau login:', pending);
                 setTimeout(function() {
                     openAutoChat(pending);
                 }, 1000);
@@ -27281,18 +27092,12 @@ window.gradeWithAPI = gradeWithAPI;
         if (role === _lastRole) return;
         _lastRole = role;
 
-        var fab = $id('acmFab');
-        if (!fab) return;
-
         if (role === 'admin') {
-            fab.classList.add('show');
             if (!ACM.usersUnsub && !ACM.threadsUnsub) {
                 startWatchers();
             }
-            // ⭐ Kiểm tra pending email sau khi login admin
             checkPendingEmail();
         } else {
-            fab.classList.remove('show');
             stopWatchers();
             if (ACM.isOpen) closeModal();
         }
