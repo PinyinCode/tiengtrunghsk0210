@@ -29415,46 +29415,29 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
         // BƯỚC 2: Escape
         var safe = _esc(raw);
 
-        // BƯỚC 3: Helper normalize
-        function _normZh(s) {
-            if (!s) return '';
-            return s.replace(/[\s，。！？、；：""''（）]/g, '').trim();
-        }
+        // BƯỚC 3: Gộp newline thừa
+        safe = safe.replace(/\n{3,}/g, '\n\n');
 
-        var viDuNormMap = {};
-        if (viDuList && viDuList.length > 0) {
-            viDuList.forEach(function(ex) {
-                if (ex && ex.zh) {
-                    viDuNormMap[_normZh(ex.zh)] = ex;
-                }
-            });
-        }
-
-        // BƯỚC 4: Wrap
+        // BƯỚC 4: Wrap câu Hán tự NGAY SAU 📎 (cho phép xuống dòng)
+        // Regex: 📎 + optional "Ví dụ:" + optional newline/space + câu Hán tự
         safe = safe.replace(
-            /([\u4e00-\u9fff][\u4e00-\u9fff\s]*[\u4e00-\u9fff，。！？、；：""''（）])/g,
-            function(match) {
-                var trimmed = match.trim();
-                var hanziOnly = trimmed.replace(/[^\u4e00-\u9fff]/g, '');
-                if (hanziOnly.length < 2) return match;
+            /(📎\s*(?:Ví\s*dụ:?)?\s*)\n?\s*([\u4e00-\u9fff][\u4e00-\u9fff\s，。！？、；：""''（）\n]*?[\u4e00-\u9fff，。！？、；：""''（）])(\s*__PAREN_L__[^_]*?__PAREN_R__)?/g,
+            function(fullMatch, prefix, zhPart, parenPart) {
+                var trimmed = zhPart.replace(/\s+/g, ' ').trim();
+                if (!trimmed) return fullMatch;
 
                 var mJs = trimmed
                     .replace(/\\/g, '\\\\')
                     .replace(/'/g, "\\'")
                     .replace(/"/g, '\\"');
-                var mNorm = _normZh(trimmed);
 
-                if (viDuNormMap[mNorm]) {
-                    return '<span class="card-example-zh" '
-                         + 'onclick="vocabSpeakChar(\'' + mJs + '\', this, event)" '
-                         + 'title="Bấm để nghe câu ví dụ">'
-                         + match + '</span>';
-                }
+                var wrapped = '<span class="card-example-zh" '
+                            + 'onclick="vocabSpeakChar(\'' + mJs + '\', this, event)" '
+                            + 'title="Bấm để nghe câu ví dụ">'
+                            + trimmed
+                            + '</span>';
 
-                return '<span class="card-char-speakable" '
-                     + 'onclick="vocabSpeakChar(\'' + mJs + '\', this, event)" '
-                     + 'title="Bấm để nghe">'
-                     + match + '</span>';
+                return prefix + wrapped + (parenPart || '');
             }
         );
 
