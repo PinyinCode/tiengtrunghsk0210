@@ -29272,9 +29272,6 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
             document.querySelectorAll('.card-example-zh.speaking').forEach(function(b) {
                 b.classList.remove('speaking');
             });
-            document.querySelectorAll('.card-char-speakable.speaking').forEach(function(b) {
-                b.classList.remove('speaking');
-            });
             btn.classList.add('speaking');
         }
         var u = new SpeechSynthesisUtterance(text);
@@ -29381,59 +29378,145 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
     }
 
     function buildMnemonicBlock(text, currentChar, viDuList) {
-        currentChar = currentChar || '';
-        if (!text || !text.trim()) return '';
+    currentChar = currentChar || '';
+    if (!text || !text.trim()) return '';
 
-        // BƯỚC 1: Tìm các cụm Hán tự liền nhau (>= 2 chữ) trong RAW text
-        // Map: zh → { zh, pinyin, vi }
-        var viDuMap = {};
-        if (viDuList && viDuList.length > 0) {
-            viDuList.forEach(function(ex) {
-                if (ex && ex.zh) {
-                    viDuMap[ex.zh] = ex;
-                }
-            });
-        }
-
-        // BƯỚC 2: Escape text
-        var safe = _esc(text);
-
-        // BƯỚC 3: Wrap TẤT CẢ cụm Hán tự (>= 2 chữ) thành span bấm được
-        // Nhưng nếu cụm đó có trong viDuMap (câu ví dụ chuẩn), dùng class khác
-        safe = safe.replace(/([\u4e00-\u9fff]{2,})/g, function(match) {
-            var mJs = match
-                .replace(/\\/g, '\\\\')
-                .replace(/'/g, "\\'")
-                .replace(/"/g, '\\"');
-
-            // Nếu là câu ví dụ được parse (có trong viDuMap)
-            if (viDuMap[match]) {
-                return '<span class="card-example-zh" '
-                     + 'onclick="vocabSpeakChar(\'' + mJs + '\', this, event)" '
-                     + 'title="Bấm để nghe câu ví dụ">'
-                     + match
-                     + '</span>';
+    // BƯỚC 1: Tìm các cụm Hán tự liền nhau (>= 2 chữ) trong RAW text
+    // Map: zh → { zh, pinyin, vi }
+    var viDuMap = {};
+    if (viDuList && viDuList.length > 0) {
+        viDuList.forEach(function(ex) {
+            if (ex && ex.zh) {
+                viDuMap[ex.zh] = ex;
             }
+        });
+    }
 
-            // Còn lại (chữ Hán trong chiết tự, liên quan, câu chuyện...)
-            // → cũng bấm được
-            return '<span class="card-char-speakable" '
+    // BƯỚC 2: Escape text
+    var safe = _esc(text);
+
+    // BƯỚC 3: Wrap TẤT CẢ cụm Hán tự (>= 2 chữ) thành span bấm được
+    // Nhưng nếu cụm đó có trong viDuMap (câu ví dụ chuẩn), dùng class khác
+    safe = safe.replace(/([\u4e00-\u9fff]{2,})/g, function(match) {
+        var mJs = match
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, "\\'")
+            .replace(/"/g, '\\"');
+
+        // Nếu là câu ví dụ được parse (có trong viDuMap)
+        if (viDuMap[match]) {
+            return '<span class="card-example-zh" '
                  + 'onclick="vocabSpeakChar(\'' + mJs + '\', this, event)" '
-                 + 'title="Bấm để nghe">'
+                 + 'title="Bấm để nghe câu ví dụ">'
                  + match
                  + '</span>';
-        });
+        }
 
-        // BƯỚC 4: Transform khác
-        safe = safe.replace(/\s=\s/g, ' <span class="arrow">=</span> ');
-        safe = safe.replace(/→/g, '<span class="arrow">→</span>');
-        safe = safe.replace(/\(([^)]+)\)/g, '(<span class="hint">$1</span>)');
+        // Còn lại (chữ Hán trong chiết tự, liên quan, câu chuyện...) 
+        // → cũng bấm được
+        return '<span class="card-char-speakable" '
+             + 'onclick="vocabSpeakChar(\'' + mJs + '\', this, event)" '
+             + 'title="Bấm để nghe">'
+             + match
+             + '</span>';
+    });
 
-        return '<div class="card-mnemonic">'
-            + '<div class="card-mnemonic-label">MẸO NHỚ</div>'
-            + '<div class="card-mnemonic-body">' + safe + '</div>'
-            + '</div>';
+    // BƯỚC 4: Wrap TỪNG chữ Hán đơn (nếu chưa nằm trong span nào)
+    // — bước này optional, có thể bỏ nếu muốn tránh rối
+    // safe = safe.replace(/(?<![>;])([\u4e00-\u9fff])(?![^<]*<\/span>)/g, ...);
+
+    // BƯỚC 5: Transform khác
+    safe = safe.replace(/\s=\s/g, ' <span class="arrow">=</span> ');
+    safe = safe.replace(/→/g, '<span class="arrow">→</span>');
+    safe = safe.replace(/\(([^)]+)\)/g, '(<span class="hint">$1</span>)');
+
+    return '<div class="card-mnemonic">'
+        + '<div class="card-mnemonic-label">MẸO NHỚ</div>'
+        + '<div class="card-mnemonic-body">' + safe + '</div>'
+        + '</div>';
+}
+
+    function buildMnemonicBlock(text, currentChar, viDuList) {
+    currentChar = currentChar || '';
+    if (!text || !text.trim()) return '';
+
+    // BƯỚC 1: Xử lý RAW text (chưa escape)
+    var raw = text;
+
+    var viDuHtml = '';
+    var hasViDu = false;
+    if (viDuList && viDuList.length > 0) {
+        // Tìm dòng ví dụ trong RAW
+        if (/📎\s*Ví dụ:?/.test(raw)) {
+            hasViDu = true;
+
+            viDuList.forEach(function(ex) {
+                var exJs = String(ex.zh || '')
+                    .replace(/\\/g, '\\\\')
+                    .replace(/'/g, "\\'")
+                    .replace(/"/g, '\\"');
+                viDuHtml += '<span class="card-example-inline">';
+                viDuHtml += '<span class="card-example-zh" '
+                          + 'onclick="vocabSpeakChar(\'' + exJs + '\', this, event)" '
+                          + 'title="Bấm để nghe câu ví dụ">'
+                          + _esc(ex.zh)  // ← escape RIÊNG zh
+                          + '</span>';
+                if (ex.pinyin) {
+                    viDuHtml += ' <span class="card-example-pinyin">(' + _esc(ex.pinyin) + ')</span>';
+                }
+                if (ex.vi) {
+                    viDuHtml += ' <span class="card-example-vi">- ' + _esc(ex.vi) + '</span>';
+                }
+                viDuHtml += '</span>';
+            });
+
+            // Xóa dòng ví dụ trong RAW (chưa escape)
+            var rawLines = raw.split('\n');
+            var newRawLines = [];
+            var skipNext = false;
+            for (var li = 0; li < rawLines.length; li++) {
+                var line = rawLines[li];
+                var trimmed = line.trim();
+
+                if (/^📎\s*Ví dụ:?/.test(trimmed)) {
+                    newRawLines.push('📎 Ví dụ: __VIDU_PLACEHOLDER__');
+                    skipNext = true;
+                    continue;
+                }
+
+                if (skipNext) {
+                    if (trimmed && !/^(🔗|💡|📌|🎬|📎)/.test(trimmed)) {
+                        skipNext = false;
+                        continue;
+                    }
+                    skipNext = false;
+                }
+
+                newRawLines.push(line);
+            }
+            raw = newRawLines.join('\n');
+        }
     }
+
+    // BƯỚC 2: GIỜ MỚI escape
+    var safe = _esc(raw);
+
+    // BƯỚC 3: Transform ký tự đặc biệt
+    safe = safe.replace(/([\u4e00-\u9fa5]+)/g, '<span class="char-zh">$1</span>');
+    safe = safe.replace(/\s=\s/g, ' <span class="arrow">=</span> ');
+    safe = safe.replace(/→/g, '<span class="arrow">→</span>');
+    safe = safe.replace(/\(([^)]+)\)/g, '(<span class="hint">$1</span>)');
+
+    // BƯỚC 4: Chèn viDuHtml
+    if (viDuHtml) {
+        safe = safe.replace('__VIDU_PLACEHOLDER__', viDuHtml);
+    }
+
+    return '<div class="card-mnemonic">'
+        + '<div class="card-mnemonic-label">MẸO NHỚ</div>'
+        + '<div class="card-mnemonic-body">' + safe + '</div>'
+        + '</div>';
+}
 
     function buildSimilarCharsBlock(currentChar) {
         currentChar = currentChar || '';
