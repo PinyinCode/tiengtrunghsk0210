@@ -1,4 +1,4 @@
-mã gốc đây # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 r"""
 Module TỪ VỰNG PREMIUM - cắm vào fix.py.
 Tự sinh bộ thủ + mẹo nhớ từ module vocab_data/.
