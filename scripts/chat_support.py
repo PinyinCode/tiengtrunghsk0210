@@ -1,85 +1,34 @@
 # -*- coding: utf-8 -*-
-"""
-Chat Support + Quota Dashboard + User Online — TỐI ƯU CHO 200+ USER
-════════════════════════════════════════════════════════════════════
-
-CHAT:
-• onSnapshot thay vì poll → giảm 97% reads
-• Messages lưu trong ARRAY của doc chat_threads/{email}
-• Giới hạn 50 tin/ngày/user + gợi ý Zalo
-• Tự mở chat khi admin gửi tin
-• Nút chat FAB + intro-glow 1 lần khi mount (không nhấp nháy)
-• Icon rung + đỏ khi có tin chưa đọc
-• Modal góc trái-dưới + mũi tên chỉ về nút chat
-
-✅ FIX (2026-09): NÚT CHAT TÁCH KHỎI CỤM ZALO/TIKTOK
-   - Wrapper riêng #chatFloatWrap, position:fixed, không phụ thuộc floatingLeftGroup
-   - Không còn bị ẩn khi user thu gọn cụm Zalo/TikTok
-   - Tự đẩy xuống khi cụm floating group đang mở (syncFloatingGroupState)
-
-✅ FIX (2026-09-28): BỎ NÚT PHÓNG TO (chat-expand-btn)
-   - Đã xóa nút phóng to trên header chat
-   - Đã xóa CSS .chat-box.expanded
-   - Đã xóa JS xử lý expand/collapse
-   - Chat modal chỉ còn chế độ MINI (~30vh)
-
-🛡️ ANTI-SPAM (2026-09-28): 5 LỚP CHỐNG SPAM
-   • Lớp 1: Cooldown 3s giữa 2 tin liên tiếp
-   • Lớp 2: Debounce nút Send (chặn double-click)
-   • Lớp 3: Rate limit 10 tin/phút
-   • Lớp 4: Chống gửi trùng nội dung (30s)
-   • Lớp 5: Chặn nội dung rác + giới hạn độ dài
-
-QUOTA:
-• Đếm reads/writes/deletes client-side (localStorage)
-• Wrap Firestore methods tự động
-• Dashboard trong Admin Panel
-• Cảnh báo khi >70% / >90% quota
-
-USER ONLINE (RTDB):
-• Track user online qua Firebase Realtime Database
-• KHÔNG tốn Firestore quota
-• onDisconnect tự động xóa khi user tắt tab
-• Admin xem danh sách user online realtime
-"""
+"""Chat Support + Quota Dashboard + User Online"""
 
 import json
 
 
-# ═══════════════════════════════════════════════════════════════
-#  CSS
-# ═══════════════════════════════════════════════════════════════
 def build_chat_css():
     return r"""
-/* ═══ CHAT BUTTON ═══ */
 .chat-float-btn{display:flex;align-items:center;gap:.5rem;padding:.7rem 1.1rem;border-radius:50px;background:linear-gradient(135deg, #4f46e5, #7c3aed, #a855f7);color:#fff;text-decoration:none;font-weight:700;font-size:.85rem;box-shadow:0 8px 24px rgba(124,58,237,.45);transition:all .35s cubic-bezier(.34,1.56,.64,1);-webkit-tap-highlight-color:transparent;white-space:nowrap;border:2px solid #fff;font-family:inherit;overflow:visible;position:relative;cursor:pointer;}
 .chat-float-btn:hover,.chat-float-btn:active{transform:scale(1.05);box-shadow:0 12px 32px rgba(124,58,237,.65),0 0 0 6px rgba(139,92,246,.2);color:#fff;}
 .chat-float-btn i.fa-comments{font-size:1.2rem;flex-shrink:0;line-height:1;position:relative;z-index:2;}
 .chat-float-btn .chat-text{line-height:1.15;display:flex;flex-direction:column;position:relative;z-index:2;transition:opacity .2s, max-width .35s;max-width:200px;overflow:hidden;}
 .chat-float-btn .chat-label{font-size:.65rem;opacity:.85;font-weight:500;white-space:nowrap}
 .chat-float-btn .chat-name{font-size:.85rem;font-weight:700;white-space:nowrap}
-
 .chat-float-btn::before{content:'';position:absolute;inset:0;border-radius:50px;background:linear-gradient(135deg, #4f46e5, #a855f7);opacity:0;z-index:1;pointer-events:none;transition:opacity .3s ease;}
-
 .chat-float-btn.intro-glow{animation:chatIntroGlow 1.8s cubic-bezier(.4,0,.2,1) 1;}
 @keyframes chatIntroGlow{
     0%{box-shadow:0 8px 24px rgba(124,58,237,.45),0 0 0 0 rgba(139,92,246,.6);}
     70%{box-shadow:0 8px 28px rgba(124,58,237,.7),0 0 0 16px rgba(139,92,246,0);}
     100%{box-shadow:0 8px 24px rgba(124,58,237,.45),0 0 0 0 rgba(139,92,246,0);}
 }
-
 .chat-float-btn.has-unread{background:linear-gradient(135deg, #dc2626, #b91c1c, #7f1d1d);animation:chatUrgentPulse 1.2s infinite;box-shadow:0 8px 24px rgba(220,38,38,.6);}
 .chat-float-btn.has-unread::before{opacity:.5;background:linear-gradient(135deg, #dc2626, #7f1d1d);animation:chatUrgentPulse 1.2s infinite;}
 .chat-float-btn.has-unread i.fa-comments{animation:chatBellShake 0.6s infinite;color:#fde68a;text-shadow:0 0 8px rgba(253,230,138,.9);}
 @keyframes chatBellShake{0%,100%{transform:rotate(0deg);}15%{transform:rotate(-15deg);}30%{transform:rotate(15deg);}45%{transform:rotate(-12deg);}60%{transform:rotate(12deg);}75%{transform:rotate(-6deg);}}
 @keyframes chatUrgentPulse{0%,100%{transform:scale(1);box-shadow:0 8px 24px rgba(220,38,38,.6),0 0 0 0 rgba(220,38,38,.7);}50%{transform:scale(1.08);box-shadow:0 12px 32px rgba(220,38,38,.8),0 0 0 14px rgba(220,38,38,0);}}
-
 .chat-float-btn .chat-badge{position:absolute;top:-6px;right:-6px;min-width:24px;height:24px;padding:0 .45rem;border-radius:50px;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1e1b4b;font-size:.72rem;font-weight:900;display:none;align-items:center;justify-content:center;border:2.5px solid #fff;line-height:1;box-shadow:0 3px 10px rgba(251,191,36,.7);animation:chatBadgeBounce 0.8s infinite;z-index:5;}
 .chat-float-btn.has-unread .chat-badge{background:linear-gradient(135deg,#fff,#fef3c7);color:#dc2626;box-shadow:0 3px 12px rgba(255,255,255,.8),0 0 0 2px #dc2626;}
 .chat-float-btn .chat-badge.show{display:flex}
 @keyframes chatBadgeBounce{0%,100%{transform:scale(1);}50%{transform:scale(1.18);}}
 .chat-float-btn.hidden{display:none}
-
 @media (max-width:768px){
     .chat-float-btn{width:46px;height:46px;padding:0;border-radius:50%;justify-content:center;gap:0;}
     .chat-float-btn i.fa-comments{font-size:1.25rem;}
@@ -93,151 +42,58 @@ def build_chat_css():
     .chat-float-btn i.fa-comments{font-size:1.1rem;}
 }
 
-/* ═══ WRAPPER NÚT CHAT — ĐỘC LẬP ═══ */
-#chatFloatWrap{
-    position:fixed;
-    left:20px;
-    bottom:calc(20px + env(safe-area-inset-bottom));
-    z-index:9998;
-    display:flex;
-    flex-direction:column;
-    align-items:flex-start;
-    gap:.5rem;
-    pointer-events:none;
-    transition:opacity .3s ease, transform .3s ease, bottom .35s cubic-bezier(.34,1.56,.64,1);
-    opacity:1;
-    transform:translateY(0);
-}
-#chatFloatWrap > *{ pointer-events:auto; }
-#chatFloatWrap.hidden{
-    display:flex;
-    opacity:0;
-    transform:translateY(12px);
-    pointer-events:none;
-}
+#chatFloatWrap{position:fixed;right:50px;bottom:calc(16px + env(safe-area-inset-bottom));left:auto;top:auto;z-index:9998;display:flex;flex-direction:column;align-items:flex-end;gap:.55rem;pointer-events:none;transition:opacity .3s ease, transform .3s ease;opacity:1;transform:translateY(0);}
+#chatFloatWrap > *{pointer-events:auto;}
+#chatFloatWrap.hidden{display:flex;opacity:0;transform:translateY(12px);pointer-events:none;}
+body.chat-is-open #chatFloatWrap{z-index:3999;}
+body.has-floating-group #chatFloatWrap{bottom:calc(16px + env(safe-area-inset-bottom));}
 
-/* ⭐ Khi chat đang mở → hạ z-index FAB xuống dưới chat box (4001) */
-body.chat-is-open #chatFloatWrap{
-    z-index:3999;
-}
+#chatFloatBtn{position:relative;width:56px;height:56px;border-radius:50%;padding:0;justify-content:center;gap:0;transition:transform .3s cubic-bezier(.34,1.56,.64,1), box-shadow .3s, background .3s;}
+#chatFloatBtn .chat-text{display:none !important;}
+#chatFloatBtn i.fa-comments{font-size:1.35rem;}
+#chatFloatBtn.menu-open{transform:rotate(45deg) scale(1.05);}
 
-body.has-floating-group #chatFloatWrap{
-    bottom:calc(180px + env(safe-area-inset-bottom));
-}
+#chatFloatMenu{display:flex;flex-direction:column;align-items:flex-end;gap:.55rem;opacity:0;transform:translateY(20px) scale(0.8);pointer-events:none;transition:opacity .25s ease, transform .3s cubic-bezier(.34,1.56,.64,1);transform-origin:bottom right;margin-bottom:.55rem;}
+#chatFloatMenu.show{opacity:1;transform:translateY(0) scale(1);pointer-events:auto;}
+
+.chat-float-sub{width:50px;height:50px;border-radius:50%;border:2px solid #fff;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.15rem;padding:0;position:relative;transition:transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s;font-family:inherit;-webkit-tap-highlight-color:transparent;box-shadow:0 6px 18px rgba(0,0,0,.25);}
+.chat-float-sub:hover,.chat-float-sub:active{transform:scale(1.12);}
+.chat-float-sub.chat-sub{background:linear-gradient(135deg, #4f46e5, #7c3aed);box-shadow:0 6px 18px rgba(124,58,237,.5);}
+.chat-float-sub.chat-sub:hover{box-shadow:0 10px 26px rgba(124,58,237,.7);}
+.chat-float-sub.manager-sub{background:linear-gradient(135deg, #059669, #10b981);box-shadow:0 6px 18px rgba(16,185,129,.5);}
+.chat-float-sub.manager-sub:hover{box-shadow:0 10px 26px rgba(16,185,129,.7);}
+.chat-float-sub .sub-badge{position:absolute;top:-5px;right:-5px;min-width:20px;height:20px;padding:0 .35rem;border-radius:50px;background:#dc2626;color:#fff;font-size:.62rem;font-weight:900;display:none;align-items:center;justify-content:center;border:2px solid #fff;line-height:1;animation:chatBadgeBounce 0.8s infinite;}
+.chat-float-sub .sub-badge.show{display:flex;}
 
 @media (max-width:768px){
-    #chatFloatWrap{
-        left:12px;
-        bottom:calc(12px + env(safe-area-inset-bottom));
-    }
-    body.has-floating-group #chatFloatWrap{
-        bottom:calc(180px + env(safe-area-inset-bottom));
-    }
+    #chatFloatWrap{right:40px;bottom:calc(14px + env(safe-area-inset-bottom));}
+    #chatFloatBtn{width:50px;height:50px;}
+    #chatFloatBtn i.fa-comments{font-size:1.2rem;}
+    .chat-float-sub{width:44px;height:44px;font-size:1rem;}
 }
 @media (max-width:400px){
-    #chatFloatWrap{
-        left:10px;
-        bottom:calc(10px + env(safe-area-inset-bottom));
-    }
-    body.has-floating-group #chatFloatWrap{
-        bottom:calc(144px + env(safe-area-inset-bottom));
-    }
+    #chatFloatWrap{right:36px;bottom:calc(12px + env(safe-area-inset-bottom));}
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   CHAT MODAL — NEO VÀO NÚT FAB (JS set left/bottom động)
-   ═══════════════════════════════════════════════════════════════ */
 .chat-modal{position:fixed;inset:0;background:transparent;z-index:4000;display:none;padding:0;pointer-events:none;}
 .chat-modal.show{display:block;pointer-events:auto;}
-
-/* ⭐ .chat-box dùng position:fixed — left/bottom do JS set động theo nút FAB */
-.chat-box{
-    position:fixed;
-    left:20px;
-    bottom:80px;
-    background:#fff;
-    border-radius:18px;
-    width:360px;
-    height:30vh;
-    min-height:260px;
-    max-height:calc(100vh - 120px);
-    box-shadow:0 16px 48px rgba(0,0,0,.28),0 0 0 1px rgba(0,0,0,.05);
-    display:flex;flex-direction:column;overflow:hidden;
-    transform-origin:bottom left;
-    animation:chatPopIn .28s cubic-bezier(.34,1.56,.64,1);
-    transition:width .3s cubic-bezier(.4,0,.2,1),
-               height .3s cubic-bezier(.4,0,.2,1),
-               left .35s cubic-bezier(.34,1.56,.64,1),
-               bottom .35s cubic-bezier(.34,1.56,.64,1),
-               border-radius .3s;
-    pointer-events:auto;
-    z-index:4001;
-}
+.chat-box{position:fixed;right:20px;top:80px;left:auto;bottom:auto;background:#fff;border-radius:18px;width:360px;height:30vh;min-height:260px;max-height:calc(100vh - 120px);box-shadow:0 16px 48px rgba(0,0,0,.28),0 0 0 1px rgba(0,0,0,.05);display:flex;flex-direction:column;overflow:hidden;transform-origin:bottom right;animation:chatPopIn .28s cubic-bezier(.34,1.56,.64,1);transition:width .3s cubic-bezier(.4,0,.2,1), height .3s cubic-bezier(.4,0,.2,1), right .35s cubic-bezier(.34,1.56,.64,1), top .35s cubic-bezier(.34,1.56,.64,1), border-radius .3s;pointer-events:auto;z-index:4001;}
 @keyframes chatPopIn{from{opacity:0;transform:scale(.85) translateY(20px);}to{opacity:1;transform:scale(1) translateY(0);}}
 [data-theme="dark"] .chat-box{background:#1e293b;box-shadow:0 16px 48px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.08);}
-
-/* ⭐ Mũi tên chỉ xuống nút FAB — vị trí set bằng biến --arrow-left do JS */
-.chat-box::before{
-    content:'';position:absolute;bottom:-14px;
-    left:var(--arrow-left,22px);
-    width:0;height:0;
-    border-left:14px solid transparent;
-    border-right:14px solid transparent;
-    border-top:14px solid #fff;
-    filter:drop-shadow(0 2px 3px rgba(0,0,0,.08));
-    pointer-events:none;z-index:1;
-    transition:left .35s cubic-bezier(.34,1.56,.64,1);
-}
+.chat-box::before{content:'';position:absolute;bottom:-14px;left:var(--arrow-left,22px);width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-top:14px solid #fff;filter:drop-shadow(0 2px 3px rgba(0,0,0,.08));pointer-events:none;z-index:1;transition:left .35s cubic-bezier(.34,1.56,.64,1);}
 [data-theme="dark"] .chat-box::before{border-top-color:#1e293b;}
-.chat-box::after{
-    content:'';position:absolute;bottom:-10px;
-    left:calc(var(--arrow-left,22px) + 2px);
-    width:0;height:0;
-    border-left:12px solid transparent;
-    border-right:12px solid transparent;
-    border-top:12px solid #4f46e5;
-    pointer-events:none;z-index:2;
-    transition:left .35s cubic-bezier(.34,1.56,.64,1);
-}
-
-/* ⭐ Khi admin đang chat với user (có quick replies) → chat box cao hơn */
-.chat-box.admin-thread-open{
-    height:55vh;
-    min-height:420px;
-    max-height:calc(100vh - 80px);
-}
-
-/* ─── MOBILE ─── */
+.chat-box::after{content:'';position:absolute;bottom:-10px;left:calc(var(--arrow-left,22px) + 2px);width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-top:12px solid #4f46e5;pointer-events:none;z-index:2;transition:left .35s cubic-bezier(.34,1.56,.64,1);}
+.chat-box.admin-thread-open{height:55vh;min-height:420px;max-height:calc(100vh - 80px);}
 @media (max-width:600px){
-    .chat-box{
-        width:calc(100vw - 24px);
-        height:30vh;
-        min-height:240px;
-        max-height:calc(100vh - 90px);
-        border-radius:18px;
-        /* left/bottom do JS set động */
-    }
+    .chat-box{width:calc(100vw - 24px);height:30vh;min-height:240px;max-height:calc(100vh - 90px);border-radius:18px;}
     .chat-box::before,.chat-box::after{display:none;}
-    .chat-box.admin-thread-open{
-        height:55vh;
-        min-height:400px;
-        max-height:calc(100vh - 70px);
-    }
+    .chat-box.admin-thread-open{height:55vh;min-height:400px;max-height:calc(100vh - 70px);}
 }
-
 @media (max-width:400px){
-    .chat-box{
-        width:calc(100vw - 16px);
-        height:30vh;
-        min-height:220px;
-    }
-    .chat-box.admin-thread-open{
-        height:60vh;
-        min-height:380px;
-    }
+    .chat-box{width:calc(100vw - 16px);height:30vh;min-height:220px;}
+    .chat-box.admin-thread-open{height:60vh;min-height:380px;}
 }
 
-/* ═══ HEADER ═══ */
 .chat-header{padding:1rem 1.25rem;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;display:flex;align-items:center;gap:.75rem;flex-shrink:0;}
 .chat-header-back{width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,.15);color:#fff;cursor:pointer;display:none;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0;}
 .chat-header-back.show{display:flex}
@@ -251,7 +107,6 @@ body.has-floating-group #chatFloatWrap{
 .chat-header-close{width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,.2);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
 .chat-header-close:hover{background:rgba(255,255,255,.35)}
 
-/* ═══ BODY ═══ */
 .chat-body{flex:1;min-height:0;overflow-y:auto;padding:1rem 1.25rem;background:#f8fafc;display:flex;flex-direction:column;gap:.45rem;}
 [data-theme="dark"] .chat-body{background:#0f172a;}
 .chat-msg{display:flex;gap:.4rem;max-width:85%;align-items:flex-end;}
@@ -268,26 +123,14 @@ body.has-floating-group #chatFloatWrap{
 .chat-empty .title{font-size:.92rem;font-weight:700;color:#475569;}
 .chat-empty .desc{font-size:.78rem;line-height:1.5;max-width:280px;}
 
-/* ═══ FOOTER ═══ */
 .chat-footer{padding:.75rem 1rem;border-top:1px solid #e2e8f0;background:#fff;flex-shrink:0;display:flex;flex-direction:column;gap:.5rem;}
 [data-theme="dark"] .chat-footer{background:#1e293b;border-color:#334155;}
 .chat-footer-row{display:flex;gap:.5rem;align-items:flex-end;}
 .chat-footer textarea{flex:1;min-width:0;min-height:42px;max-height:130px;padding:.65rem .9rem;border-radius:22px;border:1.5px solid #e2e8f0;background:#f8fafc;color:#0f172a;font-size:.85rem;font-family:inherit;outline:none;resize:none;overflow-y:hidden;line-height:1.4;}
 [data-theme="dark"] .chat-footer textarea{background:#0f172a;color:#f1f5f9;border-color:#334155;}
 .chat-footer textarea:focus{border-color:#4f46e5;}
-
-/* ⭐ Anti-spam: input bị disable */
-.chat-footer textarea:disabled{
-    opacity:.6;
-    cursor:not-allowed;
-    background:#f1f5f9;
-    border-color:#cbd5e1;
-}
-[data-theme="dark"] .chat-footer textarea:disabled{
-    background:#0f172a;
-    border-color:#475569;
-}
-
+.chat-footer textarea:disabled{opacity:.6;cursor:not-allowed;background:#f1f5f9;border-color:#cbd5e1;}
+[data-theme="dark"] .chat-footer textarea:disabled{background:#0f172a;border-color:#475569;}
 .chat-send-btn{width:44px;height:44px;border-radius:50%;border:none;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.05rem;flex-shrink:0;}
 .chat-send-btn:disabled{opacity:.4;cursor:not-allowed;}
 .chat-quick-replies{display:flex;gap:.35rem;flex-wrap:wrap;padding:.5rem 0;border-bottom:1px dashed #e2e8f0;margin-bottom:.1rem;}
@@ -295,7 +138,6 @@ body.has-floating-group #chatFloatWrap{
 .chat-quick-btn{padding:.3rem .7rem;border-radius:50px;border:1.5px solid rgba(37,99,235,.3);background:rgba(37,99,235,.08);color:#1e40af;font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit;}
 .chat-quick-btn:hover{background:#2563eb;color:#fff;}
 
-/* ═══ LIMIT BANNER ═══ */
 .chat-limit-banner{display:none;margin:0 0 .5rem;padding:.65rem .85rem;background:linear-gradient(135deg,#fef3c7,#fde68a);border:1.5px solid #f59e0b;border-radius:10px;font-size:.78rem;color:#78350f;line-height:1.45;animation:chatLimitSlide .3s cubic-bezier(.34,1.56,.64,1);flex-shrink:0;align-items:flex-start;gap:.5rem;}
 .chat-limit-banner.show{display:flex}
 .chat-limit-banner.danger{background:linear-gradient(135deg,#fecaca,#fca5a5);border-color:#dc2626;color:#7f1d1d;}
@@ -312,7 +154,6 @@ body.has-floating-group #chatFloatWrap{
 .chat-limit-banner .clb-btn.dismiss:hover{background:rgba(120,53,15,.25);}
 @keyframes chatLimitSlide{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
 
-/* ═══ ADMIN LIST ═══ */
 .admin-chat-thread{display:flex;align-items:center;gap:.75rem;padding:.75rem .85rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:.5rem;cursor:pointer;position:relative;}
 [data-theme="dark"] .admin-chat-thread{background:#334155;border-color:#475569;}
 .admin-chat-thread:hover{border-color:#4f46e5;}
@@ -324,7 +165,6 @@ body.has-floating-group #chatFloatWrap{
 .admin-chat-thread .t-time{font-size:.68rem;color:#94a3b8;flex-shrink:0;}
 .admin-chat-thread .t-badge{position:absolute;top:-4px;right:-4px;min-width:22px;height:22px;padding:0 .4rem;border-radius:50px;background:#dc2626;color:#fff;font-size:.65rem;font-weight:900;display:flex;align-items:center;justify-content:center;}
 
-/* ═══ TYPING ═══ */
 .chat-typing{display:none;align-self:flex-start;padding:.5rem .85rem;background:#fff;border:1px solid #e2e8f0;border-radius:16px;border-bottom-left-radius:4px;font-size:.8rem;color:#64748b;gap:.35rem;align-items:center;max-width:140px;margin-top:.2rem;}
 .chat-typing.show{display:inline-flex}
 .chat-typing .dots{display:inline-flex;gap:3px;}
@@ -335,7 +175,6 @@ body.has-floating-group #chatFloatWrap{
 [data-theme="dark"] .chat-typing{background:#334155;border-color:#475569;color:#cbd5e1;}
 [data-theme="dark"] .chat-typing .dots span{background:#94a3b8;}
 
-/* ═══ DROPDOWN PREVIEW ═══ */
 .dropdown-chat-preview{display:none;margin:.4rem .5rem;padding:.65rem .75rem;background:linear-gradient(135deg, rgba(79,70,229,.06), rgba(124,58,237,.06));border:1px solid rgba(124,58,237,.2);border-radius:10px;cursor:pointer;transition:.15s;}
 .dropdown-chat-preview:hover{border-color:#7c3aed;background:linear-gradient(135deg, rgba(79,70,229,.12), rgba(124,58,237,.12));}
 .dropdown-chat-preview.show{display:block}
@@ -349,7 +188,6 @@ body.has-floating-group #chatFloatWrap{
 [data-theme="dark"] .dropdown-chat-preview .dcp-msg{color:#f1f5f9;}
 [data-theme="dark"] .dropdown-chat-preview .dcp-msg b{color:#a5b4fc;}
 
-/* ═══ QUOTA DASHBOARD ═══ */
 .quota-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.75rem;margin-bottom:1rem;}
 .quota-card{padding:1rem;border-radius:12px;background:var(--surface-2);border:1px solid var(--border);position:relative;overflow:hidden;}
 .quota-card.warn{background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(251,191,36,.06));border-color:#f59e0b;}
@@ -376,7 +214,6 @@ body.has-floating-group #chatFloatWrap{
 .quota-history-table .qht-warn{color:#d97706;font-weight:700;}
 .quota-history-table .qht-danger{color:#dc2626;font-weight:700;}
 
-/* ═══ USER ONLINE (RTDB PRESENCE) ═══ */
 .online-user-row{display:flex;align-items:center;gap:.6rem;padding:.6rem .75rem;border-radius:10px;background:var(--surface-2);margin-bottom:.4rem;transition:.15s;}
 .online-user-row:hover{background:var(--surface);box-shadow:0 2px 8px rgba(0,0,0,.06);}
 .ou-dot{width:10px;height:10px;border-radius:50%;background:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.2);animation:onlinePulse 2s infinite;flex-shrink:0;}
@@ -387,45 +224,14 @@ body.has-floating-group #chatFloatWrap{
 .ou-chat-btn{width:32px;height:32px;border-radius:8px;border:none;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.8rem;flex-shrink:0;transition:.15s;}
 .ou-chat-btn:hover{transform:scale(1.08);box-shadow:0 4px 12px rgba(124,58,237,.4);}
 
-/* ═══ CHAT TOAST — Thông báo anti-spam ═══ */
-.chat-toast{
-    position:fixed;
-    bottom:120px;
-    left:50%;
-    transform:translateX(-50%) translateY(20px);
-    background:linear-gradient(135deg,#dc2626,#b91c1c);
-    color:#fff;
-    padding:.85rem 1.3rem;
-    border-radius:12px;
-    font-size:.85rem;
-    font-weight:700;
-    z-index:99999;
-    opacity:0;
-    transition:opacity .3s, transform .3s;
-    pointer-events:none;
-    box-shadow:0 12px 32px rgba(220,38,38,.4);
-    max-width:80vw;
-    text-align:center;
-    line-height:1.4;
-}
-.chat-toast.show{
-    opacity:1;
-    transform:translateX(-50%) translateY(0);
-}
+.chat-toast{position:fixed;bottom:120px;left:50%;transform:translateX(-50%) translateY(20px);background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;padding:.85rem 1.3rem;border-radius:12px;font-size:.85rem;font-weight:700;z-index:99999;opacity:0;transition:opacity .3s, transform .3s;pointer-events:none;box-shadow:0 12px 32px rgba(220,38,38,.4);max-width:80vw;text-align:center;line-height:1.4;}
+.chat-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 @media (max-width:768px){
-    .chat-toast{
-        bottom:100px;
-        font-size:.8rem;
-        padding:.75rem 1.1rem;
-        max-width:90vw;
-    }
+    .chat-toast{bottom:100px;font-size:.8rem;padding:.75rem 1.1rem;max-width:90vw;}
 }
 """
 
 
-# ═══════════════════════════════════════════════════════════════
-#  HTML
-# ═══════════════════════════════════════════════════════════════
 def build_chat_html():
     return r"""
 <div class="chat-modal" id="chatModal">
@@ -457,7 +263,7 @@ def build_chat_html():
                 <button class="chat-quick-btn" type="button" data-reply="Đã nhận được, em đợi admin 1-2 phút nhé!">Đã nhận, chờ 1-2 phút</button>
                 <button class="chat-quick-btn" type="button" data-reply="Admin đã xác nhận thanh toán. Tài khoản được gia hạn rồi em nhé!">Đã xác nhận thanh toán</button>
                 <button class="chat-quick-btn" type="button" data-reply="Em gửi giúp admin ảnh chụp biên lai chuyển khoản nhé.">Xin ảnh biên lai</button>
-                <button class="chat-quick-btn" type="button" data-reply="Cảm ơn em đã ủng hộ. Chúc em học tốt! 🎓">Cảm ơn</button>
+                <button class="chat-quick-btn" type="button" data-reply="Cảm ơn em đã ủng hộ. Chúc em học tốt!">Cảm ơn</button>
             </div>
             <div class="chat-footer-row">
                 <textarea id="chatInput" placeholder="Nhập tin nhắn..." rows="1" maxlength="1000"></textarea>
@@ -468,8 +274,8 @@ def build_chat_html():
 </div>
 """
 
+
 def build_quota_html():
-    """HTML cho section Quota trong Admin Panel."""
     return r"""
 <div class="admin-section collapsed" id="adminQuotaSection">
     <div class="admin-section-head">
@@ -557,7 +363,6 @@ def build_quota_html():
 
 
 def build_online_section_html():
-    """HTML cho section User Online trong Admin Panel (RTDB presence)."""
     return r"""
 <div class="admin-section" id="adminOnlineSection">
     <div class="admin-section-head">
@@ -594,11 +399,8 @@ def build_online_section_html():
 </div>
 """
 
+
 def build_config_js(config):
-    """
-    Sinh thẻ <script> inject config vào window.
-    Gọi SAU KHI đã load config.json, TRƯỚC KHI gọi build_chat_js().
-    """
     def esc_js(s):
         if s is None:
             return ''
@@ -609,9 +411,9 @@ def build_config_js(config):
                 .replace('\r', '\\r'))
 
     zalo_phone = esc_js(config.get("zalo_phone", ""))
-    tg_token   = esc_js(config.get("telegram_bot_token", ""))
-    tg_chat    = esc_js(config.get("telegram_chat_id", ""))
-    site_name  = esc_js(config.get("tiktok_nickname", "Website"))
+    tg_token = esc_js(config.get("telegram_bot_token", ""))
+    tg_chat = esc_js(config.get("telegram_chat_id", ""))
+    site_name = esc_js(config.get("tiktok_nickname", "Website"))
 
     return (
         '<script>\n'
@@ -619,122 +421,69 @@ def build_config_js(config):
         '  window.TELEGRAM_BOT_TOKEN = "' + tg_token + '";\n'
         '  window.TELEGRAM_CHAT_ID = "' + tg_chat + '";\n'
         '  window.SITE_NAME = "' + site_name + '";\n'
-        '  console.log("[Config] Loaded:", {\n'
-        '    zalo: window.ZALO_PHONE,\n'
-        '    tg_token: window.TELEGRAM_BOT_TOKEN ? "✅ set" : "❌ empty",\n'
-        '    tg_chat: window.TELEGRAM_CHAT_ID\n'
-        '  });\n'
         '</script>\n'
     )
+
+
 def build_telegram_notify_js():
-    """
-    Sinh JS cung cấp window.__sendTelegramNotify().
-    Cần chạy SAU build_config_js() và TRƯỚC build_chat_js().
-    + URL copy để admin mở Chrome/Safari trả lời.
-    """
     return r"""
-/* ═══════════════════════════════════════════════════════════════
-   📨 TELEGRAM NOTIFY — Gửi thông báo về Telegram
-   Cung cấp: window.__sendTelegramNotify(email, name, text, from)
-   + URL copy → admin mở Chrome/Safari trả lời
-   ═══════════════════════════════════════════════════════════════ */
 (function() {
     'use strict';
 
     var _tgLastSent = 0;
-    var TG_MIN_INTERVAL = 2000;   // 2 giây — tránh spam Telegram API
+    var TG_MIN_INTERVAL = 2000;
 
-    /**
-     * Escape ký tự đặc biệt của Markdown để tránh lỗi parse Telegram.
-     */
     function escapeMarkdown(s) {
         if (s == null) return '';
         return String(s).replace(/([_*\[\]()~`>#+\-=|{}.!\\])/g, '\\$1');
     }
 
-    /**
-     * Gửi thông báo về Telegram admin.
-     */
     window.__sendTelegramNotify = function(userEmail, userName, messageText, from) {
-        var token  = window.TELEGRAM_BOT_TOKEN;
+        var token = window.TELEGRAM_BOT_TOKEN;
         var chatId = window.TELEGRAM_CHAT_ID;
 
-        if (!token) {
-            console.warn('[Telegram] ❌ Chưa cấu hình TELEGRAM_BOT_TOKEN');
-            return;
-        }
-        if (!chatId || chatId === '-0' || chatId === '0') {
-            console.warn('[Telegram] ❌ TELEGRAM_CHAT_ID chưa hợp lệ:', chatId);
-            return;
-        }
+        if (!token) return;
+        if (!chatId || chatId === '-0' || chatId === '0') return;
 
         var now = Date.now();
-        if (now - _tgLastSent < TG_MIN_INTERVAL) {
-            console.log('[Telegram] ⏸ Skip (rate-limit < 2s)');
-            return;
-        }
+        if (now - _tgLastSent < TG_MIN_INTERVAL) return;
         _tgLastSent = now;
 
         var siteName = window.SITE_NAME || document.title || 'Website';
-        var isAdmin  = (from === 'admin');
-        var header   = isAdmin ? '📤 *Admin vừa trả lời*' : '💬 *Tin nhắn mới từ*';
+        var isAdmin = (from === 'admin');
+        var header = isAdmin ? '*Admin vừa trả lời*' : '*Tin nhắn mới từ*';
 
-        // ⭐ URL để admin copy → mở Chrome/Safari
         var siteUrl = window.location.origin + window.location.pathname;
         var adminUrl = siteUrl + '?admin_chat=' + encodeURIComponent(userEmail || '');
 
         var text =
             header + ' ' + escapeMarkdown(siteName) + '\n' +
-            '👤 *Tên:* ' + escapeMarkdown(userName || 'User') + '\n' +
-            '📧 *Email:* `' + escapeMarkdown(userEmail || '') + '`\n' +
-            '─────────────────\n' +
+            'Tên: ' + escapeMarkdown(userName || 'User') + '\n' +
+            'Email: ' + escapeMarkdown(userEmail || '') + '\n' +
+            '---------------\n' +
             escapeMarkdown(messageText || '') + '\n' +
-            '─────────────────\n' +
-            '⏰ ' + new Date().toLocaleString('vi-VN') + '\n\n' +
-            '🔗 *Copy link dưới → mở Chrome/Safari để trả lời:*\n' +
-            '`' + adminUrl + '`';
+            '---------------\n' +
+            new Date().toLocaleString('vi-VN') + '\n\n' +
+            'Copy link de tra loi:\n' +
+            adminUrl;
 
         var url = 'https://api.telegram.org/bot' + token + '/sendMessage';
         var payload = {
             chat_id: chatId,
             text: text,
-            parse_mode: 'Markdown',
             disable_web_page_preview: true
         };
-
-        console.log('[Telegram] 📤 Sending...', { to: chatId, from: from, adminUrl: adminUrl });
 
         fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
-        })
-        .then(function(r) {
-            return r.json().then(function(data) {
-                return { ok: r.ok, status: r.status, data: data };
-            });
-        })
-        .then(function(result) {
-            if (result.ok && result.data && result.data.ok) {
-                console.log('[Telegram] ✅ Sent successfully');
-            } else {
-                console.error('[Telegram] ❌ API error:', result.data);
-            }
-        })
-        .catch(function(err) {
-            console.error('[Telegram] ❌ Network error:', err);
-        });
+        }).catch(function() {});
     };
-
-    console.log('[Telegram] Module loaded. Token:',
-        window.TELEGRAM_BOT_TOKEN ? '✅' : '❌',
-        '| Chat ID:', window.TELEGRAM_CHAT_ID || '❌');
 })();
 """
 
-# ═══════════════════════════════════════════════════════════════
-#  JS
-# ═══════════════════════════════════════════════════════════════
+
 def build_chat_js():
     return r"""
 (function() {
@@ -744,12 +493,11 @@ def build_chat_js():
     var LIMIT_WARN_AT = 40;
     var MAX_MESSAGES = 100;
 
-    // ⭐ ANTI-SPAM CONFIG
-    var COOLDOWN_MS = 3000;          // 3 giây giữa 2 tin
-    var RATE_LIMIT_PER_MIN = 10;     // Tối đa 10 tin/phút
-    var DUPLICATE_WINDOW = 30000;    // 30 giây chống gửi trùng
-    var MIN_MESSAGE_LENGTH = 1;      // Độ dài tối thiểu
-    var MAX_MESSAGE_LENGTH = 1000;   // Độ dài tối đa
+    var COOLDOWN_MS = 3000;
+    var RATE_LIMIT_PER_MIN = 10;
+    var DUPLICATE_WINDOW = 30000;
+    var MIN_MESSAGE_LENGTH = 1;
+    var MAX_MESSAGE_LENGTH = 1000;
 
     var CHAT = {
         inited: false,
@@ -764,7 +512,6 @@ def build_chat_js():
         onlineUnsub: null
     };
 
-    // ⭐ ANTI-SPAM STATE
     var SPAM = {
         lastSentAt: 0,
         minuteLog: [],
@@ -831,13 +578,13 @@ def build_chat_js():
         if (banner && textEl) {
             if (count >= DAILY_LIMIT) {
                 banner.classList.add('show', 'danger');
-                textEl.innerHTML = '🚫 <b>Đã đạt giới hạn ' + DAILY_LIMIT + ' tin/ngày.</b><br>Chuyển sang <b>Zalo</b> để tiếp tục (không giới hạn).';
+                textEl.innerHTML = 'Đã đạt giới hạn ' + DAILY_LIMIT + ' tin/ngày. Chuyển sang Zalo để tiếp tục.';
                 var ic = banner.querySelector('.clb-icon');
                 if (ic) ic.innerHTML = '<i class="fas fa-ban"></i>';
             } else if (count >= LIMIT_WARN_AT) {
                 banner.classList.add('show');
                 banner.classList.remove('danger');
-                textEl.innerHTML = '⚠️ Đã gửi <b>' + count + '/' + DAILY_LIMIT + '</b> tin hôm nay. Còn <b>' + (DAILY_LIMIT - count) + '</b> tin.<br>💡 Nên chuyển sang <b>Zalo</b> để chat thoải mái hơn.';
+                textEl.innerHTML = 'Đã gửi ' + count + '/' + DAILY_LIMIT + ' tin hôm nay. Còn ' + (DAILY_LIMIT - count) + ' tin.';
                 var ic2 = banner.querySelector('.clb-icon');
                 if (ic2) ic2.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
             } else {
@@ -867,74 +614,52 @@ def build_chat_js():
         updateCounterUI();
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       ⭐ ANTI-SPAM
-       ═══════════════════════════════════════════════════════════ */
     function checkSpam(text) {
         var now = Date.now();
-
         if (isAdmin()) return { allowed: true };
 
-        // Check 1: COOLDOWN
         if (SPAM.lastSentAt > 0) {
             var elapsed = now - SPAM.lastSentAt;
             if (elapsed < COOLDOWN_MS) {
                 var wait = Math.ceil((COOLDOWN_MS - elapsed) / 1000);
                 return {
                     allowed: false,
-                    reason: '⏱ Vui lòng đợi ' + wait + ' giây trước khi gửi tin tiếp theo.',
+                    reason: 'Vui lòng đợi ' + wait + ' giây trước khi gửi tin tiếp theo.',
                     waitMs: COOLDOWN_MS - elapsed
                 };
             }
         }
 
-        // Check 2: đang gửi (double-click)
         if (SPAM.isSending) {
-            return {
-                allowed: false,
-                reason: '⏳ Đang gửi tin nhắn, vui lòng đợi...',
-                waitMs: 500
-            };
+            return { allowed: false, reason: 'Đang gửi tin nhắn, vui lòng đợi...', waitMs: 500 };
         }
 
-        // Check 3: RATE LIMIT
-        SPAM.minuteLog = SPAM.minuteLog.filter(function(t) {
-            return now - t < 60000;
-        });
+        SPAM.minuteLog = SPAM.minuteLog.filter(function(t) { return now - t < 60000; });
         if (SPAM.minuteLog.length >= RATE_LIMIT_PER_MIN) {
             var oldest = SPAM.minuteLog[0];
             var waitMs = 60000 - (now - oldest);
             return {
                 allowed: false,
-                reason: '🚫 Bạn đã gửi quá ' + RATE_LIMIT_PER_MIN + ' tin/phút. Đợi ' +
-                        Math.ceil(waitMs / 1000) + ' giây.',
+                reason: 'Bạn đã gửi quá ' + RATE_LIMIT_PER_MIN + ' tin/phút. Đợi ' + Math.ceil(waitMs / 1000) + ' giây.',
                 waitMs: waitMs
             };
         }
 
-        // Check 4: DUPLICATE
         var normalized = text.trim().toLowerCase();
-        if (normalized === SPAM.lastText &&
-            now - SPAM.lastTextAt < DUPLICATE_WINDOW) {
-            return {
-                allowed: false,
-                reason: '🔁 Bạn vừa gửi tin nhắn giống hệt. Vui lòng thay đổi nội dung.',
-                waitMs: 2000
-            };
+        if (normalized === SPAM.lastText && now - SPAM.lastTextAt < DUPLICATE_WINDOW) {
+            return { allowed: false, reason: 'Bạn vừa gửi tin nhắn giống hệt. Vui lòng thay đổi nội dung.', waitMs: 2000 };
         }
 
-        // Check 5: độ dài
         if (text.trim().length < MIN_MESSAGE_LENGTH) {
-            return { allowed: false, reason: '✏️ Tin nhắn quá ngắn.', waitMs: 0 };
+            return { allowed: false, reason: 'Tin nhắn quá ngắn.', waitMs: 0 };
         }
         if (text.length > MAX_MESSAGE_LENGTH) {
-            return { allowed: false, reason: '✏️ Tin nhắn quá dài (tối đa ' + MAX_MESSAGE_LENGTH + ' ký tự).', waitMs: 0 };
+            return { allowed: false, reason: 'Tin nhắn quá dài (tối đa ' + MAX_MESSAGE_LENGTH + ' ký tự).', waitMs: 0 };
         }
 
-        // Check 6: nội dung rác (không có chữ/số)
         var cleanText = text.replace(/[^a-zA-Z0-9À-ỹ\u4e00-\u9fff]/g, '');
         if (cleanText.length < 1 && text.length > 5) {
-            return { allowed: false, reason: '🚫 Tin nhắn không hợp lệ (toàn ký tự đặc biệt).', waitMs: 0 };
+            return { allowed: false, reason: 'Tin nhắn không hợp lệ.', waitMs: 0 };
         }
 
         return { allowed: true };
@@ -949,14 +674,11 @@ def build_chat_js():
         SPAM.isSending = false;
     }
 
-    function resetSpamState() {
-        SPAM.isSending = false;
-    }
+    function resetSpamState() { SPAM.isSending = false; }
 
     function showSpamError(reason, waitMs) {
         var input = $id('chatInput');
         if (!input) return;
-
         input.style.animation = 'chatBellShake 0.5s';
         setTimeout(function() { input.style.animation = ''; }, 600);
 
@@ -965,7 +687,7 @@ def build_chat_js():
             var btn = $id('chatSendBtn');
             var originalPlaceholder = input.placeholder;
             var remaining = Math.ceil(waitMs / 1000);
-            input.placeholder = '⏳ Vui lòng đợi ' + remaining + ' giây...';
+            input.placeholder = 'Vui lòng đợi ' + remaining + ' giây...';
 
             var timer = setInterval(function() {
                 remaining--;
@@ -975,7 +697,7 @@ def build_chat_js():
                     input.placeholder = originalPlaceholder;
                     if (btn) btn.disabled = !input.value.trim();
                 } else {
-                    input.placeholder = '⏳ Vui lòng đợi ' + remaining + ' giây...';
+                    input.placeholder = 'Vui lòng đợi ' + remaining + ' giây...';
                 }
             }, 1000);
         }
@@ -994,21 +716,13 @@ def build_chat_js():
         toast.textContent = msg;
         toast.classList.add('show');
         clearTimeout(toast._timer);
-        toast._timer = setTimeout(function() {
-            toast.classList.remove('show');
-        }, 3000);
+        toast._timer = setTimeout(function() { toast.classList.remove('show'); }, 3000);
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       ⭐ MOUNT CHAT BUTTON
-       ═══════════════════════════════════════════════════════════ */
     function mountChatButton(retries) {
         retries = retries || 0;
         if (document.getElementById('chatFloatBtn')) return;
-        if (retries > 20) {
-            console.warn('mountChatButton: bỏ qua sau 20 lần thử');
-            return;
-        }
+        if (retries > 20) return;
         if (!document.body) {
             setTimeout(function(){ mountChatButton(retries + 1); }, 300);
             return;
@@ -1022,23 +736,77 @@ def build_chat_js():
             document.body.appendChild(wrap);
         }
 
+        var menu = document.createElement('div');
+        menu.id = 'chatFloatMenu';
+        menu.className = 'chat-float-menu';
+        menu.innerHTML =
+            '<button type="button" class="chat-float-sub chat-sub" id="chatSubBtn" title="Chat với Admin">' +
+                '<i class="fas fa-comments"></i>' +
+                '<span class="sub-badge" id="chatSubBadge">0</span>' +
+            '</button>' +
+            '<button type="button" class="chat-float-sub manager-sub" id="managerSubBtn" title="Quản lý Chat (Admin)">' +
+                '<i class="fas fa-users-cog"></i>' +
+                '<span class="sub-badge" id="managerSubBadge">0</span>' +
+            '</button>';
+
         var btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'chat-float-btn hidden';
         btn.id = 'chatFloatBtn';
-        btn.title = 'Chat với Admin';
+        btn.title = 'Hỗ trợ';
         btn.innerHTML = '<i class="fas fa-comments"></i>' +
-            '<div class="chat-text">' +
-                '<span class="chat-label">Chat với Admin</span>' +
-                '<span class="chat-name">Hỗ trợ 24/7</span>' +
-            '</div>' +
             '<span class="chat-badge" id="chatFabBadge">0</span>';
 
+        wrap.appendChild(menu);
         wrap.appendChild(btn);
+
         btn.addEventListener('click', function() {
-            btn.classList.remove('has-unread');
-            if (CHAT.isOpen) closeChat();
-            else openChat();
+            var isAdminUser = isAdmin();
+            if (isAdminUser) {
+                var isOpen = menu.classList.contains('show');
+                if (isOpen) closeFloatMenu();
+                else openFloatMenu();
+            } else {
+                btn.classList.remove('has-unread');
+                if (CHAT.isOpen) closeChat();
+                else openChat();
+            }
+        });
+
+        var chatSub = document.getElementById('chatSubBtn');
+        if (chatSub) {
+            chatSub.addEventListener('click', function(e) {
+                e.stopPropagation();
+                closeFloatMenu();
+                btn.classList.remove('has-unread');
+                if (CHAT.isOpen) closeChat();
+                else openChat();
+            });
+        }
+
+        var managerSub = document.getElementById('managerSubBtn');
+        if (managerSub) {
+            managerSub.addEventListener('click', function(e) {
+                e.stopPropagation();
+                closeFloatMenu();
+                if (typeof window.__acmToggleModal === 'function') {
+                    window.__acmToggleModal();
+                } else if (typeof window.__acmOpenModal === 'function') {
+                    window.__acmOpenModal();
+                }
+            });
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!menu.classList.contains('show')) return;
+            if (wrap.contains(e.target)) return;
+            closeFloatMenu();
+        }, true);
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && menu.classList.contains('show')) {
+                closeFloatMenu();
+            }
         });
 
         setTimeout(function() {
@@ -1047,9 +815,55 @@ def build_chat_js():
                 setTimeout(function() { btn.classList.remove('intro-glow'); }, 2000);
             }
         }, 800);
-
-        console.log('✅ Chat FAB mounted');
     }
+
+    function openFloatMenu() {
+        var menu = document.getElementById('chatFloatMenu');
+        var btn = document.getElementById('chatFloatBtn');
+        if (!menu) return;
+        if (!isAdmin()) return;
+        menu.classList.add('show');
+        if (btn) btn.classList.add('menu-open');
+        syncSubBadges();
+    }
+
+    function closeFloatMenu() {
+        var menu = document.getElementById('chatFloatMenu');
+        var btn = document.getElementById('chatFloatBtn');
+        if (menu) menu.classList.remove('show');
+        if (btn) btn.classList.remove('menu-open');
+    }
+
+    function syncSubBadges() {
+        var chatFabBadge = document.getElementById('chatFabBadge');
+        var chatSubBadge = document.getElementById('chatSubBadge');
+        var managerSubBadge = document.getElementById('managerSubBadge');
+        var acmFabBadge = document.getElementById('acmFabBadge');
+
+        if (chatFabBadge && chatSubBadge) {
+            var chatCount = parseInt(chatFabBadge.textContent) || 0;
+            if (chatCount > 0) {
+                chatSubBadge.textContent = chatCount > 99 ? '99+' : chatCount;
+                chatSubBadge.classList.add('show');
+            } else {
+                chatSubBadge.classList.remove('show');
+            }
+        }
+
+        if (acmFabBadge && managerSubBadge) {
+            var mgrCount = parseInt(acmFabBadge.textContent) || 0;
+            if (mgrCount > 0) {
+                managerSubBadge.textContent = mgrCount > 99 ? '99+' : mgrCount;
+                managerSubBadge.classList.add('show');
+            } else {
+                managerSubBadge.classList.remove('show');
+            }
+        }
+    }
+
+    window.__syncChatSubBadges = syncSubBadges;
+    window.__openFloatMenu = openFloatMenu;
+    window.__closeFloatMenu = closeFloatMenu;
 
     function updateFabVisibility() {
         var fab = $id('chatFloatBtn');
@@ -1064,6 +878,7 @@ def build_chat_js():
             fab.classList.add('hidden');
         }
     }
+
     function setFabBadge(n) {
         var el = $id('chatFabBadge');
         var btn = $id('chatFloatBtn');
@@ -1076,11 +891,9 @@ def build_chat_js():
             el.classList.remove('show');
             if (btn) btn.classList.remove('has-unread');
         }
+        syncSubBadges();
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       ⭐ NEO CHAT BOX VÀO NÚT FAB
-       ═══════════════════════════════════════════════════════════ */
     function positionChatBox() {
         var fab = $id('chatFloatBtn');
         var box = document.querySelector('.chat-box');
@@ -1091,24 +904,28 @@ def build_chat_js():
         var isMobile = window.innerWidth <= 600;
 
         var boxWidth = boxRect.width || (isMobile ? (window.innerWidth - 24) : 360);
-        var left = fabRect.left;
 
-        if (left + boxWidth > window.innerWidth - 8) {
-            left = Math.max(8, window.innerWidth - boxWidth - 8);
+        var right = window.innerWidth - fabRect.right;
+        if (right < 8) right = 8;
+        if (right + boxWidth > window.innerWidth - 8) {
+            right = Math.max(8, window.innerWidth - boxWidth - 8);
         }
-        if (left < 8) left = 8;
 
         var gap = 16;
-        var bottom = window.innerHeight - fabRect.top + gap;
+        var boxHeight = boxRect.height || 260;
+        var top = fabRect.top - boxHeight - gap;
+        if (top < 8) top = 8;
+        var maxTop = window.innerHeight - boxHeight - 8;
+        if (top > maxTop) top = maxTop;
 
-        var maxBottom = window.innerHeight - (boxRect.height || 260) - 8;
-        if (bottom > maxBottom) bottom = Math.max(8, maxBottom);
-
-        box.style.left = left + 'px';
-        box.style.bottom = bottom + 'px';
+        box.style.right = right + 'px';
+        box.style.left = 'auto';
+        box.style.top = top + 'px';
+        box.style.bottom = 'auto';
 
         var fabCenterX = fabRect.left + fabRect.width / 2;
-        var arrowLeft = fabCenterX - left - 14;
+        var boxLeft = window.innerWidth - right - boxWidth;
+        var arrowLeft = fabCenterX - boxLeft - 14;
         arrowLeft = Math.max(16, Math.min(arrowLeft, boxWidth - 32));
         box.style.setProperty('--arrow-left', arrowLeft + 'px');
     }
@@ -1252,15 +1069,9 @@ def build_chat_js():
         if (CHAT.isOpen) { setTimeout(positionChatBox, 30); setTimeout(positionChatBox, 300); }
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       👥 RTDB ONLINE WATCH
-       ═══════════════════════════════════════════════════════════ */
     function startOnlineWatch() {
         if (!isAdmin()) return;
-        if (typeof firebase === 'undefined' || typeof firebase.database !== 'function') {
-            console.warn('RTDB not available for online watch');
-            return;
-        }
+        if (typeof firebase === 'undefined' || typeof firebase.database !== 'function') return;
         if (CHAT.onlineUnsub) return;
 
         try {
@@ -1289,17 +1100,13 @@ def build_chat_js():
             CHAT.onlineUnsub = function() {
                 try { ref.off('value', handler); } catch(e) {}
             };
-            console.log('👥 Online watch started');
-        } catch(e) {
-            console.warn('startOnlineWatch error:', e);
-        }
+        } catch(e) {}
     }
 
     function stopOnlineWatch() {
         if (CHAT.onlineUnsub) {
             try { CHAT.onlineUnsub(); } catch(e) {}
             CHAT.onlineUnsub = null;
-            console.log('👥 Online watch stopped');
         }
     }
 
@@ -1319,15 +1126,15 @@ def build_chat_js():
         users.forEach(function(u) {
             var diff = Date.now() - u.at;
             var status;
-            if (diff < 60000) status = '🟢 Vừa xong';
-            else if (diff < 120000) status = '🟡 ' + Math.floor(diff / 60000) + ' phút trước';
-            else status = '⚪ ' + Math.floor(diff / 60000) + ' phút trước';
+            if (diff < 60000) status = 'Vừa xong';
+            else if (diff < 120000) status = Math.floor(diff / 60000) + ' phút trước';
+            else status = Math.floor(diff / 60000) + ' phút trước';
 
             html += '<div class="online-user-row">' +
                 '<div class="ou-dot"></div>' +
                 '<div class="ou-info">' +
                     '<div class="ou-name">' + esc(u.name) + '</div>' +
-                    '<div class="ou-sub">' + esc(u.email) + ' · ' + status + '</div>' +
+                    '<div class="ou-sub">' + esc(u.email) + ' - ' + status + '</div>' +
                 '</div>' +
                 '<button class="ou-chat-btn" type="button" ' +
                     'onclick="if(window.__chatOpenThread){window.__chatOpenThread(\'' + jsStr(u.email) + '\');}" ' +
@@ -1442,9 +1249,6 @@ def build_chat_js():
         if (CHAT.isOpen) { setTimeout(positionChatBox, 30); setTimeout(positionChatBox, 300); }
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       OPEN / CLOSE
-       ═══════════════════════════════════════════════════════════ */
     function openChat() {
         var u = getCu();
         if (!u) { if (typeof window.showLoginModal === 'function') window.showLoginModal(); return; }
@@ -1475,7 +1279,7 @@ def build_chat_js():
         stopOnlineWatch();
         CHAT.adminCurrentEmail = null;
         CHAT.lastSeenAt = Date.now();
-        resetSpamState();   // ⭐ Reset spam state
+        resetSpamState();
     }
 
     function openUserView() {
@@ -1528,8 +1332,6 @@ def build_chat_js():
         if (CHAT.adminCurrentEmail) { targetEmail = CHAT.adminCurrentEmail; from = 'admin'; }
         else if (!isAdmin()) {
             targetEmail = u.email; from = 'user';
-
-            // ⭐ CHECK 1: Daily limit
             if (!canSend()) {
                 var banner = $id('chatLimitBanner');
                 if (banner) banner.classList.add('show', 'danger');
@@ -1537,8 +1339,6 @@ def build_chat_js():
                 setTimeout(function() { input.style.animation = ''; }, 500);
                 return;
             }
-
-            // ⭐ CHECK 2: Anti-spam
             var spamCheck = checkSpam(text);
             if (!spamCheck.allowed) {
                 showSpamError(spamCheck.reason, spamCheck.waitMs);
@@ -1546,9 +1346,7 @@ def build_chat_js():
             }
         } else return;
 
-        // ⭐ Đánh dấu đang gửi → chặn double-click
         SPAM.isSending = true;
-
         var btn = $id('chatSendBtn');
         btn.disabled = true;
         input.value = '';
@@ -1584,21 +1382,10 @@ def build_chat_js():
             if (from === 'user') {
                 incDailyCount();
                 updateCounterUI();
-
-                // ⭐ Cập nhật anti-spam state
                 updateSpamState(text);
-
-                // ⭐ GỬI TELEGRAM
                 if (typeof window.__sendTelegramNotify === 'function') {
-                    window.__sendTelegramNotify(
-                        targetEmail,
-                        u.name || u.email.split('@')[0],
-                        text,
-                        'user'
-                    );
+                    window.__sendTelegramNotify(targetEmail, u.name || u.email.split('@')[0], text, 'user');
                 }
-
-                // ⭐ Ghi log hoạt động
                 try {
                     db.collection('activity_logs').add({
                         email: u.email,
@@ -1612,7 +1399,7 @@ def build_chat_js():
                 SPAM.isSending = false;
             }
         }).catch(function(err) {
-            alert('❌ Lỗi gửi tin: ' + err.message);
+            alert('Lỗi gửi tin: ' + err.message);
             SPAM.isSending = false;
         }).finally(function() {
             btn.disabled = !input.value.trim();
@@ -1740,9 +1527,6 @@ def build_chat_js():
 
 def build_quota_js():
     return r"""
-/* ═══════════════════════════════════════════════════════════════
-   📊 QUOTA TRACKER — Đếm reads/writes/deletes client-side
-   ═══════════════════════════════════════════════════════════════ */
 (function() {
     'use strict';
 
@@ -1807,7 +1591,6 @@ def build_quota_js():
         if (window.__quotaWrapped) return true;
         window.__quotaWrapped = true;
 
-        var proto = firebase.firestore.Firestore.prototype;
         var docProto = firebase.firestore.DocumentReference.prototype;
         var colProto = firebase.firestore.CollectionReference.prototype;
 
@@ -1851,7 +1634,6 @@ def build_quota_js():
             return origAdd.apply(this, arguments);
         };
 
-        console.log('✅ Firestore methods wrapped for quota tracking');
         return true;
     }
 
@@ -1937,9 +1719,9 @@ def build_quota_js():
                     var pR2 = pct(h.reads || 0, LIMIT_READS);
                     var pW2 = pct(h.writes || 0, LIMIT_WRITES);
                     var maxP = Math.max(pR2, pW2);
-                    var cls = 'qht-ok', txt = '🟢 OK';
-                    if (maxP >= DANGER_PCT) { cls = 'qht-danger'; txt = '🔴 Nguy hiểm'; }
-                    else if (maxP >= WARN_PCT) { cls = 'qht-warn'; txt = '🟡 Cảnh báo'; }
+                    var cls = 'qht-ok', txt = 'OK';
+                    if (maxP >= DANGER_PCT) { cls = 'qht-danger'; txt = 'Nguy hiểm'; }
+                    else if (maxP >= WARN_PCT) { cls = 'qht-warn'; txt = 'Cảnh báo'; }
                     html += '<tr>' +
                         '<td>' + k + '</td>' +
                         '<td>' + (h.reads || 0).toLocaleString('vi-VN') + '</td>' +
@@ -2004,7 +1786,7 @@ def build_quota_js():
         QUOTA.writes += 2000;
         saveQuota();
         updateQuotaUI();
-        alert('Đã thêm 5.000 reads + 2.000 writes để test cảnh báo.\n\nReload để reset.');
+        alert('Đã thêm 5.000 reads + 2.000 writes để test cảnh báo.');
     };
 
     if (document.readyState === 'loading') {
@@ -2017,7 +1799,6 @@ def build_quota_js():
 
 
 def build_quota_init_js():
-    """JS bind các nút trong Quota section."""
     return r"""
 (function() {
     'use strict';
