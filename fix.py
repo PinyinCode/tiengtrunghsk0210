@@ -852,7 +852,7 @@ def build_js_override(ids_js, datasets_meta_json):
     add("    window.__fixpyMeta = " + datasets_meta_json + ";")
     add("")
     add("    (function() {")
-    add("        fetch('data/fixpy_datasets.json')")
+    add("        fetch('data/fixpy_datasets.json?t=' + Math.floor(Date.now() / 60000))")
     add("            .then(function(r) { return r.ok ? r.json() : {}; })")
     add("            .then(function(d) {")
     add("                window.FIXPY_DATASETS = d || {};")
