@@ -25,7 +25,7 @@ BUTTON_CONFIG = {
         "sub": "Văn phòng · Công xưởng",
     },
     "tu-vung": {
-        "icon": "",
+        "icon": "fa-book",
         "title_html": "<b>11000+</b> Từ vựng HSK",
         "sub": "Mẹo nhớ · Bộ thủ",
     },
