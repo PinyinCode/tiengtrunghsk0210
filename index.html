@@ -4030,6 +4030,68 @@ body.practice-full-open .pf-tiktok-float {
     color: #86efac !important;
     border-color: rgba(34, 197, 94, .5) !important;
 }
+.mnemonic-audio-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 50% !important;
+    border: none !important;
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important;
+    color: #fff !important;
+    cursor: pointer !important;
+    font-size: .9rem !important;
+    flex-shrink: 0 !important;
+    padding: 0 !important;
+    transition: all .2s cubic-bezier(.34, 1.56, .64, 1) !important;
+    box-shadow: 0 3px 10px rgba(124, 58, 237, .4) !important;
+}
+.mnemonic-audio-btn:hover {
+    transform: scale(1.15) !important;
+    box-shadow: 0 5px 16px rgba(124, 58, 237, .6) !important;
+}
+.mnemonic-audio-btn:active { transform: scale(.95) !important; }
+.mnemonic-audio-btn i { pointer-events: none !important; }
+.mnemonic-audio-btn.tiny {
+    width: 24px !important;
+    height: 24px !important;
+    font-size: .65rem !important;
+}
+.mnemonic-audio-btn.speaking {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b) !important;
+    animation: mnemonicAudioPulse 1s ease-in-out infinite !important;
+}
+@keyframes mnemonicAudioPulse {
+    0%, 100% {
+        box-shadow: 0 3px 10px rgba(245,158,11,.5), 0 0 0 0 rgba(245,158,11,.6);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 5px 18px rgba(245,158,11,.8), 0 0 0 10px rgba(245,158,11,0);
+        transform: scale(1.08);
+    }
+}
+.mnemonic-header {
+    display: flex !important;
+    align-items: center !important;
+    gap: .6rem !important;
+    flex-wrap: wrap !important;
+}
+.mnemonic-sim-header {
+    display: flex !important;
+    align-items: center !important;
+    gap: .35rem !important;
+    margin-bottom: .3rem !important;
+    justify-content: center !important;
+}
+[data-theme="dark"] .mnemonic-audio-btn {
+    background: linear-gradient(135deg, #a78bfa, #8b5cf6) !important;
+}
+@media (max-width: 500px) {
+    .mnemonic-audio-btn { width: 30px !important; height: 30px !important; font-size: .8rem !important; }
+    .mnemonic-audio-btn.tiny { width: 22px !important; height: 22px !important; font-size: .6rem !important; }
+}
 
 /* SOCIAL */
 
