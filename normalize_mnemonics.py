@@ -1,8 +1,4 @@
 # -*- coding: utf-8 -*-
-r"""
-Chuẩn hóa trực tiếp ai_mnemonics.json — chạy 1 lệnh là xong.
-"""
-
 import os
 import re
 import json
@@ -11,24 +7,17 @@ import shutil
 from datetime import datetime
 
 
-# =====================================================================
-# REGEX
-# =====================================================================
-
 RE_HANZI_CHARS = (
     r'\u4e00-\u9fff'
     r'\u3000-\u303f'
     r'\uff00-\uffef'
-    r'\u201c-\u201d'
-    r'\\u2018-\u2019u'
-    r'\u3002012\uff01\uff18f\u3001\uff1\ub\uff1a'
-    r'\uff08\uff09'
-    r'\u300a\u300201b'
-    r'\u300c\u300d'
+    '，。！？、；：""''（）《》「」'
 )
 
+PUNCT_CN = '，。！？、；：""''（）'
+
 RE_VI_DU_BLOCK = re.compile(
-    r'(\U0001f4ce\s*Ví dụ:?\s*)(.*?)(?=\n\s*\U0001f517|\n\s*\U0001f4a1|\n\s*\U0001f4cc|\n\s*\U0001f3ac|\Z)',
+    r'(📎\s*Ví dụ:?\s*)(.*?)(?=\n\s*🔗|\n\s*💡|\n\s*📌|\n\s*🎬|\Z)',
     re.DOTALL
 )
 
@@ -42,22 +31,20 @@ RE_ZH_FALLBACK = re.compile(r'^([\u4e00-\u9fff]+)')
 RE_PAREN = re.compile(r'^[\(\（]([^\)\）]*)[\)\）]\s*(.*)$', re.DOTALL)
 
 RE_INSIDE_SPLIT = re.compile(
-    r'^(.+?)\s*[,\uFF0C;\uFF1B\-\u2014\u2013=:]\s*(.+)$',
+    r'^(.+?)\s*[,' + PUNCT_CN + r'\-\—\–=:]\s*(.+)$',
     re.DOTALL
 )
 
 RE_PINYIN_PLAIN = re.compile(
-    r'^([A-Za-z\u0101\u00e1\u01ce\u00e0\u0113\u00e9\u011b\u00e8'
-    r'\u012b\u00ed\u01d0\u00ec\u014d\u00f3\u01d2\u00f2\u016b\u00fa\u01d4\u00f9'
-    r'\u00fc\u01d6\u01d8\u01da\u01dc\u00dc\u00fc'
+    r'^([A-Za-zàáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩị'
+    r'òóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ'
+    r'ÀÁẢÃẠĂẰẮẲẴẶÂẦẤẨẪẬÈÉẺẼẸÊỀẾỂỄỆÌÍỈĨỊ'
+    r'ÒÓỎÕỌÔỒỐỔỖỘƠỜỚỞỠỢÙÚỦŨỤƯỪỨỬỮỰỲÝỶỸỴĐ'
+    r'āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜü'
     r'\s.,;:\'\-]+?)\s*'
-    r'(?=[\-\u2014\u2013,;:=]|[\u4e00-\u9fff]|$)'
+    r'(?=[\-\—\–,;:=]|[\u4e00-\u9fff]|$)'
 )
 
-
-# =====================================================================
-# HELPERS
-# =====================================================================
 
 def _clean_punct(s):
     if not s:
@@ -88,10 +75,6 @@ def _split_outside_parens(text):
     return result
 
 
-# =====================================================================
-# PARSE
-# =====================================================================
-
 def _parse_one_example(part):
     part = part.strip()
     if not part:
@@ -110,7 +93,6 @@ def _parse_one_example(part):
 
     zh = m_zh.group(1).strip()
 
-    # Fix dấu câu bị tách: "吧 - !" → "吧！"
     zh = re.sub(
         r'\s*[-\u2014\u2013,;:]\s*([\uFF0C\u3002\uFF01\uFF1F\u3001\uFF1B\uFF1A'
         r'\u201c\u201d\u2018\u2019\uFF08\uFF09])',
@@ -125,7 +107,7 @@ def _parse_one_example(part):
 
     rest = part[len(m_zh.group(1)):].strip()
     rest = re.sub(
-        r"^['\"9\u201c\u201d]+|['\"\u2018\u2019\u201c\u201d]+$",
+        r"^['\"\u2018\u2019\u201c\u201d]+|['\"\u2018\u2019\u201c\u201d]+$",
         '', rest
     ).strip()
 
@@ -208,10 +190,6 @@ def normalize_mnemonic(mnemonic):
     return RE_VI_DU_BLOCK.sub(_replace, mnemonic)
 
 
-# =====================================================================
-# MAIN — CHẠY LÀ FIX LUÔN
-# =====================================================================
-
 def find_file():
     candidates = [
         "data/ai_mnemonics.json",
@@ -227,27 +205,23 @@ def find_file():
 def main():
     path = find_file()
     if not path:
-        print("[X] Không tìm thấy data/ai_mnemonics.json")
+        print("Khong tim thay data/ai_mnemonics.json")
         sys.exit(1)
 
-    print("=" * 70)
-    print("NORMALIZE: " + path)
-    print("=" * 70)
+    print("=" * 60)
+    print("Normalize: " + path)
+    print("=" * 60)
 
-    # Đọc
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    print("[OK] Tổng entries: " + str(len(data)))
+    print("Tong entries: " + str(len(data)))
 
-    # Backup
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup = path + ".bak_" + ts
     shutil.copy2(path, backup)
-    print("[OK] Backup: " + backup)
+    print("Backup: " + backup)
 
-    # Fix
-    print("\n[FIX] Đang chuẩn hóa...")
     fixed = 0
     samples = []
 
@@ -260,40 +234,39 @@ def main():
                 if len(samples) < 15:
                     samples.append((key, value, new_value))
         except Exception as e:
-            print("[ERR] " + key + ": " + str(e))
+            print("ERR " + key + ": " + str(e))
 
-    # Ghi
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-    # In mẫu
     if samples:
-        print("\n" + "=" * 70)
-        print("MẪU THAY ĐỔI:")
-        print("=" * 70)
+        print("=" * 60)
+        print("Mau thay doi:")
+        print("=" * 60)
 
         for key, old, new in samples:
             old_line = ""
             for line in old.split("\n"):
-                if '📎' in line or 'Ví dụ' in line:
+                if "Vi du" in line or "Ví dụ" in line:
                     old_line = line
                     break
 
             new_line = ""
             for line in new.split("\n"):
-                if '📎' in line or 'Ví dụ' in line:
+                if "Vi du" in line or "Ví dụ" in line:
                     new_line = line
                     break
 
-            print("\n🔑 " + key)
+            print("")
+            print("KEY: " + key)
             print("  OLD: " + old_line[:110])
             print("  NEW: " + new_line[:110])
 
-    # Kết quả
-    print("\n" + "=" * 70)
-    print("[OK] Đã sửa: " + str(fixed) + " / " + str(len(data)) + " entries")
-    print("[OK] File:  " + path)
-    print("=" * 70)
+    print("")
+    print("=" * 60)
+    print("Da sua: " + str(fixed) + " / " + str(len(data)) + " entries")
+    print("File:   " + path)
+    print("=" * 60)
 
 
 if __name__ == "__main__":
