@@ -517,14 +517,14 @@ def fix_one(zh, hsk, vi, radical, old_mnemonic):
             continue
 
         # DEBUG: in raw output
-        print("      [DEBUG] r1: " + r1[:150].replace("\n", " | "))
-        print("      [DEBUG] r2: " + r2[:150].replace("\n", " | "))
+        #print("      [DEBUG] r1: " + r1[:150].replace("\n", " | "))
+        #print("      [DEBUG] r2: " + r2[:150].replace("\n", " | "))
 
         new_mn = r1.strip() + "\n" + r2.strip()
         new_mn = clean_mnemonic(new_mn)
 
         # DEBUG: in sau clean
-        print("      [DEBUG] cleaned: " + new_mn[:250].replace("\n", " | "))
+        #print("      [DEBUG] cleaned: " + new_mn[:250].replace("\n", " | "))
 
         # Kiem tra 3 dong chinh (khong bat buoc 5 dong)
         emojis_main = ["\U0001F4A1", "\U0001F4CC", "\U0001F3AC"]  # 💡 📌 🎬
