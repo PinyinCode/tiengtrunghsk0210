@@ -29186,7 +29186,7 @@ window.__switchRawData = function(datasetId) {
     window.__fixpyMeta = {"1k-cau-giao-tiep":{"id":"1k-cau-giao-tiep","name":"1K+ Câu giao tiếp","icon":"fa-comments","color":"#0891b2","count":1060,"source":"1K+_Câu_giao_tiếp.xlsx","type":"main","group":"fixpy"},"tu-vung":{"id":"tu-vung","name":"11000+ Từ vựng HSK","icon":"fa-book","color":"#f59e0b","count":11747,"source":"tu_vung_hsk.xlsx","type":"premium","group":"fixpy"}};
 
     (function() {
-        fetch('data/fixpy_datasets.json?t=' + Math.floor(Date.now() / 60000))
+        fetch('data/fixpy_datasets.json')
             .then(function(r) { return r.ok ? r.json() : {}; })
             .then(function(d) {
                 window.FIXPY_DATASETS = d || {};
@@ -29334,8 +29334,13 @@ window.__switchRawData = function(datasetId) {
         var hskNum = m[1].replace(/\s+/g, '');
         if (hskNum === '7' || hskNum === '8' || hskNum === '9') hskNum = '7-9';
         var startStt = m[2] ? parseInt(m[2], 10) : null;
-        var endStt = m[3] ? parseInt(m[3], 10) : (startStt !== null ? startStt : null);
-        if (startStt !== null && endStt < startStt) {
+        var endStt;
+        if (m[3]) {
+            endStt = parseInt(m[3], 10);
+        } else {
+            endStt = null;
+        }
+        if (startStt !== null && endStt !== null && endStt < startStt) {
             var tmp = startStt; startStt = endStt; endStt = tmp;
         }
         return {
@@ -29349,6 +29354,16 @@ window.__switchRawData = function(datasetId) {
     window.__fixpyFilterByHskStt = function(parsed) {
         var pool = window.__findByHskStt(parsed.hsk, null);
         if (parsed.startStt === null) return pool;
+        if (parsed.endStt === null) {
+            return pool.filter(function(r) {
+                var sttStr = (r.stt_original != null && String(r.stt_original).trim() !== '')
+                           ? String(r.stt_original).trim()
+                           : String(r.stt || '').replace(/^[^0-9]*-/, '');
+                var n = parseInt(sttStr, 10);
+                if (isNaN(n)) return false;
+                return n >= parsed.startStt;
+            });
+        }
         return pool.filter(function(r) {
             var sttStr = (r.stt_original != null && String(r.stt_original).trim() !== '')
                        ? String(r.stt_original).trim()
@@ -29401,6 +29416,8 @@ window.__switchRawData = function(datasetId) {
                 var msg;
                 if (startStt === null) {
                     msg = 'HSK' + hskDisplay + ': ' + result.length + ' cau';
+                } else if (endStt === null) {
+                    msg = 'HSK' + hskDisplay + ' tu cau ' + startStt + ': ' + result.length + ' ket qua';
                 } else if (startStt === endStt) {
                     msg = 'HSK' + hskDisplay + ' cau ' + startStt + ': ' + result.length + ' ket qua';
                 } else {
