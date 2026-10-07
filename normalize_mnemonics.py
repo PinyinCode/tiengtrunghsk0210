@@ -171,9 +171,14 @@ def normalize_mnemonic(mnemonic):
 
     def _replace(m):
         prefix = m.group(1)
-        block = m.group(2).strip()
+        block_with_ws = m.group(2)
+        block = block_with_ws.strip()
+
         if not block:
             return m.group(0)
+
+        leading_ws = block_with_ws[:len(block_with_ws) - len(block_with_ws.lstrip())]
+        trailing_ws = block_with_ws[len(block_with_ws.rstrip()):]
 
         parts = _split_outside_parens(block)
         result_items = []
@@ -191,7 +196,7 @@ def normalize_mnemonic(mnemonic):
             return m.group(0)
 
         new_block = " / ".join(result_items)
-        return prefix + new_block + "\n"
+        return prefix + leading_ws + new_block + trailing_ws
 
     return RE_VI_DU_BLOCK.sub(_replace, mnemonic)
 
