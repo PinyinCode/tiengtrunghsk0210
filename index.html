@@ -9089,7 +9089,58 @@ body.acm-bulk-mode .acm-select-all-row{display:flex;}
     color: #b45309; font-weight: 700;
 }
 [data-theme="dark"] .card-mnemonic-body .hint { color: #fcd34d; }
+/* ========== CỤM HÁN BẤM ĐƯỢC TRONG MẸO NHỚ ========== */
+/* Style y hệt .card-example-zh nhưng dùng cho câu KHÔNG nằm trong block 📎 Ví dụ */
+.card-mnemonic-body .card-char-speakable {
+    font-family: var(--font-zh);
+    font-weight: 600;
+    color: var(--text);
+    font-size: 1rem;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    border-bottom: 1.5px dotted rgba(8, 145, 178, .5);
+    padding-bottom: 1px;
+    transition: all .18s ease;
+}
+.card-mnemonic-body .card-char-speakable:hover {
+    color: #0891b2;
+    border-bottom-color: #0891b2;
+    background: rgba(8, 145, 178, .1);
+    border-radius: 4px;
+    padding: 0 .15rem 1px;
+}
+.card-mnemonic-body .card-char-speakable:active {
+    transform: scale(.96);
+}
+.card-mnemonic-body .card-char-speakable.speaking {
+    color: #f59e0b;
+    border-bottom-color: #f59e0b;
+    animation: cardExampleSpeak 1s ease-in-out infinite;
+}
+[data-theme="dark"] .card-mnemonic-body .card-char-speakable {
+    color: #e0f2fe;
+    border-bottom-color: rgba(34, 211, 238, .5);
+}
+[data-theme="dark"] .card-mnemonic-body .card-char-speakable:hover {
+    color: #22d3ee;
+    border-bottom-color: #22d3ee;
+    background: rgba(34, 211, 238, .12);
+}
+[data-theme="dark"] .card-mnemonic-body .card-char-speakable.speaking {
+    color: #fbbf24;
+    border-bottom-color: #fbbf24;
+}
 
+/* Fix cho vocab-mode compact (câu trong mẹo nhớ nhỏ hơn) */
+body[data-vocab-mode="1"] .card-mnemonic-body .card-char-speakable {
+    font-size: .9rem;
+}
+@media (max-width: 500px) {
+    body[data-vocab-mode="1"] .card-mnemonic-body .card-char-speakable {
+        font-size: .85rem;
+    }
+}
 .card-mnemonic-body .card-example-inline {
     display: inline-flex;
     align-items: center;
@@ -29403,72 +29454,71 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
     }
 
     function buildMnemonicBlock(text, currentChar, viDuList) {
-        currentChar = currentChar || '';
-        if (!text || !text.trim()) return '';
+    currentChar = currentChar || '';
+    if (!text || !text.trim()) return '';
 
-        // BƯỚC 1: Transform ký tự đặc biệt TRƯỚC KHI ESCAPE
-        var raw = text;
-        raw = raw.replace(/\s=\s/g, ' __ARROW__ ');
-        raw = raw.replace(/→/g, ' __RARR__ ');
-        raw = raw.replace(/\(([^)]+)\)/g, ' __PAREN_L__$1__PAREN_R__');
+    // BƯỚC 1: Transform ký tự đặc biệt TRƯỚC KHI ESCAPE
+    var raw = text;
+    raw = raw.replace(/\s=\s/g, ' __ARROW__ ');
+    raw = raw.replace(/→/g, ' __RARR__ ');
+    raw = raw.replace(/\(([^)]+)\)/g, ' __PAREN_L__$1__PAREN_R__');
 
-        // BƯỚC 2: Escape
-        var safe = _esc(raw);
+    // BƯỚC 2: Escape
+    var safe = _esc(raw);
 
-        // BƯỚC 3: Helper normalize
-        function _normZh(s) {
-            if (!s) return '';
-            return s.replace(/[\s，。！？、；：""''（）]/g, '').trim();
-        }
-
-        var viDuNormMap = {};
-        if (viDuList && viDuList.length > 0) {
-            viDuList.forEach(function(ex) {
-                if (ex && ex.zh) {
-                    viDuNormMap[_normZh(ex.zh)] = ex;
-                }
-            });
-        }
-
-        // BƯỚC 4: Wrap
-        safe = safe.replace(
-            /([\u4e00-\u9fff][\u4e00-\u9fff\s]*[\u4e00-\u9fff，。！？、；：""''（）])/g,
-            function(match) {
-                var trimmed = match.trim();
-                var hanziOnly = trimmed.replace(/[^\u4e00-\u9fff]/g, '');
-                if (hanziOnly.length < 2) return match;
-
-                var mJs = trimmed
-                    .replace(/\\/g, '\\\\')
-                    .replace(/'/g, "\\'")
-                    .replace(/"/g, '\\"');
-                var mNorm = _normZh(trimmed);
-
-                if (viDuNormMap[mNorm]) {
-                    return '<span class="card-example-zh" '
-                         + 'onclick="vocabSpeakChar(\'' + mJs + '\', this, event)" '
-                         + 'title="Bấm để nghe câu ví dụ">'
-                         + match + '</span>';
-                }
-
-                return '<span class="card-char-speakable" '
-                     + 'onclick="vocabSpeakChar(\'' + mJs + '\', this, event)" '
-                     + 'title="Bấm để nghe">'
-                     + match + '</span>';
-            }
-        );
-
-        // BƯỚC 5: Thay placeholder thành HTML thật
-        safe = safe.replace(/__ARROW__/g, '<span class="arrow">=</span>');
-        safe = safe.replace(/__RARR__/g, '<span class="arrow">→</span>');
-        safe = safe.replace(/__PAREN_L__/g, '(<span class="hint">');
-        safe = safe.replace(/__PAREN_R__/g, '</span>)');
-
-        return '<div class="card-mnemonic">'
-            + '<div class="card-mnemonic-label">MẸO NHỚ</div>'
-            + '<div class="card-mnemonic-body">' + safe + '</div>'
-            + '</div>';
+    // BƯỚC 3: Helper normalize
+    function _normZh(s) {
+        if (!s) return '';
+        return s.replace(/[\s，。！？、；：""''（）]/g, '').trim();
     }
+
+    var viDuNormMap = {};
+    if (viDuList && viDuList.length > 0) {
+        viDuList.forEach(function(ex) {
+            if (ex && ex.zh) {
+                viDuNormMap[_normZh(ex.zh)] = ex;
+            }
+        });
+    }
+
+    // BƯỚC 4: Wrap mọi cụm ≥2 chữ Hán — bấm được để phát âm
+    // - Nếu cụm nằm trong block "📎 Ví dụ:" → .card-example-zh (đậm hơn)
+    // - Nếu không → .card-char-speakable (cùng style, chỉ khác tên class)
+    safe = safe.replace(
+        /([\u4e00-\u9fff][\u4e00-\u9fff\s]*[\u4e00-\u9fff，。！？、；：""''（）])/g,
+        function(match) {
+            var trimmed = match.trim();
+            var hanziOnly = trimmed.replace(/[^\u4e00-\u9fff]/g, '');
+            if (hanziOnly.length < 2) return match;
+
+            var mJs = trimmed
+                .replace(/\\/g, '\\\\')
+                .replace(/'/g, "\\'")
+                .replace(/"/g, '\\"');
+            var mNorm = _normZh(trimmed);
+
+            var isExample = !!viDuNormMap[mNorm];
+            var cls = isExample ? 'card-example-zh' : 'card-char-speakable';
+            var title = isExample ? 'Bấm để nghe câu ví dụ' : 'Bấm để nghe';
+
+            return '<span class="' + cls + '" '
+                 + 'onclick="vocabSpeakChar(\'' + mJs + '\', this, event)" '
+                 + 'title="' + title + '">'
+                 + match + '</span>';
+        }
+    );
+
+    // BƯỚC 5: Thay placeholder thành HTML thật
+    safe = safe.replace(/__ARROW__/g, '<span class="arrow">=</span>');
+    safe = safe.replace(/__RARR__/g, '<span class="arrow">→</span>');
+    safe = safe.replace(/__PAREN_L__/g, '(<span class="hint">');
+    safe = safe.replace(/__PAREN_R__/g, '</span>)');
+
+    return '<div class="card-mnemonic">'
+        + '<div class="card-mnemonic-label">MẸO NHỚ</div>'
+        + '<div class="card-mnemonic-body">' + safe + '</div>'
+        + '</div>';
+}
     function buildSimilarCharsBlock(currentChar) {
         currentChar = currentChar || '';
         if (!currentChar) return '';
