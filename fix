@@ -852,7 +852,7 @@ def build_js_override(ids_js, datasets_meta_json):
     add("    window.__fixpyMeta = " + datasets_meta_json + ";")
     add("")
     add("    (function() {")
-    add("        fetch('data/fixpy_datasets.json')")
+    add("        fetch('data/fixpy_datasets.json?t=' + Math.floor(Date.now() / 60000))")
     add("            .then(function(r) { return r.ok ? r.json() : {}; })")
     add("            .then(function(d) {")
     add("                window.FIXPY_DATASETS = d || {};")
@@ -916,6 +916,7 @@ def build_js_override(ids_js, datasets_meta_json):
     add("    }")
     add("    patchSwitchRawData();")
     add("")
+
     add("    window.__fixpyOnDataReady = function() {")
     add("        var pending = window.__fixpyPendingSwitch || [];")
     add("        window.__fixpyPendingSwitch = [];")
@@ -998,6 +999,55 @@ def build_js_override(ids_js, datasets_meta_json):
     add("    }")
     add("")
 
+    add("    window.__fixpyParseHskStt = function(rawQuery) {")
+    add("        if (!rawQuery) return null;")
+    add("        var m = rawQuery.toLowerCase().match(/^hsk\\s*(7[-\\s]*9|\\d+)\\s*(?:(\\d+)(?:\\s+(\\d+))?)?$/);")
+    add("        if (!m) return null;")
+    add("        var hskNum = m[1].replace(/\\s+/g, '');")
+    add("        if (hskNum === '7' || hskNum === '8' || hskNum === '9') hskNum = '7-9';")
+    add("        var startStt = m[2] ? parseInt(m[2], 10) : null;")
+    add("        var endStt;")
+    add("        if (m[3]) {")
+    add("            endStt = parseInt(m[3], 10);")
+    add("        } else {")
+    add("            endStt = null;")
+    add("        }")
+    add("        if (startStt !== null && endStt !== null && endStt < startStt) {")
+    add("            var tmp = startStt; startStt = endStt; endStt = tmp;")
+    add("        }")
+    add("        return {")
+    add("            hsk: (hskNum === '7-9') ? 'HSK7-9' : ('HSK' + hskNum),")
+    add("            hskNum: hskNum,")
+    add("            startStt: startStt,")
+    add("            endStt: endStt")
+    add("        };")
+    add("    };")
+    add("")
+
+    add("    window.__fixpyFilterByHskStt = function(parsed) {")
+    add("        var pool = window.__findByHskStt(parsed.hsk, null);")
+    add("        if (parsed.startStt === null) return pool;")
+    add("        if (parsed.endStt === null) {")
+    add("            return pool.filter(function(r) {")
+    add("                var sttStr = (r.stt_original != null && String(r.stt_original).trim() !== '')")
+    add("                           ? String(r.stt_original).trim()")
+    add("                           : String(r.stt || '').replace(/^[^0-9]*-/, '');")
+    add("                var n = parseInt(sttStr, 10);")
+    add("                if (isNaN(n)) return false;")
+    add("                return n >= parsed.startStt;")
+    add("            });")
+    add("        }")
+    add("        return pool.filter(function(r) {")
+    add("            var sttStr = (r.stt_original != null && String(r.stt_original).trim() !== '')")
+    add("                       ? String(r.stt_original).trim()")
+    add("                       : String(r.stt || '').replace(/^[^0-9]*-/, '');")
+    add("            var n = parseInt(sttStr, 10);")
+    add("            if (isNaN(n)) return false;")
+    add("            return n >= parsed.startStt && n <= parsed.endStt;")
+    add("        });")
+    add("    };")
+    add("")
+    
     add("    function patchApplyFilter() {")
     add("        if (window.__fixPyApplyFilterPatched) return;")
     add("        var origApply = window.applyFilter;")
@@ -1017,33 +1067,14 @@ def build_js_override(ids_js, datasets_meta_json):
     add("            }")
     add("            var si = document.getElementById('searchInput');")
     add("            var raw = si ? si.value.trim() : '';")
-    add("            var m = raw.toLowerCase().match(/^hsk\\s*(7[-\\s]*9|\\d+)\\s*(?:(\\d+)(?:\\s+(\\d+))?)?$/);")
-    add("            if (!m) {")
+    add("            var parsed = window.__fixpyParseHskStt(raw);")
+    add("            if (!parsed) {")
     add("                return origApply.apply(this, arguments);")
     add("            }")
-    add("            var hskRaw = m[1].replace(/\\s+/g, '');")
-    add("            var hskNum = hskRaw;")
-    add("            if (hskNum === '7' || hskNum === '8' || hskNum === '9') {")
-    add("                hskNum = '7-9';")
-    add("            }")
-    add("            var startStt = m[2] ? parseInt(m[2], 10) : null;")
-    add("            var endStt = m[3] ? parseInt(m[3], 10) : (startStt !== null ? startStt : null);")
-    add("            if (startStt !== null && endStt < startStt) {")
-    add("                var tmp = startStt; startStt = endStt; endStt = tmp;")
-    add("            }")
-    add("            var targetHsk = (hskNum === '7-9') ? 'HSK7-9' : ('HSK' + hskNum);")
-    add("            var pool = window.__findByHskStt(targetHsk, null);")
-    add("            var result = pool;")
-    add("            if (startStt !== null) {")
-    add("                result = pool.filter(function(r) {")
-    add("                    var sttStr = (r.stt_original != null && String(r.stt_original).trim() !== '')")
-    add("                               ? String(r.stt_original).trim()")
-    add("                               : String(r.stt || '').replace(/^[^0-9]*-/, '');")
-    add("                    var n = parseInt(sttStr, 10);")
-    add("                    if (isNaN(n)) return false;")
-    add("                    return n >= startStt && n <= endStt;")
-    add("                });")
-    add("            }")
+    add("            var result = window.__fixpyFilterByHskStt(parsed);")
+    add("            var hskNum = parsed.hskNum;")
+    add("            var startStt = parsed.startStt;")
+    add("            var endStt = parsed.endStt;")
     add("            try {")
     add("                filtered = result;")
     add("            } catch(e) {")
@@ -1059,6 +1090,8 @@ def build_js_override(ids_js, datasets_meta_json):
     add("                var msg;")
     add("                if (startStt === null) {")
     add("                    msg = 'HSK' + hskDisplay + ': ' + result.length + ' cau';")
+    add("                } else if (endStt === null) {")
+    add("                    msg = 'HSK' + hskDisplay + ' tu cau ' + startStt + ': ' + result.length + ' ket qua';")
     add("                } else if (startStt === endStt) {")
     add("                    msg = 'HSK' + hskDisplay + ' cau ' + startStt + ': ' + result.length + ' ket qua';")
     add("                } else {")
@@ -1071,6 +1104,65 @@ def build_js_override(ids_js, datasets_meta_json):
     add("    }")
     add("")
 
+    add("    function patchPfApplyFilter() {")
+    add("        if (window.__fixPyPfApplyFilterPatched) return;")
+    add("        var origPfApply = window.pfApplyFilter;")
+    add("        if (typeof origPfApply !== 'function') {")
+    add("            setTimeout(patchPfApplyFilter, 100);")
+    add("            return;")
+    add("        }")
+    add("        window.pfApplyFilter = function() {")
+    add("            if (!window.__fixpyDataLoaded) return;")
+    add("            var curDs = (typeof CURRENT_DATASET !== 'undefined')")
+    add("                        ? CURRENT_DATASET : 'tonghop';")
+    add("            if (curDs === 'tonghop') {")
+    add("                return origPfApply.apply(this, arguments);")
+    add("            }")
+    add("            if (!window.FIXPY_DATASETS || !window.FIXPY_DATASETS[curDs]) {")
+    add("                return origPfApply.apply(this, arguments);")
+    add("            }")
+    add("            var si = document.getElementById('pfSearchInput');")
+    add("            var raw = si ? si.value.trim() : '';")
+    add("            var parsed = window.__fixpyParseHskStt(raw);")
+    add("            if (!parsed) {")
+    add("                return origPfApply.apply(this, arguments);")
+    add("            }")
+    add("            var si2 = document.getElementById('searchInput');")
+    add("            if (si2) si2.value = raw;")
+    add("            if (typeof state !== 'undefined' && state) {")
+    add("                state.search = raw.toLowerCase();")
+    add("            }")
+    add("            var result = window.__fixpyFilterByHskStt(parsed);")
+    add("            try {")
+    add("                filtered = result;")
+    add("            } catch(e) {")
+    add("                window.filtered = result;")
+    add("            }")
+    add("            if (typeof pfBuildQuickNav === 'function') pfBuildQuickNav();")
+    add("            if (typeof pfUpdateFilterUI === 'function') pfUpdateFilterUI();")
+    add("            var clearBtn = document.getElementById('pfClearSearchBtn');")
+    add("            if (clearBtn) clearBtn.classList.add('show');")
+    add("            if (result.length > 0) {")
+    add("                if (typeof loadPracticeFull === 'function') {")
+    add("                    loadPracticeFull(result[0].stt);")
+    add("                }")
+    add("            } else {")
+    add("                var pfViEl = document.getElementById('pfVi');")
+    add("                if (pfViEl) pfViEl.textContent = 'Khong tim thay cau nao';")
+    add("                var pfCounter = document.getElementById('pfCounter');")
+    add("                if (pfCounter) pfCounter.textContent = 'Cau 0 / 0';")
+    add("                var pfTags = document.getElementById('pfTags');")
+    add("                if (pfTags) pfTags.innerHTML = '';")
+    add("                var pfPrev = document.getElementById('pfPrevBtn');")
+    add("                if (pfPrev) pfPrev.disabled = true;")
+    add("                var pfNext = document.getElementById('pfNextBtn');")
+    add("                if (pfNext) pfNext.disabled = true;")
+    add("            }")
+    add("        };")
+    add("        window.__fixPyPfApplyFilterPatched = true;")
+    add("    }")
+    add("")
+    
     add("    function bindTab(dsId) {")
     add("        var btn = document.querySelector('.ds-btn[data-dataset=\"' + dsId + '\"]');")
     add("        if (!btn) return;")
@@ -1256,10 +1348,10 @@ def build_js_override(ids_js, datasets_meta_json):
     add("        patchGetLimitedData();")
     add("        patchApplyOnboarding();")
     add("        patchApplyFilter();")
+    add("        patchPfApplyFilter();")
     add("        NEW_IDS.forEach(bindTab);")
     add("        patchMarkActive();")
     add("    }")
-    add("")
     add("    if (document.readyState === 'loading') {")
     add("        document.addEventListener('DOMContentLoaded', bindAll);")
     add("    } else {")
@@ -1280,6 +1372,7 @@ def build_js_override(ids_js, datasets_meta_json):
     add("</script>")
 
     return "\n".join(L)
+
 
 
 # =================================================================
@@ -1423,9 +1516,73 @@ def main():
     vocab_exists_in_html = 'data-dataset="' + VOCAB_ID + '"' in html
     add_vocab = bool(vocab_data) and not vocab_exists_in_html
 
-    if not all_new and not add_vocab:
+    # ⭐ LUÔN ghi lại fixpy_datasets.json nếu có data mới (mnemonic update)
+    _need_data_rewrite = bool(vocab_data) or bool(datasets)
+    _need_patch_html = bool(all_new) or add_vocab
+
+    if not _need_patch_html and not _need_data_rewrite:
         print("")
         print("[fix.py] Tat ca da co - khong can patch.")
+        return
+
+    # ⭐ CASE A: Tab đã có → chỉ ghi lại data JSON, KHÔNG patch HTML
+    if not _need_patch_html and _need_data_rewrite:
+        print("")
+        print("[fix.py] Tab da co san -> CHI ghi lai data JSON (khong patch HTML)")
+
+        _data_dir = "data"
+        os.makedirs(_data_dir, exist_ok=True)
+        _fixpy_path = os.path.join(_data_dir, "fixpy_datasets.json")
+
+        # Load data cũ để giữ dataset đã có
+        datasets_dict = {}
+        if os.path.isfile(_fixpy_path):
+            try:
+                with open(_fixpy_path, "r", encoding="utf-8") as _f:
+                    datasets_dict = json.load(_f) or {}
+            except Exception as _e:
+                print("   [!] Khong doc duoc file cu: " + str(_e))
+                datasets_dict = {}
+
+        # ⭐ Update vocab với mnemonic MỚI
+        if vocab_data:
+            datasets_dict[VOCAB_ID] = {
+                "id": VOCAB_ID,
+                "name": VOCAB_LABEL,
+                "icon": "fa-book",
+                "color": "#f59e0b",
+                "data": vocab_data,
+                "count": len(vocab_data),
+                "source": (os.path.basename(vocab_real_path)
+                           if vocab_real_path else "tu_vung_hsk.xlsx"),
+                "type": "premium",
+                "group": "fixpy",
+            }
+            print("   [OK] Update vocab: " + str(len(vocab_data)) + " tu")
+
+        for ds in datasets:
+            datasets_dict[ds["id"]] = ds
+
+        with open(_fixpy_path, "w", encoding="utf-8") as _f:
+            json.dump(datasets_dict, _f, ensure_ascii=False, separators=(",", ":"))
+        _size_kb = os.path.getsize(_fixpy_path) / 1024
+        print("   [OK] Ghi data/fixpy_datasets.json (" + f"{_size_kb:.1f}" + " KB)")
+
+        # Chạy patch_buttons
+        print("")
+        print("=" * 62)
+        print("[fix.py] Chay patch_buttons.py de cover 4 nut...")
+        print("=" * 62)
+        try:
+            _here = os.path.dirname(os.path.abspath(__file__))
+            if _here not in sys.path:
+                sys.path.insert(0, _here)
+            from patch_buttons import patch_all_buttons
+            _ok = patch_all_buttons(INDEX_HTML)
+            print("[fix.py] patch_buttons.py -> " + ("THANH CONG" if _ok else "THAT BAI"))
+        except Exception as _e:
+            print("[fix.py] Loi patch_buttons: " + str(_e))
+
         return
 
     print("")
@@ -1512,9 +1669,20 @@ def main():
             "group": "fixpy",
         }
 
+    # ⭐ Merge với data cũ để KHÔNG mất dataset đã có
     _data_dir = "data"
     os.makedirs(_data_dir, exist_ok=True)
     _fixpy_path = os.path.join(_data_dir, "fixpy_datasets.json")
+    if os.path.isfile(_fixpy_path):
+        try:
+            with open(_fixpy_path, "r", encoding="utf-8") as _f:
+                _old_data = json.load(_f) or {}
+            for _k, _v in _old_data.items():
+                if _k not in datasets_dict:
+                    datasets_dict[_k] = _v
+        except Exception:
+            pass
+
     with open(_fixpy_path, "w", encoding="utf-8") as _f:
         json.dump(datasets_dict, _f, ensure_ascii=False, separators=(",", ":"))
     _size_kb = os.path.getsize(_fixpy_path) / 1024
