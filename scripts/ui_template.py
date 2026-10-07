@@ -3676,7 +3676,7 @@ def build_ui_js():
     return r"""
 var filtered = [];
 var state = { search:'', hsk:'', subject:'' };
-var PAGE_SIZE = 300;
+var PAGE_SIZE = 50;
 var renderedCount = 0;
 var focusedStt = null;
 var mobileWrapper;
@@ -6242,9 +6242,8 @@ function applyFilter() {
     }
 
     /* ═══ 3. LẤY TOÀN BỘ KHO — KHÔNG GIỚI HẠN TIER ═══ */
-    var baseData = (typeof RAW_DATA !== 'undefined' && Array.isArray(RAW_DATA))
-                   ? RAW_DATA
-                   : getLimitedData();
+    // ⭐ LUÔN dùng getLimitedData() để áp dụng giới hạn tier
+    var baseData = getLimitedData();
 
     /* ⭐ Lấy danh sách HSK mà user được phép xem */
     var info = getTierInfo();
@@ -7116,9 +7115,7 @@ function pfApplyFilter() {
     state.subject = $('pfSubjectFilter').value;
 
     /* ═══ LẤY TOÀN BỘ KHO — KHÔNG GIỚI HẠN TIER ═══ */
-    var baseData = (typeof RAW_DATA !== 'undefined' && Array.isArray(RAW_DATA))
-                   ? RAW_DATA
-                   : getLimitedData();
+    var baseData = getLimitedData();
 
     var parsed = parseSearchQuery(rawSearch);
 
