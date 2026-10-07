@@ -590,6 +590,20 @@ def main():
     print("\nBuoc 0: Load nghia tieng Viet tu Excel...")
     vi_dict = load_vietnamese_meaning_from_excel()
 
+    # ============================================================
+    # DEBUG: Kiem tra vi_dict co chua cac chu quan trong khong
+    # ============================================================
+    print("\n" + "=" * 62)
+    print("DEBUG VI_DICT")
+    print("=" * 62)
+    print("Tong vi_dict: " + str(len(vi_dict)))
+
+    test_chars = ["我", "出", "次", "的", "半", "错", "爱", "家", "老", "课"]
+    for ch in test_chars:
+        val = vi_dict.get(ch, "NOT_FOUND")
+        print("  vi_dict['" + ch + "'] = " + str(val))
+    print("=" * 62)
+
     print("\nBuoc 1: Quet tim entries sai...")
 
     suspects = []
@@ -598,6 +612,9 @@ def main():
     skip_no_vi = 0
     from_excel = 0
     from_mnemonic = 0
+
+    # DEBUG: chi tiet cho chu "我"
+    debug_wo = None
 
     for idx, (key, mnemonic) in enumerate(data.items(), 1):
         if idx % 500 == 0:
@@ -618,6 +635,16 @@ def main():
             skip_no_db += 1
             continue
 
+        # DEBUG: luu thong tin chu "我"
+        if zh == "我":
+            debug_wo = {
+                "key": key,
+                "rad": dict(rad),
+                "has_radical": mnemonic_has_radical(mnemonic, rad),
+                "vi_excel": vi_dict.get(zh, ""),
+                "vi_mnemonic": extract_vi(mnemonic),
+            }
+
         if not mnemonic_has_radical(mnemonic, rad):
             vi = vi_dict.get(zh, "")
 
@@ -633,6 +660,22 @@ def main():
                 continue
 
             suspects.append((key, info, rad, mnemonic, vi))
+
+    # ============================================================
+    # DEBUG: In thong tin chu "我"
+    # ============================================================
+    print("\n" + "=" * 62)
+    print("DEBUG CHU '我'")
+    print("=" * 62)
+    if debug_wo:
+        print("  Key:            " + debug_wo["key"])
+        print("  Bo thu:         " + str(debug_wo["rad"]))
+        print("  has_radical:    " + str(debug_wo["has_radical"]))
+        print("  vi tu Excel:    '" + str(debug_wo["vi_excel"]) + "'")
+        print("  vi tu mnemonic: '" + str(debug_wo["vi_mnemonic"]) + "'")
+    else:
+        print("  KHONG TIM THAY chu '我' trong data!")
+    print("=" * 62)
 
     print("\nKet qua:")
     print("   Tim thay: " + str(len(suspects)) + " entries sai")
@@ -716,7 +759,3 @@ def main():
     print("   Backup:      " + BACKUP_FILE)
     print("   Output:      " + INPUT_FILE)
     print("=" * 62)
-
-
-if __name__ == "__main__":
-    main()
