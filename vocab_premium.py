@@ -1790,8 +1790,17 @@ window.__SIMILAR_CHARS__ = __SIMILAR_JSON__;
     var _navStack = [];
     var _navBackBtn = null;
 
-    function canAccessVocab() { return true; }
-
+    function canAccessVocab() {
+    // ⭐ Đọc kết quả từ fix.py (đã tính toán tier)
+    if (typeof window.getVocabAccess === 'function') {
+        try {
+            var acc = window.getVocabAccess();
+            return acc && acc.allowed === true;
+        } catch(e) {}
+     }
+    // Fallback nếu fix.py chưa load
+    return true;
+    }
     function _esc(s) {
         return (typeof escapeHtml === 'function')
             ? escapeHtml(s) : String(s == null ? '' : s);
@@ -1977,13 +1986,40 @@ window.__SIMILAR_CHARS__ = __SIMILAR_JSON__;
     };
 
     function updateTabLockState() {
-        var btn = document.querySelector('.ds-btn[data-dataset="' + VOCAB_ID + '"]');
-        if (!btn) return;
-        var oldLock = btn.querySelector('.vocab-lock-icon');
-        if (oldLock) oldLock.remove();
-        btn.classList.remove('vocab-locked');
-        btn.title = 'Từ vựng HSK - đã mở khóa';
+    // ⭐ Nếu fix.py có updateTabLockState → để nó x tier)
+    if (typeof window.vocabUpdateLockState === 'function' &&
+        window.vocabUpdateLockState !== updateTabLockState) {
+        try {
+            window.vocabUpdateLockState();
+            return;
+        } catch(e) {}
     }
+
+    // Fallback: đọc tier trực tiếp
+    var btn = document.querySelector('.ds-btn[data-dataset="' + VOCAB_ID + '"]');
+    if (!btn) return;
+
+    var acc = (typeof window.getVocabAccess === 'function')
+        ? window.getVocabAccess()
+        : { allowed: true, badge: 'PREMIUM' };
+
+    var oldLock = btn.querySelector('.vocab-lock-icon');
+    if (oldLock) oldLock.remove();
+    var badge = btn.querySelector('.ds-vocab-badge');
+
+    if (acc.allowed) {
+        btn.classList.remove('vocab-locked');
+        btn.title = acc.label || 'Từ vựng HSK';
+        if (badge) badge.textContent = acc.badge || 'PREMIUM';
+    } else {
+        btn.classList.add('vocab-locked');
+        btn.title = acc.label || 'Tài khoản hết hạn';
+        if (badge) badge.textContent = 'LOCKED';
+        var lock = document.createElement('i');
+        lock.className = 'fas fa-lock vocab-lock-icon';
+        btn.appendChild(lock);
+    }
+}
 
     function openUpgradeModal() {
         var modal = document.getElementById('vocabUpgradeModal');
