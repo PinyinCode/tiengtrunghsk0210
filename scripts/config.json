@@ -85,7 +85,7 @@
             "enabled": true,
             "max_questions": 50,
             "hsk_allowed": [1, 2, 3],
-            "topics_per_user": 25,
+            "topics_per_user": 3,
             "title": "Bạn quan tâm chủ đề nào?",
             "subtitle": "Chọn tối đa 5 chủ đề — chúng tôi sẽ gợi ý 80 câu phù hợp nhất"
         },
@@ -93,7 +93,7 @@
             "enabled": true,
             "max_questions": 120,
             "hsk_allowed": [1, 2, 3, 4, 5],
-            "topics_per_user": 40,
+            "topics_per_user": 6,
             "title": "Bạn quan tâm chủ đề nào?",
             "subtitle": "Chọn tối đa 12 chủ đề — chúng tôi sẽ gợi ý 250 câu phù hợp nhất"
         },
