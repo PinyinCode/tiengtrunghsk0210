@@ -1496,13 +1496,21 @@ def main():
         else:
             print("   [skip] '" + ds["id"] + "' da co trong HTML")
 
-    vocab_exists_in_html = 'data-dataset="' + VOCAB_ID + '"' in html
-    add_vocab = bool(vocab_data) and not vocab_exists_in_html
+    vocab_exists_in_html = 'data-dataset="' + VOCAB_ID + '"'
+add_vocab = bool(vocab_data) and not vocab_exists_in_html
 
-    if not all_new and not add_vocab:
-        print("")
-        print("[fix.py] Tat ca da co - khong can patch.")
-        return
+# ⭐ LUÔN ghi lại fixpy_datasets.json nếu có data mới (mnemonic update)
+_need_data_rewrite = bool(vocab_data) or bool(datasets)
+
+if not all_new and not add_vocab and not _need_data_rewrite:
+    print("[fix.py] Tat ca da co - khong can patch.")
+    return
+
+# ⭐ Nếu chỉ cần ghi lại data (không cần patch HTML):
+if not all_new and not add_vocab and _need_data_rewrite:
+    print("[fix.py] Tab da co, nhung CAN GHI LAI DATA JSON...")
+    # ... build datasets_dict + ghi fixpy_datasets.json
+    # ... return luôn, không patch HTML
 
     print("")
     print("[fix.py] Se them:")
