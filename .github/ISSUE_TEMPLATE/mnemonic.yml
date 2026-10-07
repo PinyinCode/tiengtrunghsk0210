@@ -1,0 +1,97 @@
+name: 📚 Thêm/Sửa mẹo nhớ HSK
+description: Nhập mẹo nhớ cho từ vựng HSK — bot tự động cập nhật file JSON
+title: "[Mnemonic] HSK1 - "
+labels: ["mnemonic", "automated"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 📚 Nhập mẹo nhớ cho từ vựng HSK
+
+        Điền form bên dưới → bot sẽ **tự động cập nhật** file `data/ai_mnemonics.json` và commit vào repo.
+        
+        ⚡ **Sau khi submit, đợi 1-2 phút để web cập nhật.**
+
+  - type: dropdown
+    id: hsk
+    attributes:
+      label: HSK
+      description: Chọn cấp độ HSK
+      options:
+        - HSK1
+        - HSK2
+        - HSK3
+        - HSK4
+        - HSK5
+        - HSK6
+        - HSK7-9
+    validations:
+      required: true
+
+  - type: input
+    id: stt
+    attributes:
+      label: STT
+      description: Số thứ tự của từ trong file Excel
+      placeholder: "VD: 4"
+    validations:
+      required: true
+
+  - type: input
+    id: zh
+    attributes:
+      label: Chữ Hán
+      description: Chữ Hán của từ vựng
+      placeholder: "VD: 爸爸"
+    validations:
+      required: true
+
+  - type: input
+    id: vi
+    attributes:
+      label: Nghĩa tiếng Việt
+      description: Nghĩa của từ (không bắt buộc, chỉ để tham khảo)
+      placeholder: "VD: Bố; ba"
+
+  - type: input
+    id: pinyin
+    attributes:
+      label: Pinyin
+      description: Phiên âm (không bắt buộc)
+      placeholder: "VD: bàba"
+
+  - type: input
+    id: radical
+    attributes:
+      label: Bộ thủ (tùy chọn)
+      description: "Format: 父|fù|4|
+Cha"
+      placeholder: "VD:    父|fù| id4|Cha"
+
+  - type: textarea
+    id: mnemonic
+    attributes:
+      label: Mẹo nhớ
+      description: |
+        Nhập mẹo nhớ đầy đủ. Hỗ trợ nhiều dòng, emoji.
+        
+        Format gợi ý:
+        - 💡 Chi tiết từ: ...
+        - 🔗 Âm thanh: ...
+        - 📖 Câu chuyện: ...
+        - 📎 Ví dụ: ...
+        - 🔗 Liên quan: ...
+      placeholder: |
+        💡 Chi tiết từ: 父 (Cha) + 巴 (mong ước) → 爸爸 (Bố, ba)
+        🔗 Âm thanh: "bàba" nghe như "ba ba" — gọi ba 2 lần
+        📎 Ví dụ: 爸爸去哪儿了? (Bàba qù nǎr le?) — Bố đi đâu rồi?
+      render: text
+    validations:
+      required: true
+
+  - type: checkboxes: confirm
+    attributes:
+      label: Xác nhận
+      options:
+        - label: Tôi đã kiểm tra dữ liệu chính xác
+          required: true
