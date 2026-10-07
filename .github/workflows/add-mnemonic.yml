@@ -1,0 +1,105 @@
+name: 📚 Add Mnemonic
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  process:
+    # Chỉ chạy khi có label 'mnemonic'
+    if: contains(github.event.issue.labels.*.name, 'mnemonic')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: ⚙️ Xử lý Issue → Update JSON
+        id: process
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          python scripts/process_mnemonic_issue.py
+
+      - name: 📤 Commit & Push nếu có thay đổi
+        if: steps.process.outputs.status == 'success'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add data/ai_mnemonics.json
+          
+          if git diff --staged --quiet; then
+            echo "ℹ️ Không có thay đổi"
+          else
+            git commit -m "📚 [${{ steps.process.outputs.action }}] ${{ steps.process.outputs.key }} (#${{ github.event.issue.number }})"
+            git push
+            echo "✅ Đã commit và push"
+          fi
+
+      - name: 💬 Comment vào Issue (thành công)
+        if: steps.process.outputs.status == 'success'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const action = '${{ steps.process.outputs.action }}';
+            const key = '${{ steps.process.outputs.key }}';
+            const total = '${{ steps.process.outputs.total }}';
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## ✅ Đã ${action} thành công!\n\n` +
+                    `🔑 **Key:** \`${key}\`\n\n` +
+                    `📊 **Tổng entries:** ${total}\n\n` +
+                    `⏱️ **Web sẽ cập nhật trong 1-2 phút** (chờ GitHub Pages rebuild).\n\n` +
+                    `🔄 Sau đó **hard refresh** web (Ctrl+Shift+R) để thấy mẹo nhớ mới.`
+            });
+
+      - name: 🏷️ Đóng Issue (thành công)
+        if: steps.process.outputs.status == 'success'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              state: 'closed'
+            });
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['✅ done']
+            });
+
+      - name: ⚠️ Comment lỗi (thất bại)
+        if: steps.process.outputs.status != 'success'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const message = '${{ steps.process.outputs.message }}';
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## ❌ Lỗi xử lý\n\n` +
+                    `**Lý do:** ${message}\n\n` +
+                    `Vui lòng sửa lại Issue và save (edit) để bot chạy lại.`
+            });
