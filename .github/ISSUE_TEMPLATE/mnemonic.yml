@@ -1,4 +1,4 @@
-name: 📚 Thêm/Sửa mẹo nhớ HSK
+name: "📚 Thêm/Sửa mẹo nhớ HSK"
 description: Nhập mẹo nhớ cho từ vựng HSK — bot tự động cập nhật file JSON
 title: "[Mnemonic] HSK1 - "
 labels: ["mnemonic", "automated"]
@@ -9,7 +9,7 @@ body:
         ## 📚 Nhập mẹo nhớ cho từ vựng HSK
 
         Điền form bên dưới → bot sẽ **tự động cập nhật** file `data/ai_mnemonics.json` và commit vào repo.
-        
+
         ⚡ **Sau khi submit, đợi 1-2 phút để web cập nhật.**
 
   - type: dropdown
@@ -50,7 +50,7 @@ body:
     id: vi
     attributes:
       label: Nghĩa tiếng Việt
-      description: Nghĩa của từ (không bắt buộc, chỉ để tham khảo)
+      description: Nghĩa của từ (không bắt buộc)
       placeholder: "VD: Bố; ba"
 
   - type: input
@@ -64,9 +64,8 @@ body:
     id: radical
     attributes:
       label: Bộ thủ (tùy chọn)
-      description: "Format: 父|fù|4|
-Cha"
-      placeholder: "VD:    父|fù| id4|Cha"
+      description: "Format: 父|fù|4|Cha"
+      placeholder: "VD: 父|fù|4|Cha"
 
   - type: textarea
     id: mnemonic
@@ -74,7 +73,7 @@ Cha"
       label: Mẹo nhớ
       description: |
         Nhập mẹo nhớ đầy đủ. Hỗ trợ nhiều dòng, emoji.
-        
+
         Format gợi ý:
         - 💡 Chi tiết từ: ...
         - 🔗 Âm thanh: ...
@@ -89,7 +88,8 @@ Cha"
     validations:
       required: true
 
-  - type: checkboxes: confirm
+  - type: checkboxes
+    id: confirm
     attributes:
       label: Xác nhận
       options:
