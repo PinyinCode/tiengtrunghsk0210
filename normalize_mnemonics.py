@@ -108,10 +108,10 @@ def _parse_one_example(part):
 
     zh = m_zh.group(1).strip()
 
-    # Fix dấu câu bị tách
+    # Fix dấu câu bị tách (Đã sửa lỗi cú pháp ở đây)
     zh = re.sub(r'\s*[-\u2014\u2013,;:]\s*([\uFF0C\u3002\uFF01\uFF1F\u3001\uFF1B\uFF1A\u201c\u201d\u2018\u2019\uFF08\uFF09])', r'\1', zh)
     zh = re.sub(r'\s+([\uFF0C\u3002\uFF01\uFF1F\u3001\uFF1B\uFF1A\u201c\u201d\u2018\u2019\uFF08\uFF09])', r'\1', zh)
-    zh = re =.sub(r'[\s\-\u2014\u2013,;:]+$', '', zh)
+    zh = re.sub(r'[\s\-\u2014\u2013,;:]+$', '', zh)
 
     rest = part[len(m_zh.group(1)):].strip()
     rest = re.sub(r"^['\"\u2018\u2019\u201c\u201d]+|['\"\u2018\u2019\u201c\u201d]+$", '', rest).strip()
@@ -220,7 +220,7 @@ def _analyze_entry(key, value):
         info["issues"] = issues
         return info
 
-    info["has_vi_du"] True
+    info["has_vi_du"] = True  # Đã sửa lỗi thiếu dấu = ở đây luôn
 
     m = RE_VI_DU_BLOCK.search(value)
     if not m:
