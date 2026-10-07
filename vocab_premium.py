@@ -226,34 +226,42 @@ def _parse_radical_raw(raw):
 
 
 def _parse_vi_du_from_mnemonic(mnemonic):
-    """Parse câu ví dụ từ mnemonic - hỗ trợ MỌI format."""
+    """
+    Trích XUẤT tất cả cụm Hán tự trong mnemonic.
+    Mỗi cụm = 1 câu ví dụ có thể bấm.
+    """
     if not mnemonic:
         return []
 
-    m = re.search(
-        r'📎\s*Ví dụ:?\s*(.*?)(?=\n\s*🔗|\n\s*💡|\n\s*📌|\n\s*🎬|\Z)',
-        mnemonic,
-        re.DOTALL
-    )
-    if not m:
-        return []
-
-    block = m.group(1).strip()
-    if not block:
-        return []
-
-    # Tách nhiều câu ví dụ (ngăn bằng / hoặc ;) - nhưng KHÔNG tách nếu trong ngoặc
-    parts = _split_outside_parens(block)
-
     result = []
-    for part in parts:
-        part = part.strip()
-        if not part:
-            continue
+    seen = set()
 
-        parsed = _parse_one_example(part)
-        if parsed and parsed.get("zh"):
-            result.append(parsed)
+    # Bỏ qua phần "🔗 Liên quan:" và "💡 Chi tiết:" (không phải câu ví dụ)
+    # Chỉ lấy các cụm Hán tự >= 2 chữ (câu ngắn cũng OK, nhưng tránh chữ đơn lẻ)
+    for match in re.finditer(r'[\u4e00-\u9fff]{2,}', mnemonic):
+        zh = match.group(0)
+        if zh in seen:
+            continue
+        seen.add(zh)
+
+        # Cố gắng lấy pinyin ngay sau nếu có: "Hán (pinyin)"
+        start = match.end()
+        tail = mnemonic[start:start + 80]
+        py = ""
+
+        # Match "(pinyin)" hoặc "（pinyin）"
+        m_py = re.match(
+            r'\s*[\(\（]([A-Za-zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜÜü\s,;:\'\-\.]+)[\)\）]',
+            tail
+        )
+        if m_py:
+            py = m_py.group(1).strip().rstrip('.,;:')
+
+        result.append({
+            "zh": zh,
+            "pinyin": py,
+            "vi": ""
+        })
 
     return result
 
@@ -2117,76 +2125,37 @@ window.__SIMILAR_CHARS__ = __SIMILAR_JSON__;
     }
 
     function buildMnemonicBlock(text, currentChar, viDuList) {
-        currentChar = currentChar || '';
-        if (!text || !text.trim()) return '';
+    currentChar = currentChar || '';
+    if (!text || !text.trim()) return '';
 
-        var safe = _esc(text);
+    var safe = _esc(text);
 
-        var viDuHtml = '';
-        if (viDuList && viDuList.length > 0) {
-            var viDuMatch = safe.match(/📎\s*Ví dụ:?\s*([^\n]*)/);
-            if (viDuMatch) {
-                viDuList.forEach(function(ex) {
-                    var exJs = String(ex.zh || '')
-                        .replace(/\\/g, '\\\\')
-                        .replace(/'/g, "\\'")
-                        .replace(/"/g, '\\"');
-                    viDuHtml += '<span class="card-example-inline">';
-                    viDuHtml += '<span class="card-example-zh" '
-                              + 'onclick="vocabSpeakChar(\'' + exJs + '\', this, event)" '
-                              + 'title="Bấm để nghe câu ví dụ">'
-                              + _esc(ex.zh)
-                              + '</span>';
-                    if (ex.pinyin) {
-                        viDuHtml += ' <span class="card-example-pinyin">(' + _esc(ex.pinyin) + ')</span>';
-                    }
-                    if (ex.vi) {
-                        viDuHtml += ' <span class="card-example-vi">- ' + _esc(ex.vi) + '</span>';
-                    }
-                    viDuHtml += '</span>';
-                });
+    // Wrap TẤT CẢ cụm Hán tự thành span bấm được
+    // Pattern: match cụm Hán tự liền nhau (>= 2 chữ)
+    safe = safe.replace(/([\u4e00-\u9fff]{2,})/g, function(match) {
+        var mJs = match
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, "\\'")
+            .replace(/"/g, '\\"');
+        return '<span class="card-char-speakable" '
+             + 'onclick="vocabSpeakChar(\'' + mJs + '\', this, event)" '
+             + 'title="Bấm để nghe">'
+             + match
+             + '</span>';
+    });
 
-                // Xóa TOÀN BỘ block ví dụ (bao gồm cả dòng vi continuation bên dưới)
-                var lines = safe.split('\n');
-                var newLines = [];
-                var skipNext = false;
-                for (var li = 0; li < lines.length; li++) {
-                    var line = lines[li];
-                    var trimmed = line.trim();
+    // Wrap từng chữ Hán đơn lẻ (nếu còn)
+    // KHÔNG dùng vì sẽ làm rối, có thể bật nếu muốn
+    // safe = safe.replace(/([\u4e00-\u9fff])/g, function(match) { ... });
 
-                    if (/^📎\s*Ví dụ:?/.test(trimmed)) {
-                        newLines.push('📎 Ví dụ: __VIDU_PLACEHOLDER__');
-                        skipNext = true;
-                        continue;
-                    }
+    safe = safe.replace(/\s=\s/g, ' <span class="arrow">=</span> ');
+    safe = safe.replace(/→/g, '<span class="arrow">→</span>');
+    safe = safe.replace(/\(([^)]+)\)/g, '(<span class="hint">$1</span>)');
 
-                    if (skipNext) {
-                        if (trimmed && !/^(🔗|💡|📌|🎬|📎)/.test(trimmed)) {
-                            skipNext = false;
-                            continue;
-                        }
-                        skipNext = false;
-                    }
-
-                    newLines.push(line);
-                }
-                safe = newLines.join('\n');
-            }
-        }
-
-        safe = safe.replace(/([\u4e00-\u9fa5]+)/g, '<span class="char-zh">$1</span>');
-        safe = safe.replace(/\s=\s/g, ' <span class="arrow">=</span> ');
-        safe = safe.replace(/→/g, '<span class="arrow">→</span>');
-        safe = safe.replace(/\(([^)]+)\)/g, '(<span class="hint">$1</span>)');
-
-        if (viDuHtml) {
-            safe = safe.replace('__VIDU_PLACEHOLDER__', viDuHtml);
-        }
-
-        return '<div class="card-mnemonic">'
-            + '<div class="card-mnemonic-label">MẸO NHỚ</div>'
-            + '<div class="card-mnemonic-body">' + safe + '</div>'
-            + '</div>';
+    return '<div class="card-mnemonic">'
+        + '<div class="card-mnemonic-label">MẸO NHỚ</div>'
+        + '<div class="card-mnemonic-body">' + safe + '</div>'
+        + '</div>';
     }
 
     function buildSimilarCharsBlock(currentChar) {
