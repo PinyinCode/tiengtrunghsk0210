@@ -1,0 +1,92 @@
+name: Normalize AI Mnemonics
+
+on:
+  # Chạy tự động khi push vào main/master
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'data/ai_mnemonics.json'
+      - 'normalize_mnemonics.py'
+      - '.github/workflows/normalize-mnemonics.yml'
+  
+  # Cho phép chạy thủ công từ tab Actions
+  workflow_dispatch:
+    inputs:
+      commit_message:
+        description: 'Custom commit message (optional)'
+        required: false
+        default: '🤖 Auto-normalize ai_mnemonics.json'
+
+# Cho phép workflow ghi lại vào repo
+permissions:
+  contents: write
+
+jobs:
+  normalize:
+    runs-on: ubuntu-latest
+    name: Chuẩn hóa format câu ví dụ
+    
+    steps:
+      - name: 📥 Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 🔍 Kiểm tra file tồn tại
+        run: |
+          echo "=== Kiểm tra file ==="
+          ls -la data/ai_mnemonics.json || echo "❌ Không tìm thấy file"
+          ls -la normalize_mnemonics.py || echo "❌ Không tìm thấy script"
+
+      - name: 🚀 Chạy normalize script
+        id: normalize
+        run: |
+          echo "=== Bắt đầu chuẩn hóa ==="
+          python normalize_mnemonics.py
+          
+          echo "=== Kiểm tra thay đổi ==="
+          if git diff --quiet data/ai_mnemonics.json; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "✨ Không có thay đổi - file đã chuẩn"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "📝 Có thay đổi - sẽ commit"
+          fi
+
+      - name: 📊 Thống kê thay đổi
+        if: steps.normalize.outputs.changed == 'true'
+        run: |
+          echo "=== Số dòng thay đổi ==="
+          git diff --stat data/ai_mnemonics.json
+          
+          echo "=== Mẫu thay đổi đầu tiên ==="
+          git diff data/ai_mnemonics.json | head -50
+
+      - name: 💾 Commit và push
+        if: steps.normalize.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Xóa backup files (nếu có)
+          rm -f data/ai_mnemonics.json.bak_* || true
+          
+          git add data/ai_mnemonics.json
+          
+          COMMIT_MSG="${{ github.event.inputs.commit_message || '🤖 Auto-normalize ai_mnemonics.json' }}"
+          git commit -m "$COMMIT_MSG"
+          git push
+
+      - name: ✅ Kết quả
+        run: |
+          if [ "${{ steps.normalize.outputs.changed }}" == "true" ]; then
+            echo "✅ Đã chuẩn hóa và commit!"
+          else
+            echo "✨ File đã chuẩn từ trước, không cần thay đổi"
+          fi
