@@ -1516,6 +1516,7 @@ def main():
     vocab_exists_in_html = 'data-dataset="' + VOCAB_ID + '"' in html
     add_vocab = bool(vocab_data) and not vocab_exists_in_html
 
+    # ⭐ LUÔN ghi lại fixpy_datasets.json nếu có data mới (mnemonic update)
     _need_data_rewrite = bool(vocab_data) or bool(datasets)
     _need_patch_html = bool(all_new) or add_vocab
 
@@ -1524,14 +1525,16 @@ def main():
         print("[fix.py] Tat ca da co - khong can patch.")
         return
 
+    # ⭐ CASE A: Tab đã có → chỉ ghi lại data JSON, KHÔNG patch HTML
     if not _need_patch_html and _need_data_rewrite:
         print("")
-        print("[fix.py] Tab da co san -> ghi lai data + patch JS override")
+        print("[fix.py] Tab da co san -> CHI ghi lai data JSON (khong patch HTML)")
 
         _data_dir = "data"
         os.makedirs(_data_dir, exist_ok=True)
         _fixpy_path = os.path.join(_data_dir, "fixpy_datasets.json")
 
+        # Load data cũ để giữ dataset đã có
         datasets_dict = {}
         if os.path.isfile(_fixpy_path):
             try:
@@ -1541,6 +1544,7 @@ def main():
                 print("   [!] Khong doc duoc file cu: " + str(_e))
                 datasets_dict = {}
 
+        # ⭐ Update vocab với mnemonic MỚI
         if vocab_data:
             datasets_dict[VOCAB_ID] = {
                 "id": VOCAB_ID,
@@ -1564,38 +1568,7 @@ def main():
         _size_kb = os.path.getsize(_fixpy_path) / 1024
         print("   [OK] Ghi data/fixpy_datasets.json (" + f"{_size_kb:.1f}" + " KB)")
 
-        if vocab_data:
-            print("")
-            print("[fix.py] Inject lai build_vocab_js_patch vao HTML...")
-
-            old_marker = "window.getVocabAccess = getVocabAccess;"
-            if old_marker in html:
-                print("   [clean] Xoa patch cu truoc khi inject lai")
-                pat_old_patch = re.compile(
-                    r'<script>\s*\(function\(\)\s*\{\s*\'use strict\';\s*'
-                    r'var VOCAB_ID = \'tu-vung\';.*?\}\)\(\);\s*</script>',
-                    re.DOTALL
-                )
-                html, n_removed = pat_old_patch.subn('', html)
-                if n_removed > 0:
-                    print("   [clean] Da xoa " + str(n_removed) + " patch cu")
-            else:
-                print("   [info] Chua co patch cu trong HTML")
-
-            js_patch = '\n<script>\n' + build_vocab_js_patch() + '\n</script>\n'
-
-            pat_body = re.compile(r'(\s*)(</body>)', re.MULTILINE)
-            html, n = pat_body.subn(
-                lambda m: m.group(1) + js_patch + m.group(1) + m.group(2),
-                html, count=1
-            )
-            if n > 0:
-                with open(INDEX_HTML, "w", encoding="utf-8") as f:
-                    f.write(html)
-                print("   [OK] Da inject lai patch vao " + INDEX_HTML)
-            else:
-                print("   [!] Khong tim thay </body>")
-
+        # Chạy patch_buttons
         print("")
         print("=" * 62)
         print("[fix.py] Chay patch_buttons.py de cover 4 nut...")
@@ -1610,10 +1583,6 @@ def main():
         except Exception as _e:
             print("[fix.py] Loi patch_buttons: " + str(_e))
 
-        print("")
-        print("=" * 62)
-        print("[fix.py] HOAN TAT! (CASE A - chi update data + patch JS)")
-        print("=" * 62)
         return
 
     print("")
@@ -1700,6 +1669,7 @@ def main():
             "group": "fixpy",
         }
 
+    # ⭐ Merge với data cũ để KHÔNG mất dataset đã có
     _data_dir = "data"
     os.makedirs(_data_dir, exist_ok=True)
     _fixpy_path = os.path.join(_data_dir, "fixpy_datasets.json")
