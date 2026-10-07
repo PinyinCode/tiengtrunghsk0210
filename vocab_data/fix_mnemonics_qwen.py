@@ -589,7 +589,27 @@ def main():
 
     print("\nBuoc 0: Load nghia tieng Viet tu Excel...")
     vi_dict = load_vietnamese_meaning_from_excel()
-
+    # DEBUG: Tim chu co bo thu rong
+    print("\n" + "=" * 62)
+    print("DEBUG: CHU CO BO THU RONG (pinyin/meaning trong)")
+    print("=" * 62)
+    
+    empty_rad_chars = []
+    for key in data.keys():
+        info = parse_key(key)
+        zh = info["zh"]
+        if len(zh) != 1:
+            continue
+        rad = get_true_radical(zh)
+        if rad and not rad.get("pinyin") and not rad.get("meaning"):
+            empty_rad_chars.append(zh)
+    
+    unique_chars = sorted(set(empty_rad_chars))
+    print("Tong chu unique: " + str(len(unique_chars)))
+    print()
+    print("Tat ca chu (de bo sung MANUAL_DECOMPOSITIONS):")
+    print(" ".join(unique_chars))
+    print("=" * 62)
     # ============================================================
     # DEBUG: Kiem tra vi_dict co chua cac chu quan trong khong
     # ============================================================
