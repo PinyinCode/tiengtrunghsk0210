@@ -226,6 +226,7 @@ def _parse_radical_raw(raw):
 
 
 def _parse_vi_du_from_mnemonic(mnemonic):
+    """Parse câu ví dụ từ mnemonic - hỗ trợ nhiều format."""
     if not mnemonic:
         return []
 
@@ -241,36 +242,62 @@ def _parse_vi_du_from_mnemonic(mnemonic):
     if not block:
         return []
 
+    # Tách nhiều câu ví dụ (ngăn bằng / hoặc ;)
+    parts = re.split(r'\s*[/;；]\s*', block)
+
     result = []
-
-    parts = re.split(r'\s*[/;]\s*', block)
-
     for part in parts:
         part = part.strip()
         if not part:
             continue
 
-        m2 = re.match(
-            r'^([\u4e00-\u9fff，。！？、；：""''（）]+)\s*'
-            r'(?:[\(\（]([^\)\）]+)[\)\）])?'
-            r'(?:\s*[-—–]\s*(.+))?$',
+        # 1. Lấy Hán tự đầu (kèm dấu câu Trung)
+        m_zh = re.match(
+            r'^([\u4e00-\u9fff，。！？、；：""''（）\u201c\u201d\u2018\u2019\uff01\uff1f\uff1b\uff1a\uff08\uff09]+)',
             part
         )
+        if not m_zh:
+            continue
+        zh = m_zh.group(1).strip()
+        rest = part[len(m_zh.group(1)):].strip()
 
-        if m2:
-            zh = m2.group(1).strip()
-            py = (m2.group(2) or "").strip()
-            vi = (m2.group(3) or "").strip()
+        py, vi = "", ""
 
-            if zh:
-                result.append({
-                    "zh": zh,
-                    "pinyin": py,
-                    "vi": vi
-                })
+        # 2. Thử parse ngoặc ()
+        m_paren = re.match(r'^[\(\（]([^\)\）]+)[\)\）]\s*(.*)$', rest)
+        if m_paren:
+            inside = m_paren.group(1).strip()
+            after = m_paren.group(2).strip()
+
+            # Trong ngoặc có thể chứa pinyin + vi (ngăn bằng , ; -)
+            m_split = re.match(r'^(.+?)\s*[,，;；\-—–=:]\s*(.+)$', inside)
+            if m_split:
+                py = re.sub(r'[\s,;:.]+$', '', m_split.group(1).strip())
+                vi = re.sub(r'[\s,;:.]+$', '', m_split.group(2).strip())
+            else:
+                py = re.sub(r'[\s,;:.]+$', '', inside)
+
+            # Nếu chưa có vi, thử lấy sau ngoặc
+            if not vi and after:
+                m_out = re.match(r'^[-—–,;:]\s*(.+)$', after)
+                if m_out:
+                    vi = re.sub(r'[\s,;:.]+$', '', m_out.group(1).strip())
+                elif not after.startswith('('):
+                    vi = re.sub(r'[\s,;:.]+$', '', after)
+        else:
+            # 3. Không có ngoặc → tách bằng dấu
+            m_out = re.match(r'^[-—–,;:]\s*(.+)$', rest)
+            if m_out:
+                vi = re.sub(r'[\s,;:.]+$', '', m_out.group(1).strip())
+            elif rest:
+                # Rest có thể là pinyin trần
+                if re.match(r'^[A-Za-zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜÜü\s.,;:\'\-]+$', rest):
+                    py = re.sub(r'[\s,;:.]+$', '', rest)
+
+        if zh:
+            result.append({"zh": zh, "pinyin": py, "vi": vi})
 
     return result
-
 
 def _detect_data_start_row(ws, fallback_row=3, col_zh=1):
     HEADER_KEYWORDS = (
