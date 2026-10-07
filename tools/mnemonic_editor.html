@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mnemonic Editor - Nhập mẹo nhớ HSK</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f0f4f8;
+    color: #0f172a;
+    line-height: 1.5;
+    padding: 1.5rem;
+    font-size: 15px;
+}
+.container { max-width: 1100px; margin: 0 auto; }
+
+.header {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: #fff;
+    padding: 1.5rem;
+    border-radius: 16px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 8px 24px rgba(124,58,237,.3);
+}
+.header h1 { font-size: 1.5rem; margin-bottom: .3rem; display: flex; align-items: center; gap: .5rem; }
+.header p { font-size: .85rem; opacity: .9; }
+
+.toolbar {
+    display: flex;
+    gap: .5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+.btn {
+    padding: .65rem 1.1rem;
+    border-radius: 10px;
+    border: 1.5px solid #e2e8f0;
+    background: #fff;
+    color: #0f172a;
+    font-size: .85rem;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    transition: .15s;
+}
+.btn:hover { background: #f8fafc; border-color: #4f46e5; color: #4f46e5; }
+.btn.primary { background: #4f46e5; color: #fff; border-color: #4f46e5; }
+.btn.primary:hover { background: #4338ca; border-color: #4338ca; color: #fff; }
+.btn.success { background: #16a34a; color: #fff; border-color: #16a34a; }
+.btn.success:hover { background: #15803d; border-color: #15803d; color: #fff; }
+.btn.danger { background: #dc2626; color: #fff; border-color: #dc2626; }
+.btn.danger:hover { background: #b91c1c; border-color: #b91c1c; color: #fff; }
+
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+@media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr; }
+}
+
+.panel {
+    background: #fff;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 16px rgba(15,23,42,.06);
+    border: 1px solid #e2e8f0;
+}
+.panel h2 {
+    font-size: 1.05rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    color: #0f172a;
+    padding-bottom: .6rem;
+    border-bottom: 2px solid #e2e8f0;
+}
+.panel h2 i { color: #4f46e5; }
+
+.form-group { margin-bottom: 1rem; }
+.form-group label {
+    display: block;
+    font-size: .78rem;
+    font-weight: 800;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    margin-bottom: .35rem;
+}
+.form-group label .hint {
+    font-size: .72rem;
+    font-weight: 500;
+    color: #94a3b8;
+    text-transform: none;
+    letter-spacing: 0;
+    margin-left: .3rem;
+}
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: .65rem .85rem;
+    border-radius: 10px;
+    border: 1.5px solid #e2e8f0;
+    background: #f8fafc;
+    color: #0f172a;
+    font-size: .88rem;
+    font-family: inherit;
+    outline: none;
+    transition: .15s;
+    line-height: 1.5;
+}
+.form-group textarea {
+    min-height: 100px;
+    resize: vertical;
+    font-family: 'PingFang SC', 'Microsoft YaHei', monospace;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    border-color: #4f46e5;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(79,70,229,.12);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .75rem;
+}
+
+.key-preview {
+    background: #0f172a;
+    color: #67e8f9;
+    padding: .65rem .85rem;
+    border-radius: 10px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: .85rem;
+    word-break: break-all;
+    margin-bottom: 1rem;
+    border-left: 4px solid #67e8f9;
+}
+.key-preview .label {
+    color: #94a3b8;
+    font-size: .72rem;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: .2rem;
+    font-family: inherit;
+}
+
+/* Card preview */
+.card-preview {
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    padding: 1rem;
+    box-shadow: 0 2px 8px rgba(15,23,42,.04);
+    font-size: .85rem;
+}
+.card-preview .cp-header {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin-bottom: .7rem;
+    padding-bottom: .6rem;
+    border-bottom: 1px dashed #e2e8f0;
+}
+.card-preview .cp-stt {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .72rem;
+    font-weight: 800;
+}
+.card-preview .cp-hsk {
+    background: linear-gradient(135deg, rgba(99,102,241,.15), rgba(139,92,246,.12));
+    color: #5b21b6;
+    padding: .18rem .55rem;
+    border-radius: 50px;
+    font-size: .68rem;
+    font-weight: 800;
+    border: 1px solid rgba(139,92,246,.3);
+}
+.card-preview .cp-vi {
+    color: #475569;
+    font-size: .82rem;
+    margin-bottom: .35rem;
+    font-weight: 500;
+}
+.card-preview .cp-zh {
+    font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #0f172a;
+    margin-bottom: .35rem;
+    letter-spacing: .03em;
+}
+.card-preview .cp-pinyin {
+    display: inline-block;
+    font-size: .75rem;
+    font-style: italic;
+    color: #1d4ed8;
+    background: linear-gradient(135deg, rgba(37,99,235,.08), rgba(37,99,235,.04));
+    padding: .2rem .6rem;
+    border-radius: 50px;
+    border: 1px solid rgba(37,99,235,.15);
+    font-weight: 500;
+}
+.card-preview .cp-radical {
+    margin-top: .6rem;
+    padding: .6rem .75rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+}
+.card-preview .cp-radical-label {
+    font-size: .65rem;
+    font-weight: 800;
+    color: #6d28d9;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    margin-bottom: .4rem;
+}
+.card-preview .cp-radical-body {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+}
+.card-preview .cp-radical-box {
+    width: 42px;
+    height: 42px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'PingFang SC', sans-serif;
+    font-size: 1.3rem;
+    background: #fff;
+    flex-shrink: 0;
+}
+.card-preview .cp-radical-info { font-size: .78rem; color: #475569; }
+.card-preview .cp-radical-name { font-weight: 700; color: #0f172a; margin-bottom: .15rem; }
+.card-preview .cp-radical-name .pinyin { color: #8b5cf6; font-style: italic; font-weight: 500; }
+
+.card-preview .cp-mnemonic {
+    margin-top: .6rem;
+    padding: .6rem .75rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+}
+.card-preview .cp-mnemonic-label {
+    font-size: .65rem;
+    font-weight: 800;
+    color: #b45309;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    margin-bottom: .4rem;
+}
+.card-preview .cp-mnemonic-body {
+    font-size: .8rem;
+    color: #475569;
+    line-height: 1.6;
+    white-space: pre-line;
+    word-break: break-word;
+}
+.card-preview .cp-mnemonic-body .char-zh {
+    font-family: 'PingFang SC', sans-serif;
+    font-weight: 700;
+    color: #0f172a;
+    padding: 0 .1rem;
+}
+.card-preview .cp-mnemonic-body .arrow {
+    color: #f59e0b;
+    font-weight: 800;
+    padding: 0 .2rem;
+}
+.card-preview .cp-empty {
+    color: #94a3b8;
+    font-style: italic;
+    font-size: .8rem;
+    text-align: center;
+    padding: 1rem;
+}
+
+/* JSON output */
+.json-output {
+    background: #0f172a;
+    color: #a5f3fc;
+    padding: 1rem;
+    border-radius: 10px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: .78rem;
+    overflow-x: auto;
+    max-height: 300px;
+    overflow-y: auto;
+    white-space: pre;
+    line-height: 1.6;
+    border: 1px solid #334155;
+}
+.json-output .key { color: #fcd34d; }
+.json-output .string { color: #86efac; }
+.json-output .punct { color: #94a3b8; }
+
+/* List đã lưu */
+.saved-list {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: .5rem;
+    background: #f8fafc;
+}
+.saved-item {
+    padding: .6rem .75rem;
+    background: #fff;
+    border-radius: 8px;
+    margin-bottom: .4rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: .8rem;
+    border: 1px solid #e2e8f0;
+}
+.saved-item .key {
+    font-family: monospace;
+    background: #f1f5f9;
+    padding: .15rem .5rem;
+    border-radius: 5px;
+    color: #dc2626;
+    font-weight: 700;
+    font-size: .75rem;
+}
+.saved-item .zh {
+    font-family: 'PingFang SC', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+}
+.saved-item .actions { margin-left: auto; display: flex; gap: .25rem; }
+.saved-item .actions button {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    cursor: pointer;
+    font-size: .72rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: .15s;
+}
+.saved-item .actions button:hover { background: #fee2e2; color: #dc2626; border-color: #dc2626; }
+.saved-item .actions button.edit:hover { background: #dbeafe; color: #1d4ed8; border-color: #1d4ed8; }
+
+.toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    padding: .8rem 1.3rem;
+    border-radius: 50px;
+    font-weight: 800;
+    font-size: .88rem;
+    color: #fff;
+    z-index: 9999;
+    opacity: 0;
+    transition: .3s cubic-bezier(.34,1.56,.64,1);
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.success { background: linear-gradient(135deg, #16a34a, #22c55e); box-shadow: 0 8px 24px rgba(22,163,74,.4); }
+.toast.error { background: linear-gradient(135deg, #dc2626, #b91c1c); box-shadow: 0 8px 24px rgba(220,38,38,.4); }
+
+.help-box {
+    background: #eff6ff;
+    border: 1.5px solid #bfdbfe;
+    border-radius: 10px;
+    padding: .8rem 1rem;
+    font-size: .78rem;
+    color: #1e40af;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+}
+.help-box code {
+    background: #dbeafe;
+    padding: .1rem .35rem;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: .85em;
+    color: #1e3a8a;
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+    <div class="header">
+        <h1>📚 Mnemonic Editor</h1>
+        <p>Nhập mẹo nhớ thủ công cho từng từ vựng HSK → Xuất file <code style="color:#fcd34d">ai_mnemonics.json</code></p>
+    </div>
+
+    <div class="toolbar">
+        <button class="btn primary" onclick="loadFromFile()">
+            <i>📂</i> Mở file ai_mnemonics.json hiện có
+        </button>
+        <input type="file" id="fileInput" accept=".json" style="display:none">
+        <button class="btn success" onclick="exportJson()">
+            <i>💾</i> Xuất file ai_mnemonics.json
+        </button>
+        <button class="btn" onclick="clearAll()">
+            <i>🗑️</i> Xóa tất cả
+        </button>
+        <button class="btn" onclick="showHelp()">
+            <i>❓</i> Hướng dẫn
+        </button>
+    </div>
+
+    <div class="grid">
+
+        <!-- PANEL TRÁI: FORM NHẬP -->
+        <div class="panel">
+            <h2><i>✏️</i> Nhập thông tin</h2>
+
+            <div class="help-box">
+                <b>💡 Cách dùng:</b><br>
+                1. Nhập <b>HSK</b>, <b>STT</b>, <b>Chữ Hán</b> → key tự tạo: <code>HSK1|4|爸爸</code><br>
+                2. Nhập đầy đủ: Nghĩa, Pinyin, Bộ thủ, Mẹo nhớ<br>
+                3. Bấm <b>"Lưu vào danh sách"</b><br>
+                4. Cuối cùng bấm <b>"Xuất file ai_mnemonics.json"</b>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>HSK <span class="hint">(1-9)</span></label>
+                    <select id="inpHSK">
+                        <option value="HSK1">HSK1</option>
+                        <option value="HSK2">HSK2</option>
+                        <option value="HSK3">HSK3</option>
+                        <option value="HSK4">HSK4</option>
+                        <option value="HSK5">HSK5</option>
+                        <option value="HSK6">HSK6</option>
+                        <option value="HSK7-9">HSK7-9</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>STT <span class="hint">(số trong file Excel)</span></label>
+                    <input type="text" id="inpSTT" placeholder="VD: 4">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Chữ Hán <span class="hint">(VD: 爸爸)</span></label>
+                <input type="text" id="inpZH" placeholder="爸爸" oninput="updateKeyPreview()" style="font-family:'PingFang SC',sans-serif;font-size:1.1rem;font-weight:600;">
+            </div>
+
+            <div class="form-group">
+                <label>Key tự động tạo</label>
+                <div class="key-preview" id="keyPreview">
+                    <span class="label">Key sẽ lưu</span>
+                    <span id="keyPreviewValue">HSK1|4|爸爸</span>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Nghĩa tiếng Việt</label>
+                    <input type="text" id="inpVI" placeholder="Bố; ba">
+                </div>
+                <div class="form-group">
+                    <label>Pinyin</label>
+                    <input type="text" id="inpPinyin" placeholder="bàba">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Bộ thủ <span class="hint">(format: 父|fù|4|Cha)</span></label>
+                <input type="text" id="inpRadical" placeholder="父|fù|4|Cha">
+            </div>
+
+            <div class="form-group">
+                <label>Mẹo nhớ <span class="hint">(nhập tự do, giữ nguyên format)</span></label>
+                <textarea id="inpMnemonic" placeholder="💡 Chi tiết từ: 父 (Cha) + 巴 (mong ước)...&#10;🔗 Âm thanh: ...&#10;📎 Ví dụ: ..."></textarea>
+            </div>
+
+            <button class="btn primary" onclick="saveEntry()" style="width:100%">
+                <i>💾</i> Lưu vào danh sách
+            </button>
+        </div>
+
+        <!-- PANEL PHẢI: PREVIEW + LIST -->
+        <div class="panel">
+            <h2><i>👁️</i> Preview card</h2>
+
+            <div class="card-preview" id="cardPreview">
+                <div class="cp-empty">Nhập thông tin để xem trước...</div>
+            </div>
+
+            <h2 style="margin-top:1.5rem"><i>📋</i> Đã lưu (<span id="savedCount">0</span>)</h2>
+            <div class="saved-list" id="savedList">
+                <div class="cp-empty">Chưa có entry nào</div>
+            </div>
+
+            <h2 style="margin-top:1.5rem"><i>📄</i> JSON output</h2>
+            <div class="json-output" id="jsonOutput">{}</div>
+        </div>
+
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var savedEntries = {};   // { key: { value, meta } }
+
+/* ═══════════════════════════════════════════════════════════ */
+/* CẬP NHẬT KEY PREVIEW                                        */
+/* ═══════════════════════════════════════════════════════════ */
+function updateKeyPreview() {
+    var hsk = document.getElementById('inpHSK').value;
+    var stt = document.getElementById('inpSTT').value.trim();
+    var zh = document.getElementById('inpZH').value.trim();
+    var key = hsk + '|' + (stt || '?') + '|' + (zh || '?');
+    document.getElementById('keyPreviewValue').textContent = key;
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* CẬP NHẬT PREVIEW CARD                                       */
+/* ═══════════════════════════════════════════════════════════ */
+function updateCardPreview() {
+    var hsk = document.getElementById('inpHSK').value;
+    var stt = document.getElementById('inpSTT').value.trim() || '-';
+    var zh = document.getElementById('inpZH').value.trim();
+    var vi = document.getElementById('inpVI').value.trim();
+    var pinyin = document.getElementById('inpPinyin').value.trim();
+    var radicalRaw = document.getElementById('inpRadical').value.trim();
+    var mnemonic = document.getElementById('inpMnemonic').value;
+
+    if (!zh && !vi && !pinyin && !radicalRaw && !mnemonic) {
+        document.getElementById('cardPreview').innerHTML =
+            '<div class="cp-empty">Nhập thông tin để xem trước...</div>';
+        return;
+    }
+
+    var html = '';
+    html += '<div class="cp-header">';
+    html += '<span class="cp-stt">' + escapeHtml(stt) + '</span>';
+    html += '<span class="cp-hsk">' + escapeHtml(hsk) + '</span>';
+    html += '</div>';
+
+    if (vi) html += '<div class="cp-vi">' + escapeHtml(vi) + '</div>';
+    if (zh) html += '<div class="cp-zh">' + escapeHtml(zh) + '</div>';
+    if (pinyin) html += '<div class="cp-pinyin">' + escapeHtml(pinyin) + '</div>';
+
+    // Bộ thủ
+    if (radicalRaw) {
+        var parts = radicalRaw.split('|');
+        var radZH = parts[0] || '';
+        var radPY = parts[1] || '';
+        var radStrokes = parts[2] || '';
+        var radMean = parts[3] || '';
+
+        html += '<div class="cp-radical">';
+        html += '<div class="cp-radical-label">BỘ THỦ</div>';
+        html += '<div class="cp-radical-body">';
+        if (radZH) html += '<div class="cp-radical-box">' + escapeHtml(radZH) + '</div>';
+        html += '<div class="cp-radical-info">';
+        var nameLine = radZH;
+        if (radPY) nameLine += ' <span class="pinyin">(' + escapeHtml(radPY) + ')</span>';
+        if (radStrokes) nameLine += ' - ' + escapeHtml(radStrokes) + ' nét';
+        html += '<div class="cp-radical-name">' + nameLine + '</div>';
+        if (radMean) html += '<div>' + escapeHtml(radMean) + '</div>';
+        html += '</div></div></div>';
+    }
+
+    // Mẹo nhớ
+    if (mnemonic) {
+        html += '<div class="cp-mnemonic">';
+        html += '<div class="cp-mnemonic-label">MẸO NHỚ</div>';
+        html += '<div class="cp-mnemonic-body">' + escapeHtml(mnemonic) + '</div>';
+        html += '</div>';
+    }
+
+    document.getElementById('cardPreview').innerHTML = html;
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* LƯU ENTRY                                                   */
+/* ═══════════════════════════════════════════════════════════ */
+function saveEntry() {
+    var hsk = document.getElementById('inpHSK').value;
+    var stt = document.getElementById('inpSTT').value.trim();
+    var zh = document.getElementById('inpZH').value.trim();
+    var mnemonic = document.getElementById('inpMnemonic').value.trim();
+
+    if (!stt) { showToast('Chưa nhập STT!', 'error'); return; }
+    if (!zh)  { showToast('Chưa nhập chữ Hán!', 'error'); return; }
+    if (!mnemonic) { showToast('Chưa nhập mẹo nhớ!', 'error'); return; }
+
+    var key = hsk + '|' + stt + '|' + zh;
+
+    if (savedEntries[key]) {
+        if (!confirm('Key "' + key + '" đã tồn tại. Ghi đè?')) return;
+    }
+
+    savedEntries[key] = mnemonic;
+    renderSavedList();
+    renderJsonOutput();
+    showToast('✅ Đã lưu: ' + key, 'success');
+
+    // Reset form nhưng giữ HSK
+    document.getElementById('inpSTT').value = '';
+    document.getElementById('inpZH').value = '';
+    document.getElementById('inpVI').value = '';
+    document.getElementById('inpPinyin').value = '';
+    document.getElementById('inpRadical').value = '';
+    document.getElementById('inpMnemonic').value = '';
+    updateKeyPreview();
+    updateCardPreview();
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* XÓA ENTRY                                                   */
+/* ═══════════════════════════════════════════════════════════ */
+function deleteEntry(key) {
+    if (!confirm('Xóa entry "' + key + '"?')) return;
+    delete savedEntries[key];
+    renderSavedList();
+    renderJsonOutput();
+    showToast('🗑️ Đã xóa', 'success');
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* EDIT ENTRY                                                  */
+/* ═══════════════════════════════════════════════════════════ */
+function editEntry(key) {
+    var parts = key.split('|');
+    document.getElementById('inpHSK').value = parts[0];
+    document.getElementById('inpSTT').value = parts[1];
+    document.getElementById('inpZH').value = parts[2];
+    document.getElementById('inpMnemonic').value = savedEntries[key];
+    updateKeyPreview();
+    updateCardPreview();
+    document.getElementById('inpSTT').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    showToast('✏️ Đang sửa: ' + key, 'success');
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* RENDER SAVED LIST                                           */
+/* ═══════════════════════════════════════════════════════════ */
+function renderSavedList() {
+    var keys = Object.keys(savedEntries).sort();
+    document.getElementById('savedCount').textContent = keys.length;
+
+    var listEl = document.getElementById('savedList');
+    if (keys.length === 0) {
+        listEl.innerHTML = '<div class="cp-empty">Chưa có entry nào</div>';
+        return;
+    }
+
+    var html = '';
+    keys.forEach(function(key) {
+        var parts = key.split('|');
+        var zh = parts[2] || '';
+        var escapedKey = key.replace(/'/g, "\\'");
+
+        html += '<div class="saved-item">';
+        html += '<span class="key">' + escapeHtml(key) + '</span>';
+        html += '<span class="zh">' + escapeHtml(zh) + '</span>';
+        html += '<div class="actions">';
+        html += '<button class="edit" onclick="editEntry(\'' + escapedKey + '\')" title="Sửa">✏️</button>';
+        html += '<button onclick="deleteEntry(\'' + escapedKey + '\')" title="Xóa">🗑️</button>';
+        html += '</div></div>';
+    });
+    listEl.innerHTML = html;
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* RENDER JSON OUTPUT                                          */
+/* ═══════════════════════════════════════════════════════════ */
+function renderJsonOutput() {
+    var output = document.getElementById('jsonOutput');
+    var json = JSON.stringify(savedEntries, null, 2);
+    output.textContent = json || '{}';
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* EXPORT JSON                                                 */
+/* ═══════════════════════════════════════════════════════════ */
+function exportJson() {
+    var keys = Object.keys(savedEntries);
+    if (keys.length === 0) {
+        showToast('Chưa có entry nào để xuất!', 'error');
+        return;
+    }
+
+    var json = JSON.stringify(savedEntries, null, 2);
+    var blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'ai_mnemonics.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('💾 Đã xuất ' + keys.length + ' entries!', 'success');
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* LOAD FROM FILE                                              */
+/* ═══════════════════════════════════════════════════════════ */
+function loadFromFile() {
+    document.getElementById('fileInput').click();
+}
+
+document.getElementById('fileInput').addEventListener('change', function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+
+    var reader = new FileReader();
+    reader.onload = function(evt) {
+        try {
+            var data = JSON.parse(evt.target.result);
+            if (typeof data !== 'object' || Array.isArray(data)) {
+                throw new Error('File không đúng format');
+            }
+            savedEntries = data;
+            renderSavedList();
+            renderJsonOutput();
+            showToast('📂 Đã load ' + Object.keys(data).length + ' entries!', 'success');
+        } catch(err) {
+            showToast('❌ Lỗi đọc file: ' + err.message, 'error');
+        }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+});
+
+/* ═══════════════════════════════════════════════════════════ */
+/* CLEAR ALL                                                   */
+/* ═══════════════════════════════════════════════════════════ */
+function clearAll() {
+    if (Object.keys(savedEntries).length === 0) return;
+    if (!confirm('Xóa TẤT CẢ ' + Object.keys(savedEntries).length + ' entries?')) return;
+    savedEntries = {};
+    renderSavedList();
+    renderJsonOutput();
+    showToast('🗑️ Đã xóa tất cả', 'success');
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* HELP                                                        */
+/* ═══════════════════════════════════════════════════════════ */
+function showHelp() {
+    alert(
+        '📚 HƯỚNG DẪN SỬ DỤNG\n\n' +
+        '1. Chọn HSK (VD: HSK1)\n' +
+        '2. Nhập STT (VD: 4)\n' +
+        '3. Nhập chữ Hán (VD: 爸爸)\n' +
+        '4. Nhập đầy đủ: Nghĩa, Pinyin, Bộ thủ, Mẹo nhớ\n' +
+        '5. Bấm "Lưu vào danh sách"\n' +
+        '6. Lặp lại cho các từ khác\n' +
+        '7. Bấm "Xuất file ai_mnemonics.json"\n\n' +
+        '📁 Đặt file vào: data/ai_mnemonics.json\n' +
+        '🔄 Chạy: python fix.py\n' +
+        '🌐 Hard refresh web (Ctrl+Shift+R)'
+    );
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* TOAST                                                       */
+/* ═══════════════════════════════════════════════════════════ */
+function showToast(msg, type) {
+    var toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.className = 'toast show ' + (type || 'success');
+    setTimeout(function() {
+        toast.classList.remove('show');
+    }, 2500);
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* HELPERS                                                     */
+/* ═══════════════════════════════════════════════════════════ */
+function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* EVENT BINDINGS                                              */
+/* ═══════════════════════════════════════════════════════════ */
+document.getElementById('inpHSK').addEventListener('change', updateKeyPreview);
+document.getElementById('inpSTT').addEventListener('input', updateKeyPreview);
+document.getElementById('inpZH').addEventListener('input', function() {
+    updateKeyPreview();
+    updateCardPreview();
+});
+document.getElementById('inpVI').addEventListener('input', updateCardPreview);
+document.getElementById('inpPinyin').addEventListener('input', updateCardPreview);
+document.getElementById('inpRadical').addEventListener('input', updateCardPreview);
+document.getElementById('inpMnemonic').addEventListener('input', updateCardPreview);
+
+updateKeyPreview();
+updateCardPreview();
+renderJsonOutput();
+
+</script>
+</body>
+</html>
