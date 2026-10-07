@@ -1,18 +1,6 @@
 # -*- coding: utf-8 -*-
 r"""
 SCANNER TOÀN BỘ ai_mnemonics.json
-
-Chức năng:
-  1. Quét tất cả entries
-  2. Detect lỗi format câu ví dụ
-  3. Chuẩn hóa về format: 📎 Ví dụ: <zh> (<py>) - <vi>
-  4. Report chi tiết từng entry bị lỗi
-  5. Backup + ghi file
-
-Cách dùng:
-    python normalize_mnemonics.py --scan          # Chỉ quét, không sửa
-    python normalize_mnemonics.py --dry-run       # Xem trước
-    python normalize_mnemonics.py --fix           # Sửa + ghi file
 """
 
 import os
@@ -22,23 +10,28 @@ import sys
 import shutil
 import argparse
 from datetime import datetime
-from collections import Counter, defaultdict
+from collections import Counter
 
 
 # =====================================================================
 # REGEX PATTERNS
 # =====================================================================
 
+# Hán tự + dấu câu Trung (dùng \uXXXX tường minh)
 RE_HANZI_CHARS = (
-    r'\u4e00-\u9fff'
-    r'\u3000-\u303f'
-    r'\uff00-\uffef'
-    r'，。！？、；：""''（）'
-    r'\u201c\u201d\u2018\u2019'
+    r'\u4e00-\u9fff'                    # Hán tự cơ bản
+    r'\u3000-\u303f'                    # CJK punctuation
+    r'\uff00-\uffef'                    # Fullwidth forms
+    r'\u201c-\u201d'                    # " "
+    r'\u2018-\u2019'                    # ' '
+    r'\u3002\uff01\uff1f\u3001\uff1b\uff1a'  # 。！？、；：
+    r'\uff08\uff09'                     # （）
+    r'\u300a\u300b'                     # 《》
+    r'\u300c\u300d'                     # 「」
 )
 
 RE_VI_DU_BLOCK = re.compile(
-    r'(📎\s*Ví dụ:?\s*)(.*?)(?=\n\s*🔗|\n\s*💡|\n\s*📌|\n\s*🎬|\Z)',
+    r'(\U0001f4ce\s*Ví dụ:?\s*)(.*?)(?=\n\s*\U0001f517|\n\s*\U0001f4a1|\n\s*\U0001f4cc|\n\s*\U0001f3ac|\Z)',
     re.DOTALL
 )
 
@@ -51,15 +44,15 @@ RE_ZH_FALLBACK = re.compile(r'^([\u4e00-\u9fff]+)')
 
 RE_PAREN = re.compile(r'^[\(\（]([^\)\）]*)[\)\）]\s*(.*)$', re.DOTALL)
 
-RE_INSIDE_SPLIT = re.compile(r'^(.+?)\s*[,，;；\-—–=:]\s*(.+)$', re.DOTALL)
+RE_INSIDE_SPLIT = re.compile(r'^(.+?)\s*[,\uFF0C;\uFF1B\-\u2014\u2013=:]\s*(.+)$', re.DOTALL)
 
 RE_PINYIN_PLAIN = re.compile(
-    r'^([A-Za-zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜÜ\-üĀÁǍÀĒÉĚÈ—ĪÍǏÌŌÓǑÒŪÚ–ǓÙǕǗǙǛ'
-,    r'\s.,;:\'\-;]+?)\s*'
-    r'(?=[\-—–,;:=]|[\u4e00-\u9fff]|$)'
+    r'^([A-Za-z\u0101\u00e1\u01ce\u00e0\u0113\u00e9\u011b\u00e8'
+    r'\u012b\u00ed\u01d0\u00ec\u014d\u00f3\u01d2\u00f2\u016b\u00fa\u01d4\u00f9'
+    r'\u00fc\u01d6\u01d8\u01da\u01dc\u00dc\u00fc'
+    r'\s.,;:\'\-]+?)\s*'
+    r'(?=[\-\u2014\u2013,;:=]|[\u4e00-\u9fff]|$)'
 )
-
-RE_MULTI_EXAMPLE = re.compile(r'\s*[/;；]\s*')
 
 
 # =====================================================================
@@ -104,7 +97,8 @@ def _parse_one_example(part):
     if not part:
         return None
 
-    part = re.sub(r"^['\"'\"'']+|['\"'\"'']+$", '', part).strip()
+    # Bỏ quote bao quanh
+    part = re.sub(r"^['\"\u2018\u2019\u201c\u201d]+|['\"\u2018\u2019\u201c\u201d]+$", '', part).strip()
 
     m_zh = RE_ZH_START.match(part)
     if not m_zh:
@@ -115,12 +109,12 @@ def _parse_one_example(part):
     zh = m_zh.group(1).strip()
 
     # Fix dấu câu bị tách
-    zh = re.sub(r'\s*[-—–,;:]\s*([，。！？、；：""''（）])', r'\1', zh)
-    zh = re.sub(r'\s+([，。！？、；：""''（）])', r'\1', zh)
-    zh = re.sub(r'[\s\-—–,;:]+$', '', zh)
+    zh = re.sub(r'\s*[-\u2014\u2013,;:]\s*([\uFF0C\u3002\uFF01\uFF1F\u3001\uFF1B\uFF1A\u201c\u201d\u2018\u2019\uFF08\uFF09])', r'\1', zh)
+    zh = re.sub(r'\s+([\uFF0C\u3002\uFF01\uFF1F\u3001\uFF1B\uFF1A\u201c\u201d\u2018\u2019\uFF08\uFF09])', r'\1', zh)
+    zh = re =.sub(r'[\s\-\u2014\u2013,;:]+$', '', zh)
 
     rest = part[len(m_zh.group(1)):].strip()
-    rest = re.sub(r"^['\"'\"'']+|['\"'\"'']+$", '', rest).strip()
+    rest = re.sub(r"^['\"\u2018\u2019\u201c\u201d]+|['\"\u2018\u2019\u201c\u201d]+$", '', rest).strip()
 
     py, vi = "", ""
 
@@ -138,7 +132,7 @@ def _parse_one_example(part):
 
         if not vi and after:
             after_clean = after.strip()
-            after_clean = re.sub(r'^[\s\-—–,;:=]+', '', after_clean).strip()
+            after_clean = re.sub(r'^[\s\-\u2014\u2013,;:=]+', '', after_clean).strip()
             if after_clean:
                 first_line = after_clean.split('\n')[0].strip()
                 if first_line:
@@ -148,11 +142,11 @@ def _parse_one_example(part):
         if m_py:
             py = _clean_punct(m_py.group(1))
             rest2 = rest[len(m_py.group(1)):].strip()
-            rest2 = re.sub(r'^[\s:=]+', '', rest2).strip()
+            rest2 = re.sub(r'^[\s\-\u2014\u2013,;:=]+', '', rest2).strip()
             if rest2:
                 vi = _clean_punct(rest2)
         else:
-            rest_clean = re.sub(r'^[\s\-—–,;:=]+', '', rest).strip()
+            rest_clean = re.sub(r'^[\s\-\u2014\u2013,;:=]+', '', rest).strip()
             if rest_clean:
                 vi = _clean_punct(rest_clean)
 
@@ -202,13 +196,10 @@ def normalize_mnemonic(mnemonic):
 
 
 # =====================================================================
-# SCANNER — Detect lỗi
+# SCANNER
 # =====================================================================
 
 def _analyze_entry(key, value):
-    """
-    Phân tích 1 entry, trả về dict lỗi (nếu có).
-    """
     issues = []
     info = {
         "key": key,
@@ -224,15 +215,13 @@ def _analyze_entry(key, value):
         info["issues"] = issues
         return info
 
-    # Check có 📎 Ví dụ: không
-    if "📎" not in value and "Ví dụ" not in value:
+    if "\U0001f4ce" not in value and "Ví dụ" not in value:
         info["format"] = "no_example"
         info["issues"] = issues
         return info
 
-    info["has_vi_du"] = True
+    info["has_vi_du"] True
 
-    # Lấy block ví dụ hiện tại
     m = RE_VI_DU_BLOCK.search(value)
     if not m:
         issues.append("cant_extract_block")
@@ -241,35 +230,29 @@ def _analyze_entry(key, value):
         return info
 
     block = m.group(2).strip()
-    info["old_vidu"] = "📎 Ví dụ: " + block[:120]
+    info["old_vidu"] = "\U0001f4ce Ví dụ: " + block[:120]
 
-    # Check có dấu em dash không
-    if '—' in block or '–' in block:
+    if '\u2014' in block or '\u2013' in block:
         issues.append("has_em_dash")
 
-    # Check có dấu câu tách biệt không (吧 - ! hoặc 吧—！)
-    if re.search(r'[\s\-—–]+\s*[！？，。、；：""''（）]', block):
+    if re.search(r'[\s\-\u2014\u2013]+\s*[\uFF01\uFF1F\uFF0C\u3002\u3001\uFF1B\uFF1A]', block):
         issues.append("punct_separated")
 
-    # Check có space trước dấu câu Trung
-    if re.search(r'\s+[，。！？、；：""''（）]', block):
+    if re.search(r'\s+[\uFF0C\u3002\uFF01\uFF1F\u3001\uFF1B\uFF1A\u201c\u201d\u2018\u2019\uFF08\uFF09]', block):
         issues.append("space_before_punct")
 
-    # Check ngoặc trước câu Hán
-    if re.match(r'^[\s]*[\(\（]', block):
+    if re.match(r'^[\s]*[\(\uFF08]', block):
         issues.append("paren_before_zh")
 
-    # Thử normalize
     new_value = normalize_mnemonic(value)
     new_m = RE_VI_DU_BLOCK.search(new_value)
     if new_m:
         new_block = new_m.group(2).strip()
-        info["new_vidu"] = "📎 Ví dụ: " + new_block[:120]
+        info["new_vidu"] = "\U0001f4ce Ví dụ: " + new_block[:120]
 
     if new_value != value:
         issues.append("format_changed")
 
-    # Đánh giá format
     if "has_em_dash" in issues:
         info["format"] = "em_dash"
     elif "punct_separated" in issues:
@@ -302,19 +285,12 @@ def find_file():
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Scan và chuẩn hóa ai_mnemonics.json"
-    )
-    parser.add_argument("--scan", action="store_true",
-                        help="Chỉ quét, không sửa")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Xem trước thay đổi")
-    parser.add_argument("--fix", action="store_true",
-                        help="Sửa + ghi file")
-    parser.add_argument("--show-ok", action="store_true",
-                        help="Hiển thị cả entries OK")
-    parser.add_argument("--limit", type=int, default=30,
-                        help="Số mẫu hiển thị (mặc định 30)")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--scan", action="store_true")
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--fix", action="store_true")
+    parser.add_argument("--show-ok", action="store_true")
+    parser.add_argument("--limit", type=int, default=30)
     args = parser.parse_args()
 
     if not (args.scan or args.dry_run or args.fix):
@@ -331,13 +307,11 @@ def main():
     print("SCANNER: " + path)
     print("=" * 70)
 
-    # Đọc
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
     print("[OK] Tổng entries: " + str(len(data)))
 
-    # Quét
     print("\n[SCAN] Đang quét toàn bộ...")
     results = []
     format_counter = Counter()
@@ -350,7 +324,6 @@ def main():
         for iss in info["issues"]:
             issue_counter[iss] += 1
 
-    # Báo cáo format
     print("\n" + "=" * 70)
     print("PHÂN LOẠI FORMAT:")
     print("=" * 70)
@@ -365,8 +338,7 @@ def main():
         pct = count * 100.0 / len(data)
         print("  {:<25} {:>6} ({:.1f}%)".format(iss, count, pct))
 
-    # Đếm entries cần sửa
-    need_fix = [r for r in results if r["format"] != "ok" and r["format"] != "no_example"]
+    need_fix = [r for r in results if r["format"] not in ("ok", "no_example")]
     ok_count = format_counter.get("ok", 0)
     no_example = format_counter.get("no_example", 0)
 
@@ -378,21 +350,17 @@ def main():
     print("  Cần sửa:               " + str(len(need_fix)))
     print("=" * 70)
 
-    # Hiển thị mẫu
-    if args.show_ok:
-        display = results
-    else:
-        display = need_fix
+    display = results if args.show_ok else need_fix
 
     if display:
         print("\n" + "=" * 70)
-        print("MẪU CẦN SỬA (tối đa " + str(args.limit) + "):")
+        print("MẪU (tối đa " + str(args.limit) + "):")
         print("=" * 70)
 
         for info in display[:args.limit]:
             if info["format"] == "ok" and not args.show_ok:
                 continue
-            print("\n🔑 " + info["key"])
+            print("\n\U0001f511 " + info["key"])
             print("   Format: " + info["format"])
             print("   Issues: " + ", ".join(info["issues"]))
             if info["old_vidu"]:
@@ -400,7 +368,6 @@ def main():
             if info["new_vidu"]:
                 print("   NEW:    " + info["new_vidu"][:120])
 
-    # Dry-run hoặc Fix
     if args.scan:
         print("\n[SCAN ONLY] Không sửa gì.")
         return
@@ -414,13 +381,11 @@ def main():
         return
 
     if args.fix:
-        # Backup
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         backup = path + ".bak_" + ts
         shutil.copy2(path, backup)
         print("\n[OK] Backup: " + backup)
 
-        # Sửa
         fixed = 0
         for key, value in data.items():
             new_value = normalize_mnemonic(value)
@@ -428,7 +393,6 @@ def main():
                 data[key] = new_value
                 fixed += 1
 
-        # Ghi
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
