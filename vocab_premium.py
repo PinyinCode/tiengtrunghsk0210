@@ -294,8 +294,10 @@ def _parse_one_example(part):
     if not part:
         return None
 
-    # Bước 1: Lấy Hán tự đầu (kèm dấu câu Trung + space xung quanh)
-    # Match Hán tự + dấu câu Trung, dừng ở ký tự Latin hoặc ( 
+    # Bỏ dấu ngoặc kép/đơn bao quanh câu Hán
+    part = re.sub(r"^['\"'\"']+|['\"'\"']+$", '', part).strip()
+
+    # Bước 1: Lấy Hán tự đầu (kèm dấu câu Trung + space)
     m_zh = re.match(
         r'^([\u4e00-\u9fff，。！？、；：""''（）\u201c\u201d\u2018\u2019'
         r'\uff01\uff1f\uff1b\uff1a\uff08\uff09\s]+?)\s*'
@@ -303,16 +305,15 @@ def _parse_one_example(part):
         part
     )
     if not m_zh:
-        # Fallback: match Hán tự thuần
         m_zh = re.match(r'^([\u4e00-\u9fff]+)', part)
         if not m_zh:
             return None
 
     zh = m_zh.group(1).strip()
-    # Xóa space thừa trước dấu câu Trung: " 。" → "。"
     zh = re.sub(r'\s+([，。！？、；：""''（）\uff01\uff1f\uff1b\uff1a])', r'\1', zh)
 
     rest = part[len(m_zh.group(1)):].strip()
+    rest = re.sub(r"^['\"'\"']+|['\"'\"']+$", '', rest).strip()
 
     py, vi = "", ""
 
@@ -332,14 +333,14 @@ def _parse_one_example(part):
 
         # Sau ngoặc: vi (có thể có dấu - hoặc xuống dòng)
         if not vi and after:
-            after = after.strip()
-            # Bỏ dấu phân cách đầu
-            after = re.sub(r'^[-—–,;:=]\s*', '', after).strip()
-            if after:
-                vi = _clean_punct(after)
+            after_clean = after.strip()
+            after_clean = re.sub(r'^[\s\-—–,;:=]+', '', after_clean).strip()
+            if after_clean:
+                first_line = after_clean.split('\n')[0].strip()
+                if first_line:
+                    vi = _clean_punct(first_line)
     else:
         # Bước 3: Không có ngoặc → tách pinyin trần và vi
-        # Thử tách phần Latin (pinyin) đầu tiên
         m_py = re.match(
             r'^([A-Za-zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜÜüĀÁǍÀĒÉĚÈĪÍǏÌŌÓǑÒŪÚǓÙǕǗǙǛ\s.,;:\'\-]+?)\s*'
             r'(?=[\-—–,;:=]|[\u4e00-\u9fff]|$)',
@@ -352,13 +353,11 @@ def _parse_one_example(part):
             if rest2:
                 vi = _clean_punct(rest2)
         else:
-            # Toàn bộ rest là vi
             rest = re.sub(r'^[-—–,;:=]\s*', '', rest).strip()
             if rest:
                 vi = _clean_punct(rest)
 
     return {"zh": zh, "pinyin": py, "vi": vi}
-
 
 def _clean_punct(s):
     """Xóa dấu câu cuối + space thừa."""
@@ -1436,7 +1435,49 @@ body[data-vocab-mode="1"] .card-mnemonic-body .card-example-vi {
     50%  { opacity: .9; box-shadow: 0 0 0 12px rgba(220, 38, 38, 0); }
     100% { opacity: 0; box-shadow: 0 0 0 20px rgba(220, 38, 38, 0); }
 }
-
+.card-mnemonic-body .card-char-speakable {
+    font-family: var(--font-zh);
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    border-bottom: 1.5px dotted rgba(139, 92, 246, .6);
+    padding: 0 .1rem;
+    transition: all .18s ease;
+    display: inline;
+}
+.card-mnemonic-body .card-char-speakable:hover {
+    color: #7c3aed;
+    border-bottom-color: #7c3aed;
+    background: rgba(139, 92, 246, .12);
+    border-radius: 4px;
+}
+.card-mnemonic-body .card-char-speakable:active {
+    transform: scale(.96);
+}
+.card-mnemonic-body .card-char-speakable.speaking {
+    color: #f59e0b;
+    border-bottom-color: #f59e0b;
+    animation: cardCharSpeak 1s ease-in-out infinite;
+}
+@keyframes cardCharSpeak {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: .55; }
+}
+[data-theme="dark"] .card-mnemonic-body .card-char-speakable {
+    color: #e0f2fe;
+    border-bottom-color: rgba(167, 139, 250, .6);
+}
+[data-theme="dark"] .card-mnemonic-body .card-char-speakable:hover {
+    color: #c4b5fd;
+    border-bottom-color: #c4b5fd;
+    background: rgba(139, 92, 246, .2);
+}
+[data-theme="dark"] .card-mnemonic-body .card-char-speakable.speaking {
+    color: #fbbf24;
+    border-bottom-color: #fbbf24;
+}
 [data-theme="dark"] .card-mnemonic-body .similar-hint-block {
     background: linear-gradient(135deg,
         rgba(245, 158, 11, .18) 0%,
@@ -1989,9 +2030,10 @@ window.__SIMILAR_CHARS__ = __SIMILAR_JSON__;
         speechSynthesis.cancel();
         if (btn) {
             document.querySelectorAll('.similar-char-btn-audio.speaking').forEach(function(b) {
+                b.classList.remove            document.querySelectorAll('.card-example-zh.speaking').forEach(function(b) {
                 b.classList.remove('speaking');
             });
-            document.querySelectorAll('.card-example-zh.speaking').forEach(function(b) {
+            document.querySelectorAll('.card-char-speakable.speaking').forEach(function(b) {
                 b.classList.remove('speaking');
             });
             btn.classList.add('speaking');
@@ -2007,7 +2049,6 @@ window.__SIMILAR_CHARS__ = __SIMILAR_JSON__;
         };
         setTimeout(function() { speechSynthesis.speak(u); }, 30);
     };
-
     window.vocabJumpToChar = function(char, btn, evt) {
         if (evt) { evt.stopPropagation(); evt.preventDefault(); }
         if (!char) return;
@@ -2100,63 +2141,63 @@ window.__SIMILAR_CHARS__ = __SIMILAR_JSON__;
     }
 
     function buildMnemonicBlock(text, currentChar, viDuList) {
-    currentChar = currentChar || '';
-    if (!text || !text.trim()) return '';
+        currentChar = currentChar || '';
+        if (!text || !text.trim()) return '';
 
-    // BƯỚC 1: Tìm các cụm Hán tự liền nhau (>= 2 chữ) trong RAW text
-    // Map: zh → { zh, pinyin, vi }
-    var viDuMap = {};
-    if (viDuList && viDuList.length > 0) {
-        viDuList.forEach(function(ex) {
-            if (ex && ex.zh) {
-                viDuMap[ex.zh] = ex;
-            }
-        });
-    }
+        var safe = _esc(text);
 
-    // BƯỚC 2: Escape text
-    var safe = _esc(text);
-
-    // BƯỚC 3: Wrap TẤT CẢ cụm Hán tự (>= 2 chữ) thành span bấm được
-    // Nhưng nếu cụm đó có trong viDuMap (câu ví dụ chuẩn), dùng class khác
-    safe = safe.replace(/([\u4e00-\u9fff]{2,})/g, function(match) {
-        var mJs = match
-            .replace(/\\/g, '\\\\')
-            .replace(/'/g, "\\'")
-            .replace(/"/g, '\\"');
-
-        // Nếu là câu ví dụ được parse (có trong viDuMap)
-        if (viDuMap[match]) {
-            return '<span class="card-example-zh" '
-                 + 'onclick="vocabSpeakChar(\'' + mJs + '\', this, event)" '
-                 + 'title="Bấm để nghe câu ví dụ">'
-                 + match
-                 + '</span>';
+        // Helper: normalize Hán tự (bỏ space quanh dấu câu Trung)
+        function _normZh(s) {
+            if (!s) return '';
+            return s.replace(/\s+([，。！？、；：""''（）])/g, '$1')
+                    .replace(/([，。！？、；：""''（）])\s+/g, '$1')
+                    .trim();
         }
 
-        // Còn lại (chữ Hán trong chiết tự, liên quan, câu chuyện...) 
-        // → cũng bấm được
-        return '<span class="card-char-speakable" '
-             + 'onclick="vocabSpeakChar(\'' + mJs + '\', this, event)" '
-             + 'title="Bấm để nghe">'
-             + match
-             + '</span>';
-    });
+        // Build map từ viDuList (normalized key)
+        var viDuNormMap = {};
+        if (viDuList && viDuList.length > 0) {
+            viDuList.forEach(function(ex) {
+                if (ex && ex.zh) {
+                    viDuNormMap[_normZh(ex.zh)] = ex;
+                }
+            });
+        }
 
-    // BƯỚC 4: Wrap TỪNG chữ Hán đơn (nếu chưa nằm trong span nào)
-    // — bước này optional, có thể bỏ nếu muốn tránh rối
-    // safe = safe.replace(/(?<![>;])([\u4e00-\u9fff])(?![^<]*<\/span>)/g, ...);
+        // Wrap MỌI cụm Hán tự (>= 2 chữ, kể cả dấu câu Trung) thành span bấm được
+        safe = safe.replace(/([\u4e00-\u9fff，。！？、；：""''（）]{2,})/g, function(match) {
+            var matchNorm = _normZh(match);
+            var mJs = match
+                .replace(/\\/g, '\\\\')
+                .replace(/'/g, "\\'")
+                .replace(/"/g, '\\"');
 
-    // BƯỚC 5: Transform khác
-    safe = safe.replace(/\s=\s/g, ' <span class="arrow">=</span> ');
-    safe = safe.replace(/→/g, '<span class="arrow">→</span>');
-    safe = safe.replace(/\(([^)]+)\)/g, '(<span class="hint">$1</span>)');
+            // Nếu khớp với câu ví dụ đã parse → dùng class đẹp hơn
+            if (viDuNormMap[matchNorm]) {
+                return '<span class="card-example-zh" '
+                     + 'onclick="vocabSpeakChar(\'' + mJs + '\', this, event)" '
+                     + 'title="Bấm để nghe câu ví dụ">'
+                     + match
+                     + '</span>';
+            }
 
-    return '<div class="card-mnemonic">'
-        + '<div class="card-mnemonic-label">MẸO NHỚ</div>'
-        + '<div class="card-mnemonic-body">' + safe + '</div>'
-        + '</div>';
-}
+            // Còn lại → cũng bấm được
+            return '<span class="card-char-speakable" '
+                 + 'onclick="vocabSpeakChar(\'' + mJs + '\', this, event)" '
+                 + 'title="Bấm để nghe">'
+                 + match
+                 + '</span>';
+        });
+
+        safe = safe.replace(/\s=\s/g, ' <span class="arrow">=</span> ');
+        safe = safe.replace(/→/g, '<span class="arrow">→</span>');
+        safe = safe.replace(/\(([^)]+)\)/g, '(<span class="hint">$1</span>)');
+
+        return '<div class="card-mnemonic">'
+            + '<div class="card-mnemonic-label">MẸO NHỚ</div>'
+            + '<div class="card-mnemonic-body">' + safe + '</div>'
+            + '</div>';
+    }
 
     function buildMnemonicBlock(text, currentChar, viDuList) {
     currentChar = currentChar || '';
