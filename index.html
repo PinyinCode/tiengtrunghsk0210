@@ -28932,7 +28932,40 @@ function _lookupMeaning(char) {
 
     return { meaning: '', pinyin: '' };
 }
+function escapeJs(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '\\"')
+        .replace(/\n/g, '\\n');
+}
 
+window.speakMnemonicChar = function(char, evt) {
+    if (evt) {
+        evt.stopPropagation();
+        if (evt.preventDefault) evt.preventDefault();
+    }
+    if (!char) return;
+    if (!('speechSynthesis' in window)) return;
+    try { speechSynthesis.cancel(); } catch(e) {}
+    var u = new SpeechSynthesisUtterance(char);
+    u.lang = 'zh-CN';
+    u.rate = 0.85;
+    if (typeof applyVoiceSettings === 'function') {
+        try { applyVoiceSettings(u); } catch(e) {}
+    }
+    var btn = null;
+    if (evt && evt.target) btn = evt.target.closest('.mnemonic-audio-btn');
+    if (btn) {
+        document.querySelectorAll('.mnemonic-audio-btn.speaking').forEach(function(b) {
+            b.classList.remove('speaking');
+        });
+        btn.classList.add('speaking');
+        u.onend = u.onerror = function() { btn.classList.remove('speaking'); };
+    }
+    setTimeout(function() { try { speechSynthesis.speak(u); } catch(e) {} }, 30);
+};
 window.showMnemonic = async function(evt, btn) {
     if (evt) {
         evt.stopPropagation();
@@ -28989,62 +29022,46 @@ window.showMnemonic = async function(evt, btn) {
 function renderMnemonicModal(modal, data) {
     var ch = data.char || '';
     var py = data.pinyin || '';
+    var vi = data.vi || '';
     var rad = data.radical || null;
-    var comps = data.components || [];
     var mnemonic = data.mnemonic || '';
     var similar = data.similar || null;
 
     var lookup = _lookupMeaning(ch);
-    var meaning = lookup.meaning || '';
+    if (!vi) vi = lookup.meaning || '';
     if (!py) py = lookup.pinyin || '';
 
     var html = '<div class="mnemonic-box">';
 
+    // HEADER — có nút loa
     html += '<div class="mnemonic-header">';
     html += '<span class="mnemonic-char">' + escapeHtml(ch) + '</span>';
+    html += '<button class="mnemonic-audio-btn" onclick="speakMnemonicChar(\'' +
+            escapeJs(ch) + '\', event)" title="Phát âm"><i class="fas fa-volume-up"></i></button>';
     if (py) html += '<span class="mnemonic-pinyin">' + escapeHtml(py) + '</span>';
-    if (meaning) {
-        html += '<span class="mnemonic-meaning">' + escapeHtml(meaning) + '</span>';
-    }
-    if (rad && rad.zh) {
-        html += '<span class="mnemonic-radical-tag">' +
-                '<span>' + escapeHtml(rad.zh) + '</span>' +
-                '<span>' + escapeHtml(rad.pinyin || '') + '</span>' +
-                '</span>';
-    }
+    if (vi) html += '<span class="mnemonic-meaning">' + escapeHtml(vi) + '</span>';
     html += '<button class="mnemonic-close" onclick="closeMnemonic(event)">✕</button>';
     html += '</div>';
 
     html += '<div class="mnemonic-body">';
 
+    // BỘ THỦ — KHÔNG nút loa
     if (rad && rad.zh) {
         html += '<div class="mnemonic-section">';
         html += '<div class="mnemonic-section-title">🏛️ Bộ thủ chính</div>';
         html += '<div class="mnemonic-radical-row">';
         html += '<span class="mnemonic-rad-char">' + escapeHtml(rad.zh) + '</span>';
         html += '<div class="mnemonic-rad-info">';
-        html += '<span class="mnemonic-rad-name">Bộ ' + escapeHtml(rad.pinyin || '') + '</span>';
-        html += '<span class="mnemonic-rad-meaning">' + escapeHtml(rad.meaning || '') + '</span>';
-        html += '</div>';
-        html += '</div>';
-        html += '</div>';
+        var radName = 'Bộ ' + escapeHtml(rad.pinyin || '');
+        if (rad.strokes) radName += ' - ' + escapeHtml(String(rad.strokes)) + ' nét';
+        html += '<span class="mnemonic-rad-name">' + radName + '</span>';
+        if (rad.meaning) {
+            html += '<span class="mnemonic-rad-meaning">' + escapeHtml(rad.meaning) + '</span>';
+        }
+        html += '</div></div></div>';
     }
 
-    if (comps.length > 0) {
-        html += '<div class="mnemonic-section">';
-        html += '<div class="mnemonic-section-title">🧩 Thành phần cấu tạo</div>';
-        html += '<div class="mnemonic-comp-list">';
-        comps.forEach(function(c) {
-            html += '<div class="mnemonic-comp-item">';
-            html += '<span class="mnemonic-comp-char">' + escapeHtml(c.zh || '') + '</span>';
-            html += '<span class="mnemonic-comp-py">' + escapeHtml(c.pinyin || '') + '</span>';
-            html += '<span class="mnemonic-comp-meaning">' + escapeHtml(c.meaning || '') + '</span>';
-            html += '</div>';
-        });
-        html += '</div>';
-        html += '</div>';
-    }
-
+    // MẸO NHỚ
     if (mnemonic) {
         html += '<div class="mnemonic-section">';
         html += '<div class="mnemonic-section-title">💡 Mẹo nhớ</div>';
@@ -29052,6 +29069,7 @@ function renderMnemonicModal(modal, data) {
         html += '</div>';
     }
 
+    // DỄ NHẦM — mỗi chữ có nút loa
     if (similar && similar.list && similar.list.length > 0) {
         html += '<div class="mnemonic-section">';
         html += '<div class="mnemonic-section-title">🔍 Dễ nhầm</div>';
@@ -29060,22 +29078,30 @@ function renderMnemonicModal(modal, data) {
             var simLookup = _lookupMeaning(item.char);
             var simPinyin = item.pinyin || simLookup.pinyin || '';
             var simMeaning = item.meaning || simLookup.meaning || '';
+            if (simMeaning.length > 25) simMeaning = simMeaning.substring(0, 25) + '...';
+            var simChar = item.char || '';
 
             html += '<div class="mnemonic-sim-card">';
-            html += '<span class="mnemonic-sim-char">' + escapeHtml(item.char || '') + '</span>';
+            html += '<div class="mnemonic-sim-header">';
+            html += '<button class="mnemonic-audio-btn tiny" onclick="speakMnemonicChar(\'' +
+                    escapeJs(simChar) + '\', event)"><i class="fas fa-volume-up"></i></button>';
+            html += '<span class="mnemonic-sim-char">' + escapeHtml(simChar) + '</span>';
+            html += '</div>';
             if (simPinyin) html += '<span class="mnemonic-sim-py">' + escapeHtml(simPinyin) + '</span>';
             if (simMeaning) html += '<span class="mnemonic-sim-vi">' + escapeHtml(simMeaning) + '</span>';
             html += '</div>';
         });
         html += '</div>';
+        if (similar.diff) {
+            html += '<div style="margin-top:.6rem;padding-top:.6rem;border-top:1px dashed rgba(220,38,38,.25);font-size:.75rem;color:var(--text-2);line-height:1.5;">';
+            html += '📌 ' + escapeHtml(similar.diff) + '</div>';
+        }
         html += '</div>';
     }
 
-    html += '</div>';
-    html += '</div>';
-
+    html += '</div></div>';
     modal.innerHTML = html;
-};
+}
 
 window.closeMnemonic = function(evt) {
     if (evt) {
