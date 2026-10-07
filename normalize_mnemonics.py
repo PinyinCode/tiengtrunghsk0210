@@ -50,6 +50,7 @@ def _clean_punct(s):
     if not s:
         return ""
     s = str(s).strip()
+    s = re.sub(r'^[\s\-\u2014\u2013,;:=]+', '', s)
     s = re.sub(r'[\s,;:.]+$', '', s)
     return s.strip()
 
@@ -94,7 +95,8 @@ def _parse_one_example(part):
     zh = m_zh.group(1).strip()
 
     zh = re.sub(
-        r'\s*[-\u2014\u2013,;:]\s*([\uFF0C\u3002\uFF01\uFF1F\u3001\uFF1B\uFF1A'
+        r'\s*[-\u2014\u2013,;:!?.,]+\s*'
+        r'([!?.,;:\uFF0C\u3002\uFF01\uFF1F\u3001\uFF1B\uFF1A'
         r'\u201c\u201d\u2018\u2019\uFF08\uFF09])',
         r'\1', zh
     )
@@ -103,7 +105,7 @@ def _parse_one_example(part):
         r'\u201c\u201d\u2018\u2019\uFF08\uFF09])',
         r'\1', zh
     )
-    zh = re.sub(r'[\s\-\u2014\u2013,;:]+$', '', zh)
+    zh = re.sub(r'[\s\-\u2014\u2013,;:!?.,]+$', '', zh)
 
     rest = part[len(m_zh.group(1)):].strip()
     rest = re.sub(
@@ -127,7 +129,9 @@ def _parse_one_example(part):
 
         if not vi and after:
             after_clean = after.strip()
-            after_clean = re.sub(r'^[\s\-\u2014\u2013,;:=]+', '', after_clean).strip()
+            after_clean = re.sub(
+                r'^[\s\-\u2014\u2013,;:=!?]+', '', after_clean
+            ).strip()
             if after_clean:
                 first_line = after_clean.split('\n')[0].strip()
                 if first_line:
@@ -137,11 +141,13 @@ def _parse_one_example(part):
         if m_py:
             py = _clean_punct(m_py.group(1))
             rest2 = rest[len(m_py.group(1)):].strip()
-            rest2 = re.sub(r'^[\s\-\u2014\u2013,;:=]+', '', rest2).strip()
+            rest2 = re.sub(r'^[\s\-\u2014\u2013,;:=!?]+', '', rest2).strip()
             if rest2:
                 vi = _clean_punct(rest2)
         else:
-            rest_clean = re.sub(r'^[\s\-\u2014\u2013,;:=]+', '', rest).strip()
+            rest_clean = re.sub(
+                r'^[\s\-\u2014\u2013,;:=!?]+', '', rest
+            ).strip()
             if rest_clean:
                 vi = _clean_punct(rest_clean)
 
@@ -247,13 +253,13 @@ def main():
         for key, old, new in samples:
             old_line = ""
             for line in old.split("\n"):
-                if "Vi du" in line or "Ví dụ" in line:
+                if "Ví dụ" in line:
                     old_line = line
                     break
 
             new_line = ""
             for line in new.split("\n"):
-                if "Vi du" in line or "Ví dụ" in line:
+                if "Ví dụ" in line:
                     new_line = line
                     break
 
