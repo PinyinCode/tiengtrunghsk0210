@@ -226,7 +226,7 @@ def _parse_radical_raw(raw):
 
 
 def _parse_vi_du_from_mnemonic(mnemonic):
-    """Parse câu ví dụ từ mnemonic - hỗ trợ nhiều format."""
+    """Parse câu ví dụ từ mnemonic - hỗ trợ MỌI format."""
     if not mnemonic:
         return []
 
@@ -242,8 +242,8 @@ def _parse_vi_du_from_mnemonic(mnemonic):
     if not block:
         return []
 
-    # Tách nhiều câu ví dụ (ngăn bằng / hoặc ;)
-    parts = re.split(r'\s*[/;；]\s*', block)
+    # Tách nhiều câu ví dụ (ngăn bằng / hoặc ;) - nhưng KHÔNG tách nếu trong ngoặc
+    parts = _split_outside_parens(block)
 
     result = []
     for part in parts:
@@ -251,53 +251,114 @@ def _parse_vi_du_from_mnemonic(mnemonic):
         if not part:
             continue
 
-        # 1. Lấy Hán tự đầu (kèm dấu câu Trung)
-        m_zh = re.match(
-            r'^([\u4e00-\u9fff，。！？、；：""''（）\u201c\u201d\u2018\u2019\uff01\uff1f\uff1b\uff1a\uff08\uff09]+)',
-            part
-        )
-        if not m_zh:
-            continue
-        zh = m_zh.group(1).strip()
-        rest = part[len(m_zh.group(1)):].strip()
-
-        py, vi = "", ""
-
-        # 2. Thử parse ngoặc ()
-        m_paren = re.match(r'^[\(\（]([^\)\）]+)[\)\）]\s*(.*)$', rest)
-        if m_paren:
-            inside = m_paren.group(1).strip()
-            after = m_paren.group(2).strip()
-
-            # Trong ngoặc có thể chứa pinyin + vi (ngăn bằng , ; -)
-            m_split = re.match(r'^(.+?)\s*[,，;；\-—–=:]\s*(.+)$', inside)
-            if m_split:
-                py = re.sub(r'[\s,;:.]+$', '', m_split.group(1).strip())
-                vi = re.sub(r'[\s,;:.]+$', '', m_split.group(2).strip())
-            else:
-                py = re.sub(r'[\s,;:.]+$', '', inside)
-
-            # Nếu chưa có vi, thử lấy sau ngoặc
-            if not vi and after:
-                m_out = re.match(r'^[-—–,;:]\s*(.+)$', after)
-                if m_out:
-                    vi = re.sub(r'[\s,;:.]+$', '', m_out.group(1).strip())
-                elif not after.startswith('('):
-                    vi = re.sub(r'[\s,;:.]+$', '', after)
-        else:
-            # 3. Không có ngoặc → tách bằng dấu
-            m_out = re.match(r'^[-—–,;:]\s*(.+)$', rest)
-            if m_out:
-                vi = re.sub(r'[\s,;:.]+$', '', m_out.group(1).strip())
-            elif rest:
-                # Rest có thể là pinyin trần
-                if re.match(r'^[A-Za-zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜÜü\s.,;:\'\-]+$', rest):
-                    py = re.sub(r'[\s,;:.]+$', '', rest)
-
-        if zh:
-            result.append({"zh": zh, "pinyin": py, "vi": vi})
+        parsed = _parse_one_example(part)
+        if parsed and parsed.get("zh"):
+            result.append(parsed)
 
     return result
+
+
+def _split_outside_parens(text):
+    """Tách text theo / hoặc ; NHƯNG bỏ qua các ký tự nằm trong ngoặc ()."""
+    result = []
+    depth = 0
+    current = []
+    for ch in text:
+        if ch in '(（':
+            depth += 1
+            current.append(ch)
+        elif ch in ')）':
+            depth -= 1
+            current.append(ch)
+        elif ch in '/;；' and depth == 0:
+            result.append(''.join(current))
+            current = []
+        else:
+            current.append(ch)
+    if current:
+        result.append(''.join(current))
+    return result
+
+
+def _parse_one_example(part):
+    """Parse 1 câu ví dụ - đọc được mọi format."""
+    part = part.strip()
+    if not part:
+        return None
+
+    # Bước 1: Lấy Hán tự đầu (kèm dấu câu Trung + space xung quanh)
+    # Match Hán tự + dấu câu Trung, dừng ở ký tự Latin hoặc ( 
+    m_zh = re.match(
+        r'^([\u4e00-\u9fff，。！？、；：""''（）\u201c\u201d\u2018\u2019'
+        r'\uff01\uff1f\uff1b\uff1a\uff08\uff09\s]+?)\s*'
+        r'(?=[\(\（A-Za-z]|$)',
+        part
+    )
+    if not m_zh:
+        # Fallback: match Hán tự thuần
+        m_zh = re.match(r'^([\u4e00-\u9fff]+)', part)
+        if not m_zh:
+            return None
+
+    zh = m_zh.group(1).strip()
+    # Xóa space thừa trước dấu câu Trung: " 。" → "。"
+    zh = re.sub(r'\s+([，。！？、；：""''（）\uff01\uff1f\uff1b\uff1a])', r'\1', zh)
+
+    rest = part[len(m_zh.group(1)):].strip()
+
+    py, vi = "", ""
+
+    # Bước 2: Parse ngoặc ()
+    m_paren = re.match(r'^[\(\（]([^\)\）]*)[\)\）]\s*(.*)$', rest, re.DOTALL)
+    if m_paren:
+        inside = m_paren.group(1).strip()
+        after = m_paren.group(2).strip()
+
+        # Trong ngoặc: pinyin + vi (ngăn bằng , ; -)
+        m_split = re.match(r'^(.+?)\s*[,，;；\-—–=:]\s*(.+)$', inside, re.DOTALL)
+        if m_split:
+            py = _clean_punct(m_split.group(1))
+            vi = _clean_punct(m_split.group(2))
+        else:
+            py = _clean_punct(inside)
+
+        # Sau ngoặc: vi (có thể có dấu - hoặc xuống dòng)
+        if not vi and after:
+            after = after.strip()
+            # Bỏ dấu phân cách đầu
+            after = re.sub(r'^[-—–,;:=]\s*', '', after).strip()
+            if after:
+                vi = _clean_punct(after)
+    else:
+        # Bước 3: Không có ngoặc → tách pinyin trần và vi
+        # Thử tách phần Latin (pinyin) đầu tiên
+        m_py = re.match(
+            r'^([A-Za-zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜÜüĀÁǍÀĒÉĚÈĪÍǏÌŌÓǑÒŪÚǓÙǕǗǙǛ\s.,;:\'\-]+?)\s*'
+            r'(?=[\-—–,;:=]|[\u4e00-\u9fff]|$)',
+            rest
+        )
+        if m_py:
+            py = _clean_punct(m_py.group(1))
+            rest2 = rest[len(m_py.group(1)):].strip()
+            rest2 = re.sub(r'^[-—–,;:=]\s*', '', rest2).strip()
+            if rest2:
+                vi = _clean_punct(rest2)
+        else:
+            # Toàn bộ rest là vi
+            rest = re.sub(r'^[-—–,;:=]\s*', '', rest).strip()
+            if rest:
+                vi = _clean_punct(rest)
+
+    return {"zh": zh, "pinyin": py, "vi": vi}
+
+
+def _clean_punct(s):
+    """Xóa dấu câu cuối + space thừa."""
+    if not s:
+        return ""
+    s = str(s).strip()
+    s = re.sub(r'[\s,;:.]+$', '', s)
+    return s.strip()
 
 def _detect_data_start_row(ws, fallback_row=3, col_zh=1):
     HEADER_KEYWORDS = (
