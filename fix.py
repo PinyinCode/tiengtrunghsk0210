@@ -852,7 +852,7 @@ def build_js_override(ids_js, datasets_meta_json):
     add("    window.__fixpyMeta = " + datasets_meta_json + ";")
     add("")
     add("    (function() {")
-    add("        fetch('data/fixpy_datasets.json')")
+    add("        fetch('data/fixpy_datasets.json?t=' + Math.floor(Date.now() / 60000))")
     add("            .then(function(r) { return r.ok ? r.json() : {}; })")
     add("            .then(function(d) {")
     add("                window.FIXPY_DATASETS = d || {};")
@@ -1516,9 +1516,73 @@ def main():
     vocab_exists_in_html = 'data-dataset="' + VOCAB_ID + '"' in html
     add_vocab = bool(vocab_data) and not vocab_exists_in_html
 
-    if not all_new and not add_vocab:
+    # ⭐ LUÔN ghi lại fixpy_datasets.json nếu có data mới (mnemonic update)
+    _need_data_rewrite = bool(vocab_data) or bool(datasets)
+    _need_patch_html = bool(all_new) or add_vocab
+
+    if not _need_patch_html and not _need_data_rewrite:
         print("")
         print("[fix.py] Tat ca da co - khong can patch.")
+        return
+
+    # ⭐ CASE A: Tab đã có → chỉ ghi lại data JSON, KHÔNG patch HTML
+    if not _need_patch_html and _need_data_rewrite:
+        print("")
+        print("[fix.py] Tab da co san -> CHI ghi lai data JSON (khong patch HTML)")
+
+        _data_dir = "data"
+        os.makedirs(_data_dir, exist_ok=True)
+        _fixpy_path = os.path.join(_data_dir, "fixpy_datasets.json")
+
+        # Load data cũ để giữ dataset đã có
+        datasets_dict = {}
+        if os.path.isfile(_fixpy_path):
+            try:
+                with open(_fixpy_path, "r", encoding="utf-8") as _f:
+                    datasets_dict = json.load(_f) or {}
+            except Exception as _e:
+                print("   [!] Khong doc duoc file cu: " + str(_e))
+                datasets_dict = {}
+
+        # ⭐ Update vocab với mnemonic MỚI
+        if vocab_data:
+            datasets_dict[VOCAB_ID] = {
+                "id": VOCAB_ID,
+                "name": VOCAB_LABEL,
+                "icon": "fa-book",
+                "color": "#f59e0b",
+                "data": vocab_data,
+                "count": len(vocab_data),
+                "source": (os.path.basename(vocab_real_path)
+                           if vocab_real_path else "tu_vung_hsk.xlsx"),
+                "type": "premium",
+                "group": "fixpy",
+            }
+            print("   [OK] Update vocab: " + str(len(vocab_data)) + " tu")
+
+        for ds in datasets:
+            datasets_dict[ds["id"]] = ds
+
+        with open(_fixpy_path, "w", encoding="utf-8") as _f:
+            json.dump(datasets_dict, _f, ensure_ascii=False, separators=(",", ":"))
+        _size_kb = os.path.getsize(_fixpy_path) / 1024
+        print("   [OK] Ghi data/fixpy_datasets.json (" + f"{_size_kb:.1f}" + " KB)")
+
+        # Chạy patch_buttons
+        print("")
+        print("=" * 62)
+        print("[fix.py] Chay patch_buttons.py de cover 4 nut...")
+        print("=" * 62)
+        try:
+            _here = os.path.dirname(os.path.abspath(__file__))
+            if _here not in sys.path:
+                sys.path.insert(0, _here)
+            from patch_buttons import patch_all_buttons
+            _ok = patch_all_buttons(INDEX_HTML)
+            print("[fix.py] patch_buttons.py -> " + ("THANH CONG" if _ok else "THAT BAI"))
+        except Exception as _e:
+            print("[fix.py] Loi patch_buttons: " + str(_e))
+
         return
 
     print("")
@@ -1605,9 +1669,20 @@ def main():
             "group": "fixpy",
         }
 
+    # ⭐ Merge với data cũ để KHÔNG mất dataset đã có
     _data_dir = "data"
     os.makedirs(_data_dir, exist_ok=True)
     _fixpy_path = os.path.join(_data_dir, "fixpy_datasets.json")
+    if os.path.isfile(_fixpy_path):
+        try:
+            with open(_fixpy_path, "r", encoding="utf-8") as _f:
+                _old_data = json.load(_f) or {}
+            for _k, _v in _old_data.items():
+                if _k not in datasets_dict:
+                    datasets_dict[_k] = _v
+        except Exception:
+            pass
+
     with open(_fixpy_path, "w", encoding="utf-8") as _f:
         json.dump(datasets_dict, _f, ensure_ascii=False, separators=(",", ":"))
     _size_kb = os.path.getsize(_fixpy_path) / 1024
