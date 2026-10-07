@@ -2117,80 +2117,77 @@ window.__SIMILAR_CHARS__ = __SIMILAR_JSON__;
     }
 
     function buildMnemonicBlock(text, currentChar, viDuList) {
-    currentChar = currentChar || '';
-    if (!text || !text.trim()) return '';
+        currentChar = currentChar || '';
+        if (!text || !text.trim()) return '';
 
-    var safe = _esc(text);
+        var safe = _esc(text);
 
-    var viDuHtml = '';
-    if (viDuList && viDuList.length > 0) {
-        var viDuMatch = safe.match(/📎\s*Ví dụ:?\s*([^\n]*)/);
-        if (viDuMatch) {
-            viDuList.forEach(function(ex) {
-                var exJs = String(ex.zh || '')
-                    .replace(/\\/g, '\\\\')
-                    .replace(/'/g, "\\'")
-                    .replace(/"/g, '\\"');
-                viDuHtml += '<span class="card-example-inline">';
-                viDuHtml += '<span class="card-example-zh" '
-                          + 'onclick="vocabSpeakChar(\'' + exJs + '\', this, event)" '
-                          + 'title="Bấm để nghe câu ví dụ">'
-                          + _esc(ex.zh)
-                          + '</span>';
-                if (ex.pinyin) {
-                    viDuHtml += ' <span class="card-example-pinyin">(' + _esc(ex.pinyin) + ')</span>';
-                }
-                if (ex.vi) {
-                    viDuHtml += ' <span class="card-example-vi">- ' + _esc(ex.vi) + '</span>';
-                }
-                viDuHtml += '</span>';
-            });
+        var viDuHtml = '';
+        if (viDuList && viDuList.length > 0) {
+            var viDuMatch = safe.match(/📎\s*Ví dụ:?\s*([^\n]*)/);
+            if (viDuMatch) {
+                viDuList.forEach(function(ex) {
+                    var exJs = String(ex.zh || '')
+                        .replace(/\\/g, '\\\\')
+                        .replace(/'/g, "\\'")
+                        .replace(/"/g, '\\"');
+                    viDuHtml += '<span class="card-example-inline">';
+                    viDuHtml += '<span class="card-example-zh" '
+                              + 'onclick="vocabSpeakChar(\'' + exJs + '\', this, event)" '
+                              + 'title="Bấm để nghe câu ví dụ">'
+                              + _esc(ex.zh)
+                              + '</span>';
+                    if (ex.pinyin) {
+                        viDuHtml += ' <span class="card-example-pinyin">(' + _esc(ex.pinyin) + ')</span>';
+                    }
+                    if (ex.vi) {
+                        viDuHtml += ' <span class="card-example-vi">- ' + _esc(ex.vi) + '</span>';
+                    }
+                    viDuHtml += '</span>';
+                });
 
-            // Xóa TOÀN BỘ block ví dụ (bao gồm cả dòng vi continuation bên dưới)
-            var lines = safe.split('\n');
-            var newLines = [];
-            var skipNext = false;
-            for (var li = 0; li < lines.length; li++) {
-                var line = lines[li];
-                var trimmed = line.trim();
+                // Xóa TOÀN BỘ block ví dụ (bao gồm cả dòng vi continuation bên dưới)
+                var lines = safe.split('\n');
+                var newLines = [];
+                var skipNext = false;
+                for (var li = 0; li < lines.length; li++) {
+                    var line = lines[li];
+                    var trimmed = line.trim();
 
-                if (/^📎\s*Ví dụ:?/.test(trimmed)) {
-                    newLines.push('📎 Ví dụ: __VIDU_PLACEHOLDER__');
-                    skipNext = true;
-                    continue;
-                }
-
-                if (skipNext) {
-                    // Bỏ qua dòng vi continuation nếu:
-                    // - Không rỗng
-                    // - Không phải section mới (🔗 💡 📌 🎬 📎)
-                    if (trimmed && !/^(🔗|💡|📌|🎬| if📎)/.test( (/trimmed)) {
-                        skipNext = false;
+                    if (/^📎\s*Ví dụ:?/.test(trimmed)) {
+                        newLines.push('📎 Ví dụ: __VIDU_PLACEHOLDER__');
+                        skipNext = true;
                         continue;
                     }
-                    skipNext = false;
+
+                    if (skipNext) {
+                        if (trimmed && !/^(🔗|💡|📌|🎬|📎)/.test(trimmed)) {
+                            skipNext = false;
+                            continue;
+                        }
+                        skipNext = false;
+                    }
+
+                    newLines.push(line);
                 }
-
-                newLines.push(line);
+                safe = newLines.join('\n');
             }
-            safe = newLines.join('\n');
         }
+
+        safe = safe.replace(/([\u4e00-\u9fa5]+)/g, '<span class="char-zh">$1</span>');
+        safe = safe.replace(/\s=\s/g, ' <span class="arrow">=</span> ');
+        safe = safe.replace(/→/g, '<span class="arrow">→</span>');
+        safe = safe.replace(/\(([^)]+)\)/g, '(<span class="hint">$1</span>)');
+
+        if (viDuHtml) {
+            safe = safe.replace('__VIDU_PLACEHOLDER__', viDuHtml);
+        }
+
+        return '<div class="card-mnemonic">'
+            + '<div class="card-mnemonic-label">MẸO NHỚ</div>'
+            + '<div class="card-mnemonic-body">' + safe + '</div>'
+            + '</div>';
     }
-
-    safe = safe.replace(/([\u4e00-\u9fa5]+)/g, '<span class="char-zh">$1</span>');
-    safe = safe.replace(/\s=\s/g, ' <span class="arrow">=</span> ');
-    safe = safe.replace(/→/g, '<span class="arrow">→</span>');
-    safe = safe.replace(/\(([^)]+)\)/g, '(<span class="hint">$1</span>)');
-
-    if (viDuHtml) {
-        safe = safe.replace('__VIDU_PLACEHOLDER__', viDuHtml);
-    }
-
-    return '<div class="card-mnemonic">'
-        + '<div class="card-mnemonic-label">MẸO NHỚ</div>'
-        + '<div class="card-mnemonic-body">' + safe + '</div>'
-        + '</div>';
-}
 
     function buildSimilarCharsBlock(currentChar) {
         currentChar = currentChar || '';
