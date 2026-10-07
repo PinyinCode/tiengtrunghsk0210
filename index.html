@@ -29303,33 +29303,50 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
     }
 
     window.vocabSpeakChar = function(text, btn, evt) {
-        if (evt) { evt.stopPropagation(); evt.preventDefault(); }
-        if (!text) return;
-        if (!('speechSynthesis' in window)) return;
-        speechSynthesis.cancel();
-        if (btn) {
-            document.querySelectorAll('.similar-char-btn-audio.speaking').forEach(function(b) {
-                b.classList.remove('speaking');
-            });
-            document.querySelectorAll('.card-example-zh.speaking').forEach(function(b) {
-                b.classList.remove('speaking');
-            });
-            document.querySelectorAll('.card-char-speakable.speaking').forEach(function(b) {
-                b.classList.remove('speaking');
-            });
-            btn.classList.add('speaking');
+    if (evt) { 
+        evt.stopPropagation(); 
+        evt.preventDefault(); 
+    }
+    if (!text || !('speechSynthesis' in window)) return;
+    
+    speechSynthesis.cancel();
+    
+    if (btn) {
+        // Gom các class cần reset vào một mảng để code gọn hơn
+        const speakingSelectors = [
+            '.similar-char-btn-audio.speaking',
+            '.card-example-zh.speaking',
+            '.card-char-speakable.speaking'
+        ];
+        
+        document.querySelectorAll(speakingSelectors.join(', ')).forEach(function(b) {
+            b.classList.remove('speaking');
+        });
+        
+        btn.classList.add('speaking');
+    }
+    
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = 'zh-CN';
+    u.rate = text.length > 3 ? 0.75 : 0.85;
+    
+    if (typeof applyVoiceSettings === 'function') {
+        try { 
+            applyVoiceSettings(u); 
+        } catch(e) {
+            console.error('Error applying voice settings:', e);
         }
-        var u = new SpeechSynthesisUtterance(text);
-        u.lang = 'zh-CN';
-        u.rate = text.length > 3 ? 0.75 : 0.85;
-        if (typeof applyVoiceSettings === 'function') {
-            try { applyVoiceSettings(u); } catch(e) {}
-        }
-        u.onend = u.onerror = function() {
-            if (btn) btn.classList.remove('speaking');
-        };
-        setTimeout(function() { speechSynthesis.speak(u); }, 30);
+    }
+    
+    u.onend = u.onerror = function() {
+        if (btn) btn.classList.remove('speaking');
     };
+    
+    setTimeout(function() { 
+        speechSynthesis.speak(u); 
+    }, 30);
+};
+
     window.vocabJumpToChar = function(char, btn, evt) {
         if (evt) { evt.stopPropagation(); evt.preventDefault(); }
         if (!char) return;
