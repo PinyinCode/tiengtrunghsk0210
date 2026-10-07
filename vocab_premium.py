@@ -1994,6 +1994,9 @@ window.__SIMILAR_CHARS__ = __SIMILAR_JSON__;
             document.querySelectorAll('.card-example-zh.speaking').forEach(function(b) {
                 b.classList.remove('speaking');
             });
+            document.querySelectorAll('.card-char-speakable.speaking').forEach(function(b) {
+                b.classList.remove('speaking');
+            });
             btn.classList.add('speaking');
         }
         var u = new SpeechSynthesisUtterance(text);
@@ -2100,66 +2103,167 @@ window.__SIMILAR_CHARS__ = __SIMILAR_JSON__;
     }
 
     function buildMnemonicBlock(text, currentChar, viDuList) {
-    currentChar = currentChar || '';
-    if (!text || !text.trim()) return '';
+        currentChar = currentChar || '';
+        if (!text || !text.trim()) return '';
 
-    // BƯỚC 1: Tìm các cụm Hán tự liền nhau (>= 2 chữ) trong RAW text
-    // Map: zh → { zh, pinyin, vi }
-    var viDuMap = {};
-    if (viDuList && viDuList.length > 0) {
-        viDuList.forEach(function(ex) {
-            if (ex && ex.zh) {
-                viDuMap[ex.zh] = ex;
-            }
-        });
-    }
-
-    // BƯỚC 2: Escape text
-    var safe = _esc(text);
-
-    // BƯỚC 3: Wrap TẤT CẢ cụm Hán tự (>= 2 chữ) thành span bấm được
-    // Nhưng nếu cụm đó có trong viDuMap (câu ví dụ chuẩn), dùng class khác
-    safe = safe.replace(/([\u4e00-\u9fff]{2,})/g, function(match) {
-        var mJs = match
-            .replace(/\\/g, '\\\\')
-            .replace(/'/g, "\\'")
-            .replace(/"/g, '\\"');
-
-        // Nếu là câu ví dụ được parse (có trong viDuMap)
-        if (viDuMap[match]) {
-            return '<span class="card-example-zh" '
-                 + 'onclick="vocabSpeakChar(\'' + mJs + '\', this, event)" '
-                 + 'title="Bấm để nghe câu ví dụ">'
-                 + match
-                 + '</span>';
+        // BƯỚC 1: Tìm các cụm Hán tự liền nhau (>= 2 chữ) trong RAW text
+        // Map: zh → { zh, pinyin, vi }
+        var viDuMap = {};
+        if (viDuList && viDuList.length > 0) {
+            viDuList.forEach(function(ex) {
+                if (ex && ex.zh) {
+                    viDuMap[ex.zh] = ex;
+                }
+            });
         }
 
-        // Còn lại (chữ Hán trong chiết tự, liên quan, câu chuyện...) 
-        // → cũng bấm được
-        return '<span class="card-char-speakable" '
-             + 'onclick="vocabSpeakChar(\'' + mJs + '\', this, event)" '
-             + 'title="Bấm để nghe">'
-             + match
-             + '</span>';
-    });
+        // BƯỚC 2: Escape text
+        var safe = _esc(text);
 
-    // BƯỚC 4: Wrap TỪNG chữ Hán đơn (nếu chưa nằm trong span nào)
-    // — bước này optional, có thể bỏ nếu muốn tránh rối
-    // safe = safe.replace(/(?<![>;])([\u4e00-\u9fff])(?![^<]*<\/span>)/g, ...);
+        // BƯỚC 3: Wrap TẤT CẢ cụm Hán tự (>= 2 chữ) thành span bấm được
+        // Nhưng nếu cụm đó có trong viDuMap (câu ví dụ chuẩn), dùng class khác
+        safe = safe.replace(/([\u4e00-\u9fff]{2,})/g, function(match) {
+            var mJs = match
+                .replace(/\\/g, '\\\\')
+                .replace(/'/g, "\\'")
+                .replace(/"/g, '\\"');
 
-    // BƯỚC 5: Transform khác
-    safe = safe.replace(/\s=\s/g, ' <span class="arrow">=</span> ');
-    safe = safe.replace(/→/g, '<span class="arrow">→</span>');
-    safe = safe.replace(/\(([^)]+)\)/g, '(<span class="hint">$1</span>)');
+            // Nếu là câu ví dụ được parse (có trong viDuMap)
+            if (viDuMap[match]) {
+                return '<span class="card-example-zh" '
+                     + 'onclick="vocabSpeakChar(\'' + mJs + '\', this, event)" '
+                     + 'title="Bấm để nghe câu ví dụ">'
+                     + match
+                     + '</span>';
+            }
 
-    return '<div class="card-mnemonic">'
-        + '<div class="card-mnemonic-label">MẸO NHỚ</div>'
-        + '<div class="card-mnemonic-body">' + safe + '</div>'
-        + '</div>';
-}
+            // Còn lại (chữ Hán trong chiết tự, liên quan, câu chuyện...)
+            // → cũng bấm được
+            return '<span class="card-char-speakable" '
+                 + 'onclick="vocabSpeakChar(\'' + mJs + '\', this, event)" '
+                 + 'title="Bấm để nghe">'
+                 + match
+                 + '</span>';
+        });
 
-    
-    
+        // BƯỚC 4: Transform khác
+        safe = safe.replace(/\s=\s/g, ' <span class="arrow">=</span> ');
+        safe = safe.replace(/→/g, '<span class="arrow">→</span>');
+        safe = safe.replace(/\(([^)]+)\)/g, '(<span class="hint">$1</span>)');
+
+        return '<div class="card-mnemonic">'
+            + '<div class="card-mnemonic-label">MẸO NHỚ</div>'
+            + '<div class="card-mnemonic-body">' + safe + '</div>'
+            + '</div>';
+    }
+
+    function buildSimilarCharsBlock(currentChar) {
+        currentChar = currentChar || '';
+        if (!currentChar) return '';
+
+        var similarMap = window.__SIMILAR_CHARS__ || {};
+        var entry = similarMap[currentChar];
+
+        var chars = [];
+        if (entry && typeof entry === 'object') {
+            if (Array.isArray(entry)) {
+                chars = entry;
+            } else if (Array.isArray(entry.similar)) {
+                chars = entry.similar;
+            }
+        }
+
+        if (!chars || chars.length === 0) return '';
+
+        var vocabList = [];
+        if (window.FIXPY_DATASETS && window.FIXPY_DATASETS[VOCAB_ID]) {
+            vocabList = window.FIXPY_DATASETS[VOCAB_ID].data || [];
+        }
+        if (vocabList.length === 0 && typeof RAW_DATA !== 'undefined' && RAW_DATA) {
+            vocabList = RAW_DATA;
+        }
+
+        var items = [];
+        for (var i = 0; i < chars.length; i++) {
+            var c = String(chars[i] || '').trim();
+            if (!c) continue;
+
+            var info = null;
+            for (var j = 0; j < vocabList.length; j++) {
+                if (vocabList[j].zh === c) { info = vocabList[j]; break; }
+            }
+            if (!info) {
+                for (var k = 0; k < vocabList.length; k++) {
+                    if (vocabList[k].zh && vocabList[k].zh.indexOf(c) !== -1) {
+                        info = vocabList[k];
+                        break;
+                    }
+                }
+            }
+
+            var pinyin = info ? (info.pinyin || '') : '';
+            var vi = info ? (info.vi || '') : '';
+            if (vi.length > 20) vi = vi.substring(0, 20) + '...';
+
+            var extra = '';
+            if (pinyin && vi) {
+                extra = '<span class="similar-char-info-txt">'
+                      + '<span class="similar-char-pinyin">/' + _esc(pinyin) + '/</span> '
+                      + _esc(vi)
+                      + '</span>';
+            } else if (pinyin) {
+                extra = '<span class="similar-char-info-txt">'
+                      + '<span class="similar-char-pinyin">/' + _esc(pinyin) + '/</span>'
+                      + '</span>';
+            } else if (vi) {
+                extra = '<span class="similar-char-info-txt">' + _esc(vi) + '</span>';
+            } else {
+                extra = '<span class="similar-char-info-txt" style="opacity:.5">(?)</span>';
+            }
+
+            var charJs = c.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+            var hasCard = _hasCardForChar(c);
+
+            var jumpBtn = '';
+            if (hasCard) {
+                jumpBtn = '<button class="similar-char-btn-jump" '
+                        + 'onclick="vocabJumpToChar(\'' + charJs + '\', this, event)" '
+                        + 'title="Xem chi tiết">'
+                        + '<i class="fas fa-arrow-right"></i></button>';
+            }
+
+            items.push(
+                '<span class="similar-char-item" data-char="' + _esc(c) + '">'
+                + '<button class="similar-char-btn-audio" '
+                + 'onclick="vocabSpeakChar(\'' + charJs + '\', this, event)" '
+                + 'title="Đọc âm">'
+                + '<i class="fas fa-volume-up"></i></button>'
+                + '<span class="similar-char-main">'
+                + '<span class="similar-char-zh">' + _esc(c) + '</span>'
+                + extra
+                + '</span>'
+                + jumpBtn
+                + '</span>'
+            );
+        }
+
+        if (items.length === 0) return '';
+
+        var diffText = '';
+        if (entry && !Array.isArray(entry) && entry.diff) {
+            diffText = '<div class="similar-diff">'
+                     + '📌 ' + _esc(entry.diff)
+                     + '</div>';
+        }
+
+        return '<div class="similar-hint-block">'
+             + '<span class="similar-title">🔍 DỄ NHẦM</span>'
+             + '<div class="similar-chars">'
+             + items.join(' <span class="similar-sep">·</span> ')
+             + '</div>'
+             + diffText
+             + '</div>';
+    }
 
     function enhanceCards() {
         if (!_isVocabMode()) return;
@@ -2978,5 +3082,6 @@ window.__SIMILAR_CHARS__ = __SIMILAR_JSON__;
 
 })();
 """
+    
     js = js.replace("__SIMILAR_JSON__", similar_json)
     return js.replace("__VOCAB_ID__", vocab_id)
