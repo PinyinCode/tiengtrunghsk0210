@@ -1488,6 +1488,9 @@ def main():
         else:
             print("[VOCAB] Khong co file tu vung - bo qua")
 
+    # ═══════════════════════════════════════════════════════════════
+    #  Kiểm tra tab nào đã có trong HTML
+    # ═══════════════════════════════════════════════════════════════
     all_new = []
     for ds in datasets:
         marker = 'data-dataset="' + ds["id"] + '"'
@@ -1496,22 +1499,96 @@ def main():
         else:
             print("   [skip] '" + ds["id"] + "' da co trong HTML")
 
-    vocab_exists_in_html = 'data-dataset="' + VOCAB_ID + '"'
-add_vocab = bool(vocab_data) and not vocab_exists_in_html
+    vocab_exists_in_html = 'data-dataset="' + VOCAB_ID + '"' in html
+    add_vocab = bool(vocab_data) and not vocab_exists_in_html
 
-# ⭐ LUÔN ghi lại fixpy_datasets.json nếu có data mới (mnemonic update)
-_need_data_rewrite = bool(vocab_data) or bool(datasets)
+    # ⭐ LUÔN ghi lại fixpy_datasets.json nếu có data (mnemonic update)
+    _need_data_rewrite = bool(vocab_data) or bool(datasets)
+    _need_patch_html = bool(all_new) or add_vocab
 
-if not all_new and not add_vocab and not _need_data_rewrite:
-    print("[fix.py] Tat ca da co - khong can patch.")
-    return
+    # ═══════════════════════════════════════════════════════════════
+    #  CASE 0: Không có gì để làm
+    # ═══════════════════════════════════════════════════════════════
+    if not _need_patch_html and not _need_data_rewrite:
+        print("[fix.py] Tat ca da co - khong can patch.")
+        return
 
-# ⭐ Nếu chỉ cần ghi lại data (không cần patch HTML):
-if not all_new and not add_vocab and _need_data_rewrite:
-    print("[fix.py] Tab da co, nhung CAN GHI LAI DATA JSON...")
-    # ... build datasets_dict + ghi fixpy_datasets.json
-    # ... return luôn, không patch HTML
+    # ═══════════════════════════════════════════════════════════════
+    #  CASE A: Tab đã có sẵn → CHỈ ghi lại data JSON (mnemonic update)
+    #          KHÔNG patch HTML để tránh trùng lặp
+    # ═══════════════════════════════════════════════════════════════
+    if not _need_patch_html and _need_data_rewrite:
+        print("")
+        print("[fix.py] Tab da co san -> CHI ghi lai data JSON (khong patch HTML)")
 
+        _data_dir = "data"
+        os.makedirs(_data_dir, exist_ok=True)
+        _fixpy_path = os.path.join(_data_dir, "fixpy_datasets.json")
+
+        # Load data cũ để giữ các dataset đã có
+        datasets_dict = {}
+        if os.path.isfile(_fixpy_path):
+            try:
+                with open(_fixpy_path, "r", encoding="utf-8") as _f:
+                    datasets_dict = json.load(_f) or {}
+            except Exception as _e:
+                print("   [!] Khong doc duoc file cu: " + str(_e))
+                datasets_dict = {}
+
+        # ⭐ Update vocab dataset với mnemonic MỚI
+        if vocab_data:
+            datasets_dict[VOCAB_ID] = {
+                "id": VOCAB_ID,
+                "name": VOCAB_LABEL,
+                "icon": "fa-book",
+                "color": "#f59e0b",
+                "data": vocab_data,
+                "count": len(vocab_data),
+                "source": (os.path.basename(vocab_real_path)
+                           if vocab_real_path else "tu_vung_hsk.xlsx"),
+                "type": "premium",
+                "group": "fixpy",
+            }
+            print("   [OK] Update vocab: " + str(len(vocab_data)) + " tu")
+
+        # Update các dataset khác nếu có data mới
+        for ds in datasets:
+            datasets_dict[ds["id"]] = ds
+
+        with open(_fixpy_path, "w", encoding="utf-8") as _f:
+            json.dump(datasets_dict, _f, ensure_ascii=False, separators=(",", ":"))
+        _size_kb = os.path.getsize(_fixpy_path) / 1024
+        print("   [OK] Ghi data/fixpy_datasets.json (" + f"{_size_kb:.1f}" + " KB)")
+
+        # ⭐ Vẫn chạy patch_buttons ở cuối
+        print("")
+        print("=" * 62)
+        print("[fix.py] Chay patch_buttons.py de cover 4 nut...")
+        print("=" * 62)
+        try:
+            _here = os.path.dirname(os.path.abspath(__file__))
+            if _here not in sys.path:
+                sys.path.insert(0, _here)
+
+            from patch_buttons import patch_all_buttons
+            _ok = patch_all_buttons(INDEX_HTML)
+            if _ok:
+                print("[fix.py] patch_buttons.py -> THANH CONG")
+            else:
+                print("[fix.py] patch_buttons.py -> THAT BAI (tra ve False)")
+        except ImportError as _e:
+            print("[fix.py] Khong tim thay patch_buttons.py: " + str(_e))
+            print("[fix.py] Bo qua buoc nay")
+        except Exception as _e:
+            print("[fix.py] Loi khi chay patch_buttons.py: " + str(_e))
+            import traceback
+            traceback.print_exc()
+
+        return
+
+    # ═══════════════════════════════════════════════════════════════
+    #  CASE B: Cần patch HTML (có tab mới hoặc vocab mới)
+    # ═══════════════════════════════════════════════════════════════
     print("")
     print("[fix.py] Se them:")
     for ds in all_new:
@@ -1519,6 +1596,9 @@ if not all_new and not add_vocab and _need_data_rewrite:
     if add_vocab:
         print("   - [PREMIUM] " + VOCAB_LABEL + " (" + str(len(vocab_data)) + " tu)")
 
+    # ═══════════════════════════════════════════════════════════════
+    #  [PATCH 2] Them button tabs
+    # ═══════════════════════════════════════════════════════════════
     print("")
     print("[PATCH 2] Them button tabs...")
     new_btns = ""
@@ -1561,6 +1641,9 @@ if not all_new and not add_vocab and _need_data_rewrite:
             sys.exit(1)
         print("   [OK] Da chen button (fallback)")
 
+    # ═══════════════════════════════════════════════════════════════
+    #  [PATCH 3] CSS layout
+    # ═══════════════════════════════════════════════════════════════
     print("")
     print("[PATCH 3] CSS layout...")
     css = build_layout_css(all_new, add_vocab)
@@ -1574,6 +1657,9 @@ if not all_new and not add_vocab and _need_data_rewrite:
     else:
         print("   [OK] Da inject CSS")
 
+    # ═══════════════════════════════════════════════════════════════
+    #  [PATCH 4] JS binding + ghi data JSON
+    # ═══════════════════════════════════════════════════════════════
     print("")
     print("[PATCH 4] JS binding...")
 
@@ -1596,13 +1682,25 @@ if not all_new and not add_vocab and _need_data_rewrite:
             "group": "fixpy",
         }
 
+    # ⭐ Merge với data cũ để KHÔNG mất dataset đã có
     _data_dir = "data"
     os.makedirs(_data_dir, exist_ok=True)
     _fixpy_path = os.path.join(_data_dir, "fixpy_datasets.json")
+    if os.path.isfile(_fixpy_path):
+        try:
+            with open(_fixpy_path, "r", encoding="utf-8") as _f:
+                _old_data = json.load(_f) or {}
+            # Chỉ merge các ID CHƯA có (không ghi đè cái mới)
+            for _k, _v in _old_data.items():
+                if _k not in datasets_dict:
+                    datasets_dict[_k] = _v
+        except Exception:
+            pass
+
     with open(_fixpy_path, "w", encoding="utf-8") as _f:
         json.dump(datasets_dict, _f, ensure_ascii=False, separators=(",", ":"))
     _size_kb = os.path.getsize(_fixpy_path) / 1024
-    print(f"   Ghi data/fixpy_datasets.json ({_size_kb:.1f} KB)")
+    print("   Ghi data/fixpy_datasets.json (" + f"{_size_kb:.1f}" + " KB)")
 
     datasets_meta = {}
     for _id, _ds in datasets_dict.items():
@@ -1652,7 +1750,7 @@ if not all_new and not add_vocab and _need_data_rewrite:
     print("[fix.py] Kich thuoc HTML: " + str(round(size_kb, 1)) + " KB")
     if add_vocab or all_new:
         _fx_kb = os.path.getsize(_fixpy_path) / 1024
-        print(f"[fix.py] Data JSON (tai rieng): {_fx_kb:.1f} KB")
+        print("[fix.py] Data JSON (tai rieng): " + f"{_fx_kb:.1f}" + " KB")
 
     if all_new:
         print("[fix.py] Tab thuong da them:")
@@ -1665,6 +1763,9 @@ if not all_new and not add_vocab and _need_data_rewrite:
     print("[fix.py] Layout: PC 4 cot - Mobile 2 cot")
     print("=" * 62)
 
+    # ═══════════════════════════════════════════════════════════════
+    #  Chạy patch_buttons.py
+    # ═══════════════════════════════════════════════════════════════
     print("")
     print("=" * 62)
     print("[fix.py] Chay patch_buttons.py de cover 4 nut...")
