@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+mã gốc đây # -*- coding: utf-8 -*-
 r"""
 Module TỪ VỰNG PREMIUM - cắm vào fix.py.
 Tự sinh bộ thủ + mẹo nhớ từ module vocab_data/.
@@ -2240,113 +2240,7 @@ window.__SIMILAR_CHARS__ = __SIMILAR_JSON__;
         + '</div>';
 }
 
-    function buildSimilarCharsBlock(currentChar) {
-        currentChar = currentChar || '';
-        if (!currentChar) return '';
-
-        var similarMap = window.__SIMILAR_CHARS__ || {};
-        var entry = similarMap[currentChar];
-
-        var chars = [];
-        if (entry && typeof entry === 'object') {
-            if (Array.isArray(entry)) {
-                chars = entry;
-            } else if (Array.isArray(entry.similar)) {
-                chars = entry.similar;
-            }
-        }
-
-        if (!chars || chars.length === 0) return '';
-
-        var vocabList = [];
-        if (window.FIXPY_DATASETS && window.FIXPY_DATASETS[VOCAB_ID]) {
-            vocabList = window.FIXPY_DATASETS[VOCAB_ID].data || [];
-        }
-        if (vocabList.length === 0 && typeof RAW_DATA !== 'undefined' && RAW_DATA) {
-            vocabList = RAW_DATA;
-        }
-
-        var items = [];
-        for (var i = 0; i < chars.length; i++) {
-            var c = String(chars[i] || '').trim();
-            if (!c) continue;
-
-            var info = null;
-            for (var j = 0; j < vocabList.length; j++) {
-                if (vocabList[j].zh === c) { info = vocabList[j]; break; }
-            }
-            if (!info) {
-                for (var k = 0; k < vocabList.length; k++) {
-                    if (vocabList[k].zh && vocabList[k].zh.indexOf(c) !== -1) {
-                        info = vocabList[k];
-                        break;
-                    }
-                }
-            }
-
-            var pinyin = info ? (info.pinyin || '') : '';
-            var vi = info ? (info.vi || '') : '';
-            if (vi.length > 20) vi = vi.substring(0, 20) + '...';
-
-            var extra = '';
-            if (pinyin && vi) {
-                extra = '<span class="similar-char-info-txt">'
-                      + '<span class="similar-char-pinyin">/' + _esc(pinyin) + '/</span> '
-                      + _esc(vi)
-                      + '</span>';
-            } else if (pinyin) {
-                extra = '<span class="similar-char-info-txt">'
-                      + '<span class="similar-char-pinyin">/' + _esc(pinyin) + '/</span>'
-                      + '</span>';
-            } else if (vi) {
-                extra = '<span class="similar-char-info-txt">' + _esc(vi) + '</span>';
-            } else {
-                extra = '<span class="similar-char-info-txt" style="opacity:.5">(?)</span>';
-            }
-
-            var charJs = c.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
-            var hasCard = _hasCardForChar(c);
-
-            var jumpBtn = '';
-            if (hasCard) {
-                jumpBtn = '<button class="similar-char-btn-jump" '
-                        + 'onclick="vocabJumpToChar(\'' + charJs + '\', this, event)" '
-                        + 'title="Xem chi tiết">'
-                        + '<i class="fas fa-arrow-right"></i></button>';
-            }
-
-            items.push(
-                '<span class="similar-char-item" data-char="' + _esc(c) + '">'
-                + '<button class="similar-char-btn-audio" '
-                + 'onclick="vocabSpeakChar(\'' + charJs + '\', this, event)" '
-                + 'title="Đọc âm">'
-                + '<i class="fas fa-volume-up"></i></button>'
-                + '<span class="similar-char-main">'
-                + '<span class="similar-char-zh">' + _esc(c) + '</span>'
-                + extra
-                + '</span>'
-                + jumpBtn
-                + '</span>'
-            );
-        }
-
-        if (items.length === 0) return '';
-
-        var diffText = '';
-        if (entry && !Array.isArray(entry) && entry.diff) {
-            diffText = '<div class="similar-diff">'
-                     + '📌 ' + _esc(entry.diff)
-                     + '</div>';
-        }
-
-        return '<div class="similar-hint-block">'
-             + '<span class="similar-title">🔍 DỄ NHẦM</span>'
-             + '<div class="similar-chars">'
-             + items.join(' <span class="similar-sep">·</span> ')
-             + '</div>'
-             + diffText
-             + '</div>';
-    }
+    
 
     function enhanceCards() {
         if (!_isVocabMode()) return;
