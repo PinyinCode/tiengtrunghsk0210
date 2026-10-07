@@ -100,8 +100,9 @@ def parse_key(key):
 def load_vietnamese_meaning_from_excel():
     """
     Doc nghia tieng Viet tu file Excel.
-    Doc TAT CA sheets, chữ Han luon o cot 1 (B), 
-    nghia o cot 5 (F) cho HSK 1-6, cot 4 (E) cho HSK 7-9.
+    HSK 1-6: nghia cot F (5), fallback cot E (4).
+    HSK 7-9: nghia cot E (4).
+    Chữ Han: cot B (1).
     """
     try:
         import openpyxl
@@ -112,6 +113,7 @@ def load_vietnamese_meaning_from_excel():
     candidates = [
         os.path.join(_ROOT_DIR, "data", "tu_vung_hsk.xlsx"),
         os.path.join(_ROOT_DIR, "tu_vung_hsk.xlsx"),
+        os.path.join(_SCRIPT_DIR, "..", "data", "tu_vung_hsk.xlsx"),
         "data/tu_vung_hsk.xlsx",
         "tu_vung_hsk.xlsx",
     ]
@@ -143,7 +145,15 @@ def load_vietnamese_meaning_from_excel():
             print("[EXCEL] Loi sheet " + sheet_name + ": " + str(e))
             continue
 
-        # Doc 5 dong dau de tim header
+        # Xac dinh cot nghia theo sheet
+        if "7-9" in sheet_name:
+            col_vi = 4
+            col_vi_fallback = None
+        else:
+            col_vi = 5
+            col_vi_fallback = 4
+
+        # Do 5 dong dau de tim header
         first_rows = []
         try:
             for i, row in enumerate(ws.iter_rows(values_only=True)):
@@ -153,41 +163,44 @@ def load_vietnamese_meaning_from_excel():
         except Exception:
             pass
 
-        # Tim dong header (dong co nhieu text nhat, chua "Nghia" hoac "意思")
+        # Tim dong header
         header_idx = 0
-        col_vi = None
+        col_vi_detected = None
+        col_vi_fallback_detected = None
+
         for i, row in enumerate(first_rows):
             if not row:
                 continue
             header_str = " ".join([str(c).lower() if c else "" for c in row])
+
             # HSK 1-6: header chua "nghia tieng viet"
             if "nghia" in header_str or "nghĩa" in header_str:
                 header_idx = i
-                # Tim cot "nghia tieng viet"
                 for j, c in enumerate(row):
-                    if c and ("nghia" in str(c).lower() or "nghĩa" in str(c).lower()):
-                        col_vi = j
+                    if c and ("nghia tieng viet" in str(c).lower() or "nghĩa tiếng việt" in str(c).lower()):
+                        col_vi_detected = j
                         break
+                if col_vi_detected is None:
+                    for j, c in enumerate(row):
+                        if c and ("nghia" in str(c).lower() or "nghĩa" in str(c).lower()):
+                            col_vi_detected = j
+                            break
                 break
+
             # HSK 7-9: header chua "意思"
             if "意思" in header_str:
                 header_idx = i
                 for j, c in enumerate(row):
                     if c and "意思" in str(c):
-                        col_vi = j
+                        col_vi_detected = j
                         break
                 break
 
-        # Fallback: neu khong tim thay header
-        if col_vi is None:
-            # Doan theo sheet
-            if "7-9" in sheet_name:
-                col_vi = 4  # cot E
-            else:
-                col_vi = 5  # cot F
-            header_idx = 0
+        # Ap dung cot detected
+        if col_vi_detected is not None:
+            col_vi = col_vi_detected
 
-        # Data bat dau tu dong sau header + 1 (bo 1 dong trong)
+        # Data bat dau
         data_start = header_idx + 2
 
         sheet_count = 0
@@ -206,6 +219,11 @@ def load_vietnamese_meaning_from_excel():
                 zh = row[COL_ZH]
                 vi = row[col_vi]
 
+                # Fallback sang cot E neu cot F rong
+                if not vi and col_vi_fallback is not None:
+                    if col_vi_fallback < len(row):
+                        vi = row[col_vi_fallback]
+
                 if not zh or not vi:
                     sheet_skip += 1
                     continue
@@ -222,7 +240,7 @@ def load_vietnamese_meaning_from_excel():
         except Exception as e:
             print("[EXCEL] Loi doc sheet " + sheet_name + ": " + str(e))
 
-        print("[EXCEL] Sheet " + sheet_name + ": nghia cot " + str(col_vi) + " -> " + str(sheet_count) + " entries (bo qua " + str(sheet_skip) + ")")
+        print("[EXCEL] Sheet " + sheet_name + ": nghia cot " + str(col_vi) + " (fallback " + str(col_vi_fallback) + ") -> " + str(sheet_count) + " entries (bo qua " + str(sheet_skip) + ")")
 
     try:
         wb.close()
@@ -231,7 +249,6 @@ def load_vietnamese_meaning_from_excel():
 
     print("[EXCEL] TONG: " + str(len(result)) + " entries")
     return result
-
 
 def extract_vi(mnemonic):
     """Fallback: lay nghia tu mnemonic cu (chi lay dong Vi du)."""
