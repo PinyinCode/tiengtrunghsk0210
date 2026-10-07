@@ -29406,15 +29406,21 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
         currentChar = currentChar || '';
         if (!text || !text.trim()) return '';
 
-        var safe = _esc(text);
+        // BƯỚC 1: Transform ký tự đặc biệt TRƯỚC KHI ESCAPE
+        var raw = text;
+        raw = raw.replace(/\s=\s/g, ' __ARROW__ ');
+        raw = raw.replace(/→/g, ' __RARR__ ');
+        raw = raw.replace(/\(([^)]+)\)/g, ' __PAREN_L__$1__PAREN_R__');
 
-        // Helper: normalize Hán tự (bỏ space, dấu câu Trung)
+        // BƯỚC 2: Escape
+        var safe = _esc(raw);
+
+        // BƯỚC 3: Helper normalize
         function _normZh(s) {
             if (!s) return '';
             return s.replace(/[\s，。！？、；：""''（）]/g, '').trim();
         }
 
-        // Build map từ viDuList (normalized key)
         var viDuNormMap = {};
         if (viDuList && viDuList.length > 0) {
             viDuList.forEach(function(ex) {
@@ -29424,7 +29430,7 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
             });
         }
 
-        // Wrap mọi cụm Hán tự (>= 2 chữ) + có thể có dấu câu Trung cuối
+        // BƯỚC 4: Wrap
         safe = safe.replace(
             /([\u4e00-\u9fff][\u4e00-\u9fff\s]*[\u4e00-\u9fff，。！？、；：""''（）])/g,
             function(match) {
@@ -29442,28 +29448,27 @@ window.__SIMILAR_CHARS__ = {"版": {"similar": ["板", "饭"], "diff": "版=bả
                     return '<span class="card-example-zh" '
                          + 'onclick="vocabSpeakChar(\'' + mJs + '\', this, event)" '
                          + 'title="Bấm để nghe câu ví dụ">'
-                         + match
-                         + '</span>';
+                         + match + '</span>';
                 }
 
                 return '<span class="card-char-speakable" '
                      + 'onclick="vocabSpeakChar(\'' + mJs + '\', this, event)" '
                      + 'title="Bấm để nghe">'
-                     + match
-                     + '</span>';
+                     + match + '</span>';
             }
         );
 
-        safe = safe.replace(/\s=\s/g, ' <span class="arrow">=</span> ');
-        safe = safe.replace(/→/g, '<span class="arrow">→</span>');
-        safe = safe.replace(/\(([^)]+)\)/g, '(<span class="hint">$1</span>)');
+        // BƯỚC 5: Thay placeholder thành HTML thật
+        safe = safe.replace(/__ARROW__/g, '<span class="arrow">=</span>');
+        safe = safe.replace(/__RARR__/g, '<span class="arrow">→</span>');
+        safe = safe.replace(/__PAREN_L__/g, '(<span class="hint">');
+        safe = safe.replace(/__PAREN_R__/g, '</span>)');
 
         return '<div class="card-mnemonic">'
             + '<div class="card-mnemonic-label">MẸO NHỚ</div>'
             + '<div class="card-mnemonic-body">' + safe + '</div>'
             + '</div>';
     }
-
     function buildSimilarCharsBlock(currentChar) {
         currentChar = currentChar || '';
         if (!currentChar) return '';
