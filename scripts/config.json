@@ -17,7 +17,7 @@
     "demo_hsk_max": 3,
 
     "trial_days": 3,
-    "trial_max_questions": 200,
+    "trial_max_questions": 120,
     "trial_max_hsk": 5,
     "trial_unlimited_writing": true,
 
@@ -83,7 +83,7 @@
     "onboarding": {
         "demo": {
             "enabled": true,
-            "max_questions": 50,
+            "max_questions": 30,
             "hsk_allowed": [1, 2, 3],
             "topics_per_user": 10,
             "title": "Bạn quan tâm chủ đề nào?",
