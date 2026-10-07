@@ -759,3 +759,6 @@ def main():
     print("   Backup:      " + BACKUP_FILE)
     print("   Output:      " + INPUT_FILE)
     print("=" * 62)
+if __name__ == "__main__":
+    main()
+    
