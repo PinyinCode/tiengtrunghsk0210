@@ -2144,7 +2144,7 @@ window.__SIMILAR_CHARS__ = __SIMILAR_JSON__;
         + '<div class="card-mnemonic-label">MẸO NHỚ</div>'
         + '<div class="card-mnemonic-body">' + safe + '</div>'
         + '</div>';
-}
+    }
     function buildSimilarCharsBlock(currentChar) {
         currentChar = currentChar || '';
         if (!currentChar) return '';
