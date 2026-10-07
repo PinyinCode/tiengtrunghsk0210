@@ -1946,7 +1946,7 @@ window.__SIMILAR_CHARS__ = __SIMILAR_JSON__;
             document.querySelectorAll('.similar-char-btn-audio.speaking').forEach(function(b) {
                 b.classList.remove('speaking');
             });
-            document.querySelectorAll('.card-example-zh.speaking').forEach(function(b) {
+            document.querySelectorAll('.card-example-zh.speaking, .card-char-speakable.speaking').forEach(function(b) {
                 b.classList.remove('speaking');
             });
             btn.classList.add('speaking');
