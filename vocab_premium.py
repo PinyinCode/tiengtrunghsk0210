@@ -2031,47 +2031,58 @@ window.__SIMILAR_CHARS__ = __SIMILAR_JSON__;
     function buildMnemonicBlock(text, currentChar, viDuList) {
         currentChar = currentChar || '';
         if (!text || !text.trim()) return '';
+
         var safe = _esc(text);
 
-        var viDuHtml = '';
-        if (viDuList && viDuList.length > 0) {
-            var viDuMatch = safe.match(/📎\s*Ví dụ:?\s*([^\n]*)/);
-            if (viDuMatch) {
-                viDuList.forEach(function(ex) {
-                    var exJs = String(ex.zh || '')
-                        .replace(/\\/g, '\\\\')
-                        .replace(/'/g, "\\'")
-                        .replace(/"/g, '\\"');
-                    viDuHtml += '<span class="card-example-inline">';
-                    viDuHtml += '<span class="card-example-zh" '
-                              + 'onclick="vocabSpeakChar(\'' + exJs + '\', this, event)" '
-                              + 'title="Bấm để nghe câu ví dụ">'
-                              + _esc(ex.zh)
-                              + '</span>';
-                    if (ex.pinyin) {
-                        viDuHtml += ' <span class="card-example-pinyin">(' + _esc(ex.pinyin) + ')</span>';
-                    }
-                    if (ex.vi) {
-                        viDuHtml += ' <span class="card-example-vi">- ' + _esc(ex.vi) + '</span>';
-                    }
-                    viDuHtml += '</span>';
-                });
-
-                safe = safe.replace(
-                    /📎\s*Ví dụ:?\s*[^\n]*/,
-                    '📎 Ví dụ: __VIDU_PLACEHOLDER__'
-                );
-            }
+        // Helper: normalize Hán tự (bỏ space, dấu câu Trung)
+        function _normZh(s) {
+            if (!s) return '';
+            return s.replace(/[\s，。！？、；：""''（）]/g, '').trim();
         }
 
-        safe = safe.replace(/([\u4e00-\u9fa5]+)/g, '<span class="char-zh">$1</span>');
+        // Build map từ viDuList (normalized key)
+        var viDuNormMap = {};
+        if (viDuList && viDuList.length > 0) {
+            viDuList.forEach(function(ex) {
+                if (ex && ex.zh) {
+                    viDuNormMap[_normZh(ex.zh)] = ex;
+                }
+            });
+        }
+
+        // Wrap mọi cụm Hán tự (>= 2 chữ) + có thể có dấu câu Trung cuối
+        safe = safe.replace(
+            /([\u4e00-\u9fff][\u4e00-\u9fff\s]*[\u4e00-\u9fff，。！？、；：""''（）])/g,
+            function(match) {
+                var trimmed = match.trim();
+                var hanziOnly = trimmed.replace(/[^\u4e00-\u9fff]/g, '');
+                if (hanziOnly.length < 2) return match;
+
+                var mJs = trimmed
+                    .replace(/\\/g, '\\\\')
+                    .replace(/'/g, "\\'")
+                    .replace(/"/g, '\\"');
+                var mNorm = _normZh(trimmed);
+
+                if (viDuNormMap[mNorm]) {
+                    return '<span class="card-example-zh" '
+                         + 'onclick="vocabSpeakChar(\'' + mJs + '\', this, event)" '
+                         + 'title="Bấm để nghe câu ví dụ">'
+                         + match
+                         + '</span>';
+                }
+
+                return '<span class="card-char-speakable" '
+                     + 'onclick="vocabSpeakChar(\'' + mJs + '\', this, event)" '
+                     + 'title="Bấm để nghe">'
+                     + match
+                     + '</span>';
+            }
+        );
+
         safe = safe.replace(/\s=\s/g, ' <span class="arrow">=</span> ');
         safe = safe.replace(/→/g, '<span class="arrow">→</span>');
         safe = safe.replace(/\(([^)]+)\)/g, '(<span class="hint">$1</span>)');
-
-        if (viDuHtml) {
-            safe = safe.replace('__VIDU_PLACEHOLDER__', viDuHtml);
-        }
 
         return '<div class="card-mnemonic">'
             + '<div class="card-mnemonic-label">MẸO NHỚ</div>'
