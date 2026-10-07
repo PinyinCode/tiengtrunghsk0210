@@ -564,14 +564,7 @@ def fix_one(zh, hsk, vi, radical, old_mnemonic):
     return old_mnemonic, "verify_fail"
 
 def main():
-    print("=" * 62)
-    print("FIX MNEMONICS - QWEN")
-    print("   Model:     " + MODEL_ID)
-    print("   Input:     " + INPUT_FILE)
-    print("   Backup:    " + BACKUP_FILE)
-    print("   LIMIT:     " + str(LIMIT))
-    print("   DELAY:     " + str(DELAY) + "s")
-    print("=" * 62)
+    
 
     if not API_KEY:
         print("Chua set DASHSCOPE_API_KEY")
