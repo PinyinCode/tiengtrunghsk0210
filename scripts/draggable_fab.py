@@ -1,30 +1,14 @@
 # -*- coding: utf-8 -*-
-"""
-Draggable FAB — Cho phép kéo thả nút FAB tự do.
-- Mặc định: cả 2 nút giữ nguyên vị trí như hiện tại (CSS)
-- USER thường: chỉ kéo được 1 nút (FAB chat tím)
-- ADMIN: kéo được cả 2 nút (chat tím + admin manager xanh)
-- Mỗi user/admin có vị trí RIÊNG (theo email)
-- Sync Firestore → đa máy
-- Fallback localStorage nếu chưa login / offline
-"""
+"""Draggable FAB"""
 
 
 def build_draggable_fab_css():
-    """CSS bổ trợ cho draggable FAB."""
     return r"""
-/* ═══════════════════════════════════════════════════════════════
-   🎯 DRAGGABLE FAB — CSS bổ trợ
-   ═══════════════════════════════════════════════════════════════ */
-
-/* Khi FAB đang được kéo → tắt transition để mượt */
 .acm-fab.dragging,
 .chat-float-btn.dragging{
     transition:none !important;
     cursor:grabbing !important;
 }
-
-/* FAB có thể kéo → đổi cursor thành grab */
 .acm-fab[data-draggable="1"],
 .chat-float-btn[data-draggable="1"]{
     cursor:grab;
@@ -33,14 +17,10 @@ def build_draggable_fab_css():
     user-select:none;
     -webkit-touch-callout:none;
 }
-
-/* Đang kéo → cursor grabbing */
 .acm-fab[data-draggable="1"]:active,
 .chat-float-btn[data-draggable="1"]:active{
     cursor:grabbing;
 }
-
-/* Toast thông báo */
 .fab-toast{
     position:fixed;
     bottom:120px;
@@ -69,12 +49,6 @@ def build_draggable_fab_css():
 
 def build_draggable_fab_js():
     return r"""
-/* ═══════════════════════════════════════════════════════════════
-   🎯 DRAGGABLE FAB — Kéo thả nút FAB tự do
-   - USER: chỉ FAB chat (tím)
-   - ADMIN: cả FAB chat + FAB admin manager (xanh)
-   - Mặc định giữ nguyên vị trí CSS
-   ═══════════════════════════════════════════════════════════════ */
 (function() {
     'use strict';
 
@@ -82,6 +56,20 @@ def build_draggable_fab_js():
     var STORAGE_PREFIX = 'fab_pos_';
     var FIRESTORE_COLLECTION = 'user_prefs';
     var FIRESTORE_FIELD_PREFIX = 'fab_pos_';
+    var DESKTOP_RESIZE_MIN = 100;
+
+    var _lastWidth = window.innerWidth;
+    var _lastHeight = window.innerHeight;
+    var _resizeTimer = null;
+
+    function isMobileDevice() {
+        try {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                   (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+        } catch(e) {
+            return false;
+        }
+    }
 
     function getUser() {
         try { return window.currentUser || null; }
@@ -90,10 +78,6 @@ def build_draggable_fab_js():
     function getUserEmail() {
         var u = getUser();
         return (u && u.email) ? u.email : null;
-    }
-    function isAdmin() {
-        var u = getUser();
-        return u && u.role === 'admin';
     }
     function getUserKey(baseKey) {
         var email = getUserEmail();
@@ -114,263 +98,99 @@ def build_draggable_fab_js():
         t._timer = setTimeout(function() { t.classList.remove('show'); }, 2000);
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // MAIN — Làm cho 1 FAB kéo thả được
-    // ═══════════════════════════════════════════════════════════
-    window.__makeDraggable = function(elementId, baseStorageKey) {
-        var el = document.getElementById(elementId);
-        if (!el) {
-            console.warn('__makeDraggable: không tìm thấy #' + elementId);
+    function clearSavedPosition(baseStorageKey) {
+        var storageKey = getUserKey(baseStorageKey);
+        try {
+            localStorage.removeItem(STORAGE_PREFIX + storageKey);
+        } catch(e) {}
+
+        var email = getUserEmail();
+        var db = window.db;
+        if (email && db) {
+            var fieldName = FIRESTORE_FIELD_PREFIX + baseStorageKey;
+            var update = {};
+            try {
+                update[fieldName] = firebase.firestore.FieldValue.delete();
+                db.collection(FIRESTORE_COLLECTION).doc(email)
+                    .update(update)
+                    .catch(function() {});
+            } catch(e) {}
+        }
+    }
+
+    function resetElementToDefault(el) {
+        el.style.left = '';
+        el.style.top = '';
+        el.style.right = '';
+        el.style.bottom = '';
+        el.style.transform = '';
+        el.style.transition = '';
+        el.style.zIndex = '';
+        el.removeAttribute('data-draggable');
+        el.classList.remove('dragging');
+        el.__draggable = false;
+        el.__storageKey = null;
+        el.__suppressClick = false;
+    }
+
+    function handleRealResize() {
+        var newW = window.innerWidth;
+        var newH = window.innerHeight;
+        var dw = Math.abs(newW - _lastWidth);
+        var dh = Math.abs(newH - _lastHeight);
+
+        var shouldReset;
+        if (isMobileDevice()) {
+            shouldReset = (newW !== _lastWidth);
+        } else {
+            shouldReset = (dw > DESKTOP_RESIZE_MIN || dh > DESKTOP_RESIZE_MIN);
+        }
+
+        if (!shouldReset) {
+            _lastHeight = newH;
             return;
         }
-        if (el.__draggable) return;
-        el.__draggable = true;
-        el.__baseKey = baseStorageKey;
-        el.setAttribute('data-draggable', '1');
 
-        var isDragging = false;
-        var hasMoved = false;
-        var startX = 0, startY = 0;
-        var elStartX = 0, elStartY = 0;
-        var storageKey = getUserKey(baseStorageKey);
+        _lastWidth = newW;
+        _lastHeight = newH;
 
-        // ─────────────────────────────────────────────────────
-        // Vị trí
-        // ─────────────────────────────────────────────────────
-        function applyPosition(x, y) {
-            var rect = el.getBoundingClientRect();
-            var maxX = window.innerWidth - rect.width - 4;
-            var maxY = window.innerHeight - rect.height - 4;
-            x = Math.max(4, Math.min(x, maxX));
-            y = Math.max(4, Math.min(y, maxY));
+        var chatEl = document.getElementById('chatFloatWrap');
 
-            el.style.left = x + 'px';
-            el.style.top = y + 'px';
-            el.style.right = 'auto';
-            el.style.bottom = 'auto';
+        if (chatEl && chatEl.__draggable) {
+            clearSavedPosition('chat');
+            resetElementToDefault(chatEl);
         }
 
-        function getCurrentPosition() {
-            var rect = el.getBoundingClientRect();
-            return { x: Math.round(rect.left), y: Math.round(rect.top) };
-        }
+        setTimeout(function() {
+            if (typeof initChatFab === 'function') initChatFab();
+        }, 200);
+    }
 
-        function fromLocalStorage() {
-            try {
-                var saved = localStorage.getItem(STORAGE_PREFIX + storageKey);
-                if (saved) {
-                    var pos = JSON.parse(saved);
-                    if (pos && typeof pos.x === 'number') {
-                        applyPosition(pos.x, pos.y);
-                        return true;
-                    }
-                }
-            } catch(e) {}
-            return false;
-        }
-
-        function loadPosition() {
-            var email = getUserEmail();
-            var db = window.db;
-
-            // ⭐ Nếu chưa login hoặc chưa có db → chỉ dùng localStorage
-            if (!email || !db) {
-                fromLocalStorage();
-                return;
-            }
-
-            // ⭐ Load Firestore trước
-            var fieldName = FIRESTORE_FIELD_PREFIX + baseStorageKey;
-            db.collection(FIRESTORE_COLLECTION).doc(email).get()
-                .then(function(doc) {
-                    if (doc.exists) {
-                        var data = doc.data();
-                        var pos = data[fieldName];
-                        if (pos && typeof pos.x === 'number') {
-                            applyPosition(pos.x, pos.y);
-                            try {
-                                localStorage.setItem(
-                                    STORAGE_PREFIX + storageKey,
-                                    JSON.stringify({ x: pos.x, y: pos.y })
-                                );
-                            } catch(e) {}
-                            return;
-                        }
-                    }
-                    // Không có trong Firestore → localStorage
-                    fromLocalStorage();
-                })
-                .catch(function(e) {
-                    console.warn('FAB load Firestore error:', e);
-                    fromLocalStorage();
-                });
-        }
-
-        function savePosition() {
-            var pos = getCurrentPosition();
-
-            // 1. localStorage
-            try {
-                localStorage.setItem(
-                    STORAGE_PREFIX + storageKey,
-                    JSON.stringify(pos)
-                );
-            } catch(e) {}
-
-            // 2. Firestore
-            var email = getUserEmail();
-            var db = window.db;
-            if (email && db) {
-                var fieldName = FIRESTORE_FIELD_PREFIX + baseStorageKey;
-                var update = {};
-                update[fieldName] = pos;
-                db.collection(FIRESTORE_COLLECTION).doc(email)
-                    .set(update, { merge: true })
-                    .catch(function(e) {
-                        console.warn('FAB save Firestore error:', e);
-                    });
-            }
-        }
-
-        // ─────────────────────────────────────────────────────
-        // Pointer events
-        // ─────────────────────────────────────────────────────
-        function getPoint(e) {
-            if (e.touches && e.touches.length) {
-                return { x: e.touches[0].clientX, y: e.touches[0].clientY };
-            }
-            if (e.changedTouches && e.changedTouches.length) {
-                return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
-            }
-            return { x: e.clientX, y: e.clientY };
-        }
-
-        function onPointerDown(e) {
-            if (e.type === 'mousedown' && e.button !== 0) return;
-
-            var point = getPoint(e);
-            startX = point.x;
-            startY = point.y;
-
-            var rect = el.getBoundingClientRect();
-            elStartX = rect.left;
-            elStartY = rect.top;
-
-            isDragging = true;
-            hasMoved = false;
-
-            el.style.transition = 'none';
-            el.classList.add('dragging');
-            el.style.zIndex = '99999';
-        }
-
-        function onPointerMove(e) {
-            if (!isDragging) return;
-
-            var point = getPoint(e);
-            var dx = point.x - startX;
-            var dy = point.y - startY;
-
-            if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
-                hasMoved = true;
-            }
-
-            if (!hasMoved) return;
-
-            var newX = elStartX + dx;
-            var newY = elStartY + dy;
-            applyPosition(newX, newY);
-
-            if (e.cancelable) e.preventDefault();
-        }
-
-        function onPointerUp(e) {
-            if (!isDragging) return;
-            isDragging = false;
-
-            el.style.transition = '';
-            el.classList.remove('dragging');
-            el.style.zIndex = '';
-
-            if (hasMoved) {
-                savePosition();
-                el.__suppressClick = true;
-                setTimeout(function() { el.__suppressClick = false; }, 150);
-            }
-        }
-
-        // Chặn click sau khi drag
-        el.addEventListener('click', function(e) {
-            if (el.__suppressClick) {
-                e.preventDefault();
-                e.stopPropagation();
-                return false;
-            }
-        }, true);
-
-        el.addEventListener('mousedown', onPointerDown);
-        el.addEventListener('touchstart', onPointerDown, { passive: true });
-
-        document.addEventListener('mousemove', onPointerMove);
-        document.addEventListener('mouseup', onPointerUp);
-        document.addEventListener('touchmove', onPointerMove, { passive: false });
-        document.addEventListener('touchend', onPointerUp);
-        document.addEventListener('touchcancel', onPointerUp);
-
-        // Load vị trí
-        loadPosition();
-
-        // Resize
-        window.addEventListener('resize', function() {
-            var pos = getCurrentPosition();
-            applyPosition(pos.x, pos.y);
-        });
-
-        console.log('✅ Draggable FAB:', elementId, '| key:', storageKey);
-    };
-
-    // ═══════════════════════════════════════════════════════════
-    // RESET vị trí
-    // ═══════════════════════════════════════════════════════════
     window.__resetFabPosition = function(baseKey) {
         var email = getUserEmail();
         var storageKey = getUserKey(baseKey);
-
         try { localStorage.removeItem(STORAGE_PREFIX + storageKey); } catch(e) {}
-
         if (email && window.db) {
             var fieldName = FIRESTORE_FIELD_PREFIX + baseKey;
             var update = {};
-            update[fieldName] = firebase.firestore.FieldValue.delete();
-            window.db.collection(FIRESTORE_COLLECTION).doc(email)
-                .update(update).catch(function() {});
+            try {
+                update[fieldName] = firebase.firestore.FieldValue.delete();
+                window.db.collection(FIRESTORE_COLLECTION).doc(email)
+                    .update(update).catch(function() {});
+            } catch(e) {}
         }
-
-        showToast('✅ Đã reset vị trí nút');
+        showToast('Da reset vi tri nut');
         setTimeout(function() { location.reload(); }, 600);
     };
 
-    // ═══════════════════════════════════════════════════════════
-    // AUTO INIT — Quyết định FAB nào được kéo
-    // ═══════════════════════════════════════════════════════════
     function initChatFab() {
-        // ⭐ Kéo WRAPPER (chatFloatWrap) — chứa button bên trong
         var el = document.getElementById('chatFloatWrap');
-        if (!el) {
-            console.warn('Không tìm thấy #chatFloatWrap');
-            return;
-        }
+        if (!el) return;
 
         var storageKey = getUserKey('chat');
 
-        // Nếu user đổi → reset
         if (el.__draggable && el.__storageKey !== storageKey) {
-            el.__draggable = false;
-            el.__storageKey = null;
-            el.style.left = '';
-            el.style.top = '';
-            el.style.right = '';
-            el.style.bottom = '';
+            resetElementToDefault(el);
         }
 
         if (el.__draggable) return;
@@ -378,12 +198,8 @@ def build_draggable_fab_js():
         el.__storageKey = storageKey;
         el.setAttribute('data-draggable', '1');
 
-        // ⭐ Nút bên trong wrapper — dùng để bắt sự kiện
         var btn = document.getElementById('chatFloatBtn');
-        if (!btn) {
-            console.warn('Không tìm thấy #chatFloatBtn');
-            return;
-        }
+        if (!btn) return;
 
         var isDragging = false;
         var hasMoved = false;
@@ -396,8 +212,6 @@ def build_draggable_fab_js():
             var maxY = window.innerHeight - rect.height - 4;
             x = Math.max(4, Math.min(x, maxX));
             y = Math.max(4, Math.min(y, maxY));
-
-            // ⭐ Set cho WRAPPER
             el.style.left = x + 'px';
             el.style.top = y + 'px';
             el.style.right = 'auto';
@@ -426,12 +240,10 @@ def build_draggable_fab_js():
         function loadPosition() {
             var email = getUserEmail();
             var db = window.db;
-
             if (!email || !db) {
                 fromLocalStorage();
                 return;
             }
-
             db.collection(FIRESTORE_COLLECTION).doc(email).get()
                 .then(function(doc) {
                     if (doc.exists) {
@@ -450,22 +262,19 @@ def build_draggable_fab_js():
                     }
                     fromLocalStorage();
                 })
-                .catch(function(e) {
-                    console.warn('FAB load Firestore error:', e);
+                .catch(function() {
                     fromLocalStorage();
                 });
         }
 
         function savePosition() {
             var pos = getCurrentPosition();
-
             try {
                 localStorage.setItem(
                     STORAGE_PREFIX + storageKey,
                     JSON.stringify(pos)
                 );
             } catch(e) {}
-
             var email = getUserEmail();
             var db = window.db;
             if (email && db) {
@@ -473,9 +282,7 @@ def build_draggable_fab_js():
                 update['fab_pos_chat'] = pos;
                 db.collection(FIRESTORE_COLLECTION).doc(email)
                     .set(update, { merge: true })
-                    .catch(function(e) {
-                        console.warn('FAB save Firestore error:', e);
-                    });
+                    .catch(function() {});
             }
         }
 
@@ -491,18 +298,17 @@ def build_draggable_fab_js():
 
         function onPointerDown(e) {
             if (e.type === 'mousedown' && e.button !== 0) return;
-
+            if (typeof window.__closeFloatMenu === 'function') {
+                window.__closeFloatMenu();
+            }
             var point = getPoint(e);
             startX = point.x;
             startY = point.y;
-
             var rect = el.getBoundingClientRect();
             elStartX = rect.left;
             elStartY = rect.top;
-
             isDragging = true;
             hasMoved = false;
-
             el.style.transition = 'none';
             el.classList.add('dragging');
             el.style.zIndex = '99999';
@@ -510,32 +316,25 @@ def build_draggable_fab_js():
 
         function onPointerMove(e) {
             if (!isDragging) return;
-
             var point = getPoint(e);
             var dx = point.x - startX;
             var dy = point.y - startY;
-
             if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
                 hasMoved = true;
             }
-
             if (!hasMoved) return;
-
             var newX = elStartX + dx;
             var newY = elStartY + dy;
             applyPosition(newX, newY);
-
             if (e.cancelable) e.preventDefault();
         }
 
         function onPointerUp(e) {
             if (!isDragging) return;
             isDragging = false;
-
             el.style.transition = '';
             el.classList.remove('dragging');
             el.style.zIndex = '';
-
             if (hasMoved) {
                 savePosition();
                 btn.__suppressClick = true;
@@ -543,7 +342,6 @@ def build_draggable_fab_js():
             }
         }
 
-        // ⭐ Chặn click của BUTTON khi kéo
         btn.addEventListener('click', function(e) {
             if (btn.__suppressClick) {
                 e.preventDefault();
@@ -552,7 +350,6 @@ def build_draggable_fab_js():
             }
         }, true);
 
-        // ⭐ Bắt sự kiện từ BUTTON (để user nhấn vào nút kéo)
         btn.addEventListener('mousedown', onPointerDown);
         btn.addEventListener('touchstart', onPointerDown, { passive: true });
 
@@ -564,78 +361,38 @@ def build_draggable_fab_js():
 
         loadPosition();
 
-        window.addEventListener('resize', function() {
-            var pos = getCurrentPosition();
-            applyPosition(pos.x, pos.y);
-        });
-
-        console.log('✅ Draggable FAB chat wrapper | key:', storageKey);
-    }
-    function initAcmFab() {
-        // ⭐ CHỈ ADMIN mới được kéo FAB xanh lá
-        if (!isAdmin()) return;
-
-        var acmFab = document.getElementById('acmFab');
-        if (!acmFab) return;
-
-        var acmKey = getUserKey('admin_chat');
-
-        if (acmFab.__draggable && acmFab.__storageKey !== acmKey) {
-            acmFab.__draggable = false;
-            acmFab.__storageKey = null;
-            acmFab.style.left = '';
-            acmFab.style.top = '';
-            acmFab.style.right = '';
-            acmFab.style.bottom = '';
-        }
-
-        if (!acmFab.__draggable) {
-            window.__makeDraggable('acmFab', 'admin_chat');
-            acmFab.__storageKey = acmKey;
-        }
+        el.__isDraggingFn = function() { return isDragging; };
     }
 
     function autoInit() {
-        initChatFab();   // ⭐ Mọi user đều kéo được FAB chat
-        initAcmFab();    // ⭐ Chỉ admin kéo được FAB admin manager
+        initChatFab();
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // WATCH user change → re-init
-    // ═══════════════════════════════════════════════════════════
     var _lastEmail = null;
-    var _lastRole = null;
     setInterval(function() {
         try {
             var u = getUser();
             var email = u ? u.email : null;
-            var role = u ? (u.role || 'user') : null;
 
-            if (email === _lastEmail && role === _lastRole) return;
+            if (email === _lastEmail) return;
             _lastEmail = email;
-            _lastRole = role;
 
-            // Reset
-            ['chatFloatBtn', 'acmFab'].forEach(function(id) {
-                var el = document.getElementById(id);
-                if (el) {
-                    el.__draggable = false;
-                    el.__storageKey = null;
-                    el.style.left = '';
-                    el.style.top = '';
-                    el.style.right = '';
-                    el.style.bottom = '';
-                }
-            });
+            var el = document.getElementById('chatFloatWrap');
+            if (el) resetElementToDefault(el);
 
             setTimeout(autoInit, 300);
-            console.log('🎯 FAB re-init cho:', email || 'guest', '| role:', role || '-');
         } catch(e) {}
     }, 2000);
 
-    // ═══════════════════════════════════════════════════════════
-    // KHỞI ĐỘNG
-    // ═══════════════════════════════════════════════════════════
+    window.addEventListener('resize', function() {
+        var chatEl = document.getElementById('chatFloatWrap');
+        var isDragging = (chatEl && chatEl.__isDraggingFn && chatEl.__isDraggingFn());
+        if (isDragging) return;
+
+        clearTimeout(_resizeTimer);
+        _resizeTimer = setTimeout(handleRealResize, 300);
+    });
+
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', autoInit);
     } else {
@@ -643,7 +400,5 @@ def build_draggable_fab_js():
     }
     setTimeout(autoInit, 1000);
     setTimeout(autoInit, 3000);
-
-    console.log('✅ Draggable FAB module loaded');
 })();
 """
