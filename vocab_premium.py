@@ -115,28 +115,90 @@ def _get_ai_mnemonic(hsk, stt, zh):
     stt_str = str(stt or "").strip()
     zh_str = str(zh or "").strip()
 
+    # ═══════════════════════════════════════════════════════════
+    #  TẠO CÁC BIẾN THỂ CHỮ HÁN
+    #  VD: "爸爸 | 爸" → ["爸爸 | 爸", "爸爸", "爸"]
+    #      "爱好"     → ["爱好"]
+    # ═══════════════════════════════════════════════════════════
+    zh_variants = [zh_str]
+
+    # Nếu có dấu " | " (space + gạch + space)
+    if " | " in zh_str:
+        parts = zh_str.split(" | ")
+        for p in parts:
+            p = p.strip()
+            if p and p not in zh_variants:
+                zh_variants.append(p)
+
+    # Nếu có dấu "|" (không space)
+    elif "|" in zh_str:
+        parts = zh_str.split("|")
+        for p in parts:
+            p = p.strip()
+            if p and p not in zh_variants:
+                zh_variants.append(p)
+
+    # Nếu có space giữa các chữ (VD: "爸 爸")
+    if " " in zh_str and " | " not in zh_str:
+        no_space = zh_str.replace(" ", "")
+        if no_space and no_space not in zh_variants:
+            zh_variants.append(no_space)
+
+    # ═══════════════════════════════════════════════════════════
+    #  TẠO CÁC BIẾN THỂ HSK
+    #  VD: "HSK 1" → ["HSK 1", "HSK1", "hsk 1", "hsk1"]
+    # ═══════════════════════════════════════════════════════════
     m = re.match(r'^(HSK)\s*(\d+.*)$', hsk_str, re.IGNORECASE)
     hsk_spaced = (m.group(1).upper() + " " + m.group(2)) if m else hsk_str
+    hsk_no_space = hsk_str.replace(" ", "")
+    hsk_spaced_no_space = hsk_spaced.replace(" ", "")
 
-    candidates = [
-        hsk_str + "|" + stt_str + "|" + zh_str,
-        hsk_spaced + "|" + stt_str + "|" + zh_str,
-        hsk_str.lower() + "|" + stt_str + "|" + zh_str,
-        hsk_spaced.lower() + "|" + stt_str + "|" + zh_str,
+    hsk_variants = [
+        hsk_str,
+        hsk_spaced,
+        hsk_no_space,
+        hsk_spaced_no_space,
+        hsk_str.lower(),
+        hsk_spaced.lower(),
+        hsk_no_space.lower(),
     ]
 
+    # ═══════════════════════════════════════════════════════════
+    #  TẠO CANDIDATES (HSK × ZH)
+    # ═══════════════════════════════════════════════════════════
+    candidates = []
+    for hsk_var in hsk_variants:
+        for zh_var in zh_variants:
+            candidates.append(hsk_var + "|" + stt_str + "|" + zh_var)
+
+    # ═══════════════════════════════════════════════════════════
+    #  THỬ MATCH TỪNG CANDIDATE
+    # ═══════════════════════════════════════════════════════════
     for key in candidates:
         if key in _AI_MNEMONICS:
             return _AI_MNEMONICS[key]
 
-    target_hsk = hsk_str.replace(" ", "").lower()
+    # ═══════════════════════════════════════════════════════════
+    #  FALLBACK: DUYỆT TOÀN BỘ DICT
+    # ═══════════════════════════════════════════════════════════
+    target_hsk = hsk_no_space.lower()
+    target_stt = stt_str
+    target_zh_set = set(v.strip() for v in zh_variants)
+
     for k, v in _AI_MNEMONICS.items():
         parts = k.split("|")
         if len(parts) != 3:
             continue
-        if (parts[0].replace(" ", "").lower() == target_hsk
-                and parts[1].strip() == stt_str
-                and parts[2].strip() == zh_str):
+
+        key_hsk = parts[0].replace(" ", "").lower()
+        key_stt = parts[1].strip()
+        key_zh = parts[2].strip()
+
+        if key_hsk != target_hsk:
+            continue
+        if key_stt != target_stt:
+            continue
+        if key_zh in target_zh_set:
             return v
 
     return ""
