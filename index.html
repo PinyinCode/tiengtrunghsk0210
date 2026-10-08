@@ -12235,27 +12235,13 @@ function parseSearchQuery(rawQuery) {
 
     var qLower = q.toLowerCase();
 
-    // Hỗ trợ: "hsk1", "hsk1 5", "hsk7-9", "hsk7-9-1", "hsk7", "hsk8", "hsk9"
-    var match = qLower.match(/^hsk\s*(7[-–\s]*9(?:[-–\s]*[123])?|\d+)\s*(?:(\d+)(?:\s+(\d+))?)?$/);
+    var match = qLower.match(/^hsk\s*(\d+)(?:\s+(\d+)(?:\s+(\d+))?)?$/);
     if (!match) return null;
 
-    var hskRaw = match[1].replace(/[\s–]/g, '');
-    var hskValue;
+    var hskNum = parseInt(match[1]);
+    if (isNaN(hskNum) || hskNum < 1 || hskNum > 6) return null;
 
-    if (hskRaw === '7-9-1') {
-        hskValue = 'HSK 7-9 (1)';
-    } else if (hskRaw === '7-9-2') {
-        hskValue = 'HSK 7-9 ( 2)';
-    } else if (hskRaw === '7-9-3') {
-        hskValue = 'HSK 7-9 (3)';
-    } else if (hskRaw === '7-9' || hskRaw === '7' || hskRaw === '8' || hskRaw === '9') {
-        hskValue = 'HSK 7-9';
-    } else {
-        var hskNum = parseInt(hskRaw, 10);
-        if (isNaN(hskNum) || hskNum < 1 || hskNum > 6) return null;
-        hskValue = 'HSK ' + hskNum;
-    }
-
+    var hskValue = 'HSK' + hskNum;
     var startStt = match[2] ? parseInt(match[2]) : null;
     var endStt   = match[3] ? parseInt(match[3]) : startStt;
 
@@ -12831,10 +12817,7 @@ function getAllowedHskList() {
     var info = getTierInfo();
     var max = info.maxHSK;
     if (max === Infinity || max >= 6 || info.tier === 'active') {
-        return [
-            'HSK1','HSK2','HSK3','HSK4','HSK5','HSK6',
-            'HSK 7-9 (1)', 'HSK 7-9 ( 2)', 'HSK 7-9 (3)'
-        ];
+        return ['HSK1','HSK2','HSK3','HSK4','HSK5','HSK6','HSK7-9'];
     }
     var list = [];
     for (var i = 1; i <= max; i++) list.push('HSK' + i);
@@ -14644,10 +14627,7 @@ function buildFilters() {
         allowedHsk.forEach(function(h) {
             hskHtml += '<option value="' + h + '">' + h + '</option>';
         });
-        var allHskList = [
-            'HSK1','HSK2','HSK3','HSK4','HSK5','HSK6',
-            'HSK 7-9 (1)', 'HSK 7-9 ( 2)', 'HSK 7-9 (3)'
-        ];
+        var allHskList = ['HSK1','HSK2','HSK3','HSK4','HSK5','HSK6'];
         allHskList.forEach(function(h) {
             if (allowedHsk.indexOf(h) === -1) {
                 var lockLabel = info.tier === 'trial' ? '(gia hạn)' : '(đăng nhập)';
@@ -14682,10 +14662,7 @@ function buildFilters() {
             '<option value="HSK3">HSK3</option>' +
             '<option value="HSK4">HSK4</option>' +
             '<option value="HSK5">HSK5</option>' +
-            '<option value="HSK6">HSK6</option>' +
-            '<option value="HSK 7-9 (1)">HSK 7-9 (1)</option>' +
-            '<option value="HSK 7-9 ( 2)">HSK 7-9 ( 2)</option>' +
-            '<option value="HSK 7-9 (3)">HSK 7-9 (3)</option>';
+            '<option value="HSK6">HSK6</option>';
         var allSubjectSet2 = {};
         RAW_DATA.forEach(function(r) { if (r.subject) allSubjectSet2[r.subject] = 1; });
         var allSubjects2 = Object.keys(allSubjectSet2).sort();
@@ -14735,7 +14712,44 @@ function updateResultCount() {
         else spanEl.innerHTML = 'Tìm thấy <b>' + total + '</b> kết quả';
     }
 }
+function parseSearchQuery(rawQuery) {
+    var q = (rawQuery || '').trim();
+    if (!q) return null;
 
+    var qLower = q.toLowerCase();
+
+    // Hỗ trợ: "hsk1", "hsk1 5", "hsk1 5 10", "hsk7", "hsk7-9", "hsk7-9 5"
+    var match = qLower.match(/^hsk\s*(7[-–\s]*9|\d+)\s*(?:(\d+)(?:\s+(\d+))?)?$/);
+    if (!match) return null;
+
+    var hskRaw = match[1].replace(/[\s–]/g, '');  // "7-9" hoặc "5"
+    var hskValue;
+
+    if (hskRaw === '7-9' || hskRaw === '7' || hskRaw === '8' || hskRaw === '9') {
+        hskValue = 'HSK7-9';
+    } else {
+        var hskNum = parseInt(hskRaw, 10);
+        if (isNaN(hskNum) || hskNum < 1 || hskNum > 6) return null;
+        hskValue = 'HSK' + hskNum;
+    }
+
+    var startStt = match[2] ? parseInt(match[2]) : null;
+    var endStt   = match[3] ? parseInt(match[3]) : startStt;
+
+    if (startStt !== null && endStt !== null && endStt < startStt) {
+        var tmp = startStt;
+        startStt = endStt;
+        endStt = tmp;
+    }
+
+    return {
+        type: 'hsk_stt',
+        hsk: hskValue,
+        startStt: startStt,
+        endStt: endStt,
+        original: q
+    };
+}
 /* ============================================================ */
 /* APPLY FILTER — Lọc câu theo search/HSK/subject                */
 /* Đã tích hợp cú pháp đặc biệt: "hsk1 5", "hsk1", "hsk1 5 10"  */
@@ -15561,10 +15575,7 @@ function pfBuildFilterOptions() {
         var allowedHsk = getAllowedHskList();
         var hskHtml = '<option value="">Tất cả</option>';
         allowedHsk.forEach(function(h) { hskHtml += '<option value="' + h + '">' + h + '</option>'; });
-        var allHskList = [
-            'HSK1','HSK2','HSK3','HSK4','HSK5','HSK6',
-            'HSK 7-9 (1)', 'HSK 7-9 ( 2)', 'HSK 7-9 (3)'
-        ];
+        var allHskList = ['HSK1','HSK2','HSK3','HSK4','HSK5','HSK6'];
         allHskList.forEach(function(h) {
             if (allowedHsk.indexOf(h) === -1) {
                 var lockLabel = info.tier === 'trial' ? '(gia hạn)' : '(đăng nhập)';
@@ -15596,10 +15607,7 @@ function pfBuildFilterOptions() {
             '<option value="HSK3">HSK3</option>' +
             '<option value="HSK4">HSK4</option>' +
             '<option value="HSK5">HSK5</option>' +
-            '<option value="HSK6">HSK6</option>' +
-            '<option value="HSK 7-9 (1)">HSK 7-9 (1)</option>' +
-            '<option value="HSK 7-9 ( 2)">HSK 7-9 ( 2)</option>' +
-            '<option value="HSK 7-9 (3)">HSK 7-9 (3)</option>';
+            '<option value="HSK6">HSK6</option>';
         var allSubjectSet2 = {};
         RAW_DATA.forEach(function(r) { if (r.subject) allSubjectSet2[r.subject] = 1; });
         var allSubjects2 = Object.keys(allSubjectSet2).sort();
@@ -15651,32 +15659,22 @@ function pfApplyFilter() {
 
     /* ═══ NHÁNH 1: CÚ PHÁP ĐẶC BIỆT ═══ */
     if (parsed && parsed.type === 'hsk_stt') {
-        // ⭐ Xử lý "HSK 7-9" (không sheet) → match cả 3 sheet
-        var is79Group = (parsed.hsk === 'HSK 7-9');
+        var targetHsk = String(parsed.hsk || '').toUpperCase().replace(/\s+/g, '');
 
         /* ⭐ CHECK QUYỀN */
-        if (!isUnlimited && !is79Group && allowedHsk.indexOf(parsed.hsk) === -1) {
+        if (!isUnlimited && allowedHsk.indexOf(parsed.hsk) === -1) {
             var lockMsg = info.tier === 'trial'
                 ? '⚠️ ' + parsed.hsk + ' chưa mở khoá (cần gia hạn)'
                 : '⚠️ ' + parsed.hsk + ' chưa mở khoá (cần đăng nhập)';
             showSearchToast(lockMsg);
             filtered = [];
         } else {
-            var targetHsk = String(parsed.hsk || '').toUpperCase().replace(/\s+/g, '');
-
             filtered = baseData.filter(function(r) {
                 var rHsk = String(r.hsk || '').toUpperCase().replace(/\s+/g, '');
-
-                if (is79Group) {
-                    // ⭐ "HSK 7-9" match cả "HSK7-9(1)", "HSK7-9(2)", "HSK7-9(3)"
-                    if (rHsk.indexOf('HSK7-9') !== 0) return false;
-                } else {
-                    if (rHsk !== targetHsk) return false;
-                }
-
+                if (rHsk !== targetHsk) return false;
                 if (parsed.startStt === null) return true;
 
-                var sttNum = parseInt(String(r.stt_original || r.stt).trim(), 10);
+                var sttNum = parseInt(String(r.stt).trim(), 10);
                 if (isNaN(sttNum)) return false;
 
                 return sttNum >= parsed.startStt && sttNum <= parsed.endStt;
@@ -15712,18 +15710,7 @@ function pfApplyFilter() {
                 var inSubject = (r.subject || '').toLowerCase().indexOf(s) !== -1;
                 if (!inVi && !inZh && !inPinyin && !inTopic && !inSubject) return false;
             }
-
-            // ⭐ Xử lý HSK filter (bao gồm HSK 7-9 group)
-            if (state.hsk) {
-                var rHsk = String(r.hsk || '');
-                if (state.hsk === 'HSK 7-9') {
-                    // Match cả 3 sheet HSK 7-9
-                    if (rHsk.toUpperCase().replace(/\s+/g, '').indexOf('HSK7-9') !== 0) return false;
-                } else {
-                    if (rHsk !== state.hsk) return false;
-                }
-            }
-
+            if (state.hsk     && r.hsk     !== state.hsk)     return false;
             if (state.subject && r.subject !== state.subject) return false;
             return true;
         });
@@ -15799,6 +15786,7 @@ function pfApplyFilter() {
         $('pfNextBtn').disabled = true;
     }
 }
+
 function updateCharPreview() {
     var input = $('pfInput');
     var preview = $('pfPreview');
