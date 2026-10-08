@@ -6,7 +6,7 @@ on:
       - 'data/**'
       - 'scripts/data/**'
       - 'scripts/**/*.py'
-      - 'scripts/config.json'
+      - 'scripts/config.example.json'
       - 'fix.py'
       - 'patch_buttons.py'
       - 'quick_search.py'
@@ -14,6 +14,10 @@ on:
       - 'vocab_data/**'
       - 'requirements.txt'
       - '.github/workflows/convert.yml'
+  workflow_run:
+    workflows: ["📚 Add Mnemonic"]
+    types:
+      - completed
   workflow_dispatch:
 
 permissions:
@@ -43,6 +47,49 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install openpyxl cn2an pypinyin jieba pandas hanzidentifier cjkradlib
+
+      - name: Create scripts/config.json with secrets
+        run: |
+          python << 'EOF'
+          import json
+          import os
+
+          with open('scripts/config.example.json', 'r', encoding='utf-8') as f:
+              cfg = json.load(f)
+
+          cfg['telegram_bot_token'] = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+          cfg['telegram_chat_id'] = os.environ.get('TELEGRAM_CHAT_ID', '')
+
+          fb_json = os.environ.get('FIREBASE_CONFIG', '{}')
+          try:
+              cfg['firebase_config'] = json.loads(fb_json)
+          except json.JSONDecodeError:
+              print('[WARN] FIREBASE_CONFIG khong phai JSON hop le')
+
+          with open('scripts/config.json', 'w', encoding='utf-8') as f:
+              json.dump(cfg, f, ensure_ascii=False, indent=4)
+
+          print('[OK] Da tao scripts/config.json voi secret')
+          EOF
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG }}
+
+      - name: Verify scripts/config.json
+        run: |
+          if [ ! -f "scripts/config.json" ]; then
+            echo "scripts/config.json khong duoc tao"
+            exit 1
+          fi
+          python -c "
+          import json
+          cfg = json.load(open('scripts/config.json', encoding='utf-8'))
+          print('scripts/config.json OK')
+          print('  - telegram_bot_token:', 'SET' if cfg.get('telegram_bot_token') else 'MISSING')
+          print('  - telegram_chat_id:', 'SET' if cfg.get('telegram_chat_id') else 'MISSING')
+          print('  - firebase_config.apiKey:', 'SET' if cfg.get('firebase_config', {}).get('apiKey') else 'MISSING')
+          "
 
       - name: Verify dependencies
         run: |
@@ -192,27 +239,35 @@ jobs:
             echo "fix.py CSS OK"
           fi
 
+      - name: Check no secrets leaked to index.html
+        run: |
+          LEAK=0
+          if grep -q "8936673606:AAGQt" index.html; then
+            echo "LEAK: Old telegram token found in index.html"
+            LEAK=1
+          fi
+          if grep -qE '"telegram_bot_token"\s*:\s*"[0-9]{8,}:' index.html; then
+            echo "LEAK: Telegram bot token pattern found in index.html"
+            LEAK=1
+          fi
+          if [ "$LEAK" -eq 1 ]; then
+            echo "SECRET LEAK DETECTED - abort commit"
+            exit 1
+          fi
+          echo "No secrets leaked OK"
+
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
           git add index.html
-          if [ -f "data/ai_mnemonics.json" ]; then
-            git add data/ai_mnemonics.json
-          fi
-          if [ -f "data/all_datasets.json" ]; then
-            git add data/all_datasets.json
-          fi
-          if [ -f "data/dataset_registry.json" ]; then
-            git add data/dataset_registry.json
-          fi
-          if [ -f "data/fixpy_datasets.json" ]; then
-            git add data/fixpy_datasets.json
-          fi
-          if [ -f "data/similar_chars.json" ]; then
-            git add data/similar_chars.json
-          fi
-          git add -A
+          if [ -f "data/ai_mnemonics.json" ]; then git add data/ai_mnemonics.json; fi
+          if [ -f "data/all_datasets.json" ]; then git add data/all_datasets.json; fi
+          if [ -f "data/dataset_registry.json" ]; then git add data/dataset_registry.json; fi
+          if [ -f "data/fixpy_datasets.json" ]; then git add data/fixpy_datasets.json; fi
+          if [ -f "data/similar_chars.json" ]; then git add data/similar_chars.json; fi
+
           if git diff --quiet && git diff --staged --quiet; then
             echo "no changes"
           else
