@@ -29172,65 +29172,6 @@ window.__switchRawData = function(datasetId) {
     }
 
     console.log('[fix.py] Da bind ' + NEW_IDS.length + ' tab:', NEW_IDS);
-
-    /* === DEMO SEARCH LOCK (chi khoa o search, khong dung tab) === */
-    function __fixpyIsDemo() {
-        try {
-            if (typeof getTierInfo === 'function') {
-                var i = getTierInfo();
-                return i && i.tier === 'demo';
-            }
-            if (typeof window.APP_TIER !== 'undefined') {
-                return window.APP_TIER === 'demo';
-            }
-        } catch(e) {}
-        return false;
-    }
-    function __fixpyLockSearch() {
-        var isDemo = __fixpyIsDemo();
-        var si = document.getElementById('searchInput');
-        var pfSi = document.getElementById('pfSearchInput');
-        function setup(inp) {
-            if (!inp) return;
-            if (isDemo) {
-                if (inp.__fixpyLocked) return;
-                inp.__fixpyLocked = true;
-                inp.readOnly = true;
-                inp.style.cursor = 'pointer';
-                inp.style.background = 'linear-gradient(135deg,#fef3c7,#fde68a)';
-                inp.style.borderColor = '#f59e0b';
-                inp.style.color = '#92400e';
-                inp.style.fontWeight = '600';
-                inp.placeholder = 'Dang nhap de su dung tim kiem...';
-                inp.addEventListener('click', function(e) {
-                    e.preventDefault(); e.stopPropagation();
-                    alert('Vui long dang nhap de su dung tim kiem');
-                    if (typeof showLoginModal === 'function') showLoginModal();
-                    return false;
-                }, true);
-                inp.addEventListener('keydown', function(e) {
-                    e.preventDefault(); e.stopPropagation();
-                    alert('Vui long dang nhap de su dung tim kiem');
-                    if (typeof showLoginModal === 'function') showLoginModal();
-                    return false;
-                }, true);
-            } else {
-                if (!inp.__fixpyLocked) return;
-                inp.__fixpyLocked = false;
-                inp.readOnly = false;
-                inp.style.cursor = '';
-                inp.style.background = '';
-                inp.style.borderColor = '';
-                inp.style.color = '';
-                inp.style.fontWeight = '';
-                inp.placeholder = 'Tim kiem... (VD: hsk1 5)';
-            }
-        }
-        setup(si);
-        setup(pfSi);
-    }
-    setTimeout(__fixpyLockSearch, 800);
-    setInterval(__fixpyLockSearch, 2000);
 })();
 </script>
 <script>
