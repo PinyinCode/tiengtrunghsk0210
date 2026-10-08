@@ -395,8 +395,7 @@ def _detect_data_start_row(ws, fallback_row=3, col_zh=1):
         return fallback_row
 
 
-import os
-import openpyxl
+
 
 def read_vocab_excel(excel_file, start_row=3):
     print("\n[VOCAB] Dang doc: " + excel_file)
@@ -472,9 +471,9 @@ def _read_vocab_sheet(ws, hsk, sheet_name, start_row):
         COL_PINYIN = 2
         COL_LOAI_TU = -1
         COL_VI = 4
-        COL_VI_DU_ZH = -1
-        COL_VI_DU_PINYIN = -1
-        COL_VI_DU_VI = -1
+clean        COL_VI_DU_ZH_p = -1inyin
+        COL_VI_DU_PIN(rowYIN = -1
+        COL_VI[_DU_VICOL = -1
         COL_MNEMONIC = -1
         COL_RADICAL = -1
         print("      [COLS] HSK 7-9 mode (nghia o cot E)")
@@ -524,8 +523,10 @@ def _read_vocab_sheet(ws, hsk, sheet_name, start_row):
         stt_str = str(stt_raw_val).strip()
         stt_unique = (sheet_clean + "-" + stt_str) if stt_str else ""
 
-        pinyin = _clean_pinyin(row[COL_PINYIN]) if COL_PINYIN >= 0 and COL_PINYIN else ""
+        pinyin = __PINYIN]) if COL_PINYIN >= 0 and COL_PINYIN < len(row) else ""
         vi = _clean(row[COL_VI]) if COL_VI >= 0 and COL_VI < len(row) else ""
+
+        hsk_normalized = _normalize_hsk_with_sheet(hsk, sheet_name)
 
         mnemonic = ""
         source = "none"
@@ -536,7 +537,7 @@ def _read_vocab_sheet(ws, hsk, sheet_name, start_row):
                 source = "excel"
 
         if not mnemonic:
-            ai_text = _get_ai_mnemonic(hsk, stt_str, zh)
+            ai_text = _get_ai_mnemonic(hsk_normalized, stt_str, zh)
             if ai_text:
                 mnemonic = ai_text
                 source = "ai"
@@ -569,8 +570,6 @@ def _read_vocab_sheet(ws, hsk, sheet_name, start_row):
         vi_du_vi = _clean(row[COL_VI_DU_VI]) if COL_VI_DU_VI >= 0 and COL_VI_DU_VI < len(row) else ""
         vi_du_words = _split_chinese_words(vi_du_zh)
 
-        hsk_normalized = _normalize_hsk_with_sheet(hsk, sheet_name)
-
         data.append({
             "stt": stt_unique,
             "stt_original": stt_str,
@@ -592,7 +591,6 @@ def _read_vocab_sheet(ws, hsk, sheet_name, start_row):
         })
 
     return data, n_mnemonic_ai, n_mnemonic_static, n_radical_generated
-
 def build_vocab_css(vocab_id="tu-vung"):
     css = r"""
 .ds-btn[data-dataset="__VOCAB_ID__"] {
