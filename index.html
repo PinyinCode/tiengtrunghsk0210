@@ -28704,6 +28704,108 @@ window.__switchRawData = function(datasetId) {
         });
     };
 
+    window.__fixpyIsDemoLocked = function() {
+        try {
+            if (typeof getTierInfo === 'function') {
+                var info = getTierInfo();
+                return info && info.tier === 'demo';
+            }
+            if (typeof window.APP_TIER !== 'undefined') {
+                return window.APP_TIER === 'demo';
+            }
+        } catch(e) {}
+        return false;
+    };
+
+    window.__fixpyShowSearchLockNotice = function(inputEl) {
+        var oldToast = document.getElementById('searchLockToast');
+        if (oldToast) oldToast.remove();
+        var toast = document.createElement('div');
+        toast.id = 'searchLockToast';
+        toast.innerHTML = '<i class="fas fa-lock"></i> Dang nhap de su dung tim kiem';
+        toast.style.cssText = [
+            'position:fixed','top:80px','left:50%',
+            'transform:translateX(-50%) translateY(-20px)',
+            'padding:.85rem 1.4rem',
+            'background:linear-gradient(135deg,#f59e0b,#dc2626)',
+            'color:#fff','border-radius:50px',
+            'font-size:.9rem','font-weight:800','font-family:inherit',
+            'box-shadow:0 12px 36px rgba(220,38,38,.55)',
+            'z-index:99999','opacity:0',
+            'transition:opacity .25s ease, transform .3s cubic-bezier(.34,1.56,.64,1)',
+            'pointer-events:none','max-width:90vw',
+            'display:flex','align-items:center','gap:.5rem',
+            'white-space:nowrap'
+        ].join(';');
+        document.body.appendChild(toast);
+        requestAnimationFrame(function() {
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateX(-50%) translateY(0)';
+        });
+        setTimeout(function() {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(-50%) translateY(-20px)';
+            setTimeout(function() { if (toast.parentNode) toast.remove(); }, 300);
+        }, 2500);
+        if (inputEl) {
+            inputEl.style.animation = 'none';
+            void inputEl.offsetWidth;
+            inputEl.style.animation = 'searchLockShake .4s ease-in-out';
+            setTimeout(function() { inputEl.style.animation = ''; }, 500);
+            inputEl.blur();
+        }
+        if (typeof showLoginModal === 'function') {
+            setTimeout(function() {
+                showLoginModal();
+            }, 800);
+        }
+    };
+
+    window.__fixpyLockSearchInputs = function() {
+        var isDemo = window.__fixpyIsDemoLocked();
+        var searchInput = document.getElementById('searchInput');
+        var pfSearchInput = document.getElementById('pfSearchInput');
+        function setupLock(inp) {
+            if (!inp) return;
+            if (isDemo) {
+                inp.readOnly = true;
+                inp.style.cursor = 'pointer';
+                inp.style.background = 'linear-gradient(135deg, #fef3c7, #fde68a)';
+                inp.style.borderColor = '#f59e0b';
+                inp.style.color = '#92400e';
+                inp.style.fontWeight = '600';
+                inp.placeholder = 'Dang nhap de su dung tim kiem...';
+                if (!inp.__fixpyLockBound) {
+                    inp.__fixpyLockBound = true;
+                    var handler = function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        window.__fixpyShowSearchLockNotice(inp);
+                        return false;
+                    };
+                    inp.addEventListener('click', handler, true);
+                    inp.addEventListener('focus', handler, true);
+                    inp.addEventListener('keydown', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        window.__fixpyShowSearchLockNotice(inp);
+                        return false;
+                    }, true);
+                }
+            } else {
+                inp.readOnly = false;
+                inp.style.cursor = '';
+                inp.style.background = '';
+                inp.style.borderColor = '';
+                inp.style.color = '';
+                inp.style.fontWeight = '';
+                inp.placeholder = 'Tim kiem... (VD: hsk1 5)';
+            }
+        }
+        setupLock(searchInput);
+        setupLock(pfSearchInput);
+    };
+
     function patchSwitchRawData() {
         if (window.__fixPySwitchPatched) return;
         var origSwitch = window.__switchRawData;
@@ -28865,6 +28967,14 @@ window.__switchRawData = function(datasetId) {
         }
         window.applyFilter = function() {
             if (!window.__fixpyDataLoaded) return;
+            if (window.__fixpyIsDemoLocked && window.__fixpyIsDemoLocked()) {
+                var _si = document.getElementById('searchInput');
+                if (_si && _si.value && _si.value.trim() !== '') {
+                    _si.value = '';
+                    if (typeof state !== 'undefined' && state) state.search = '';
+                }
+                return;
+            }
             var curDs = (typeof CURRENT_DATASET !== 'undefined')
                         ? CURRENT_DATASET : 'tonghop';
             if (curDs === 'tonghop') {
@@ -28920,6 +29030,14 @@ window.__switchRawData = function(datasetId) {
         }
         window.pfApplyFilter = function() {
             if (!window.__fixpyDataLoaded) return;
+            if (window.__fixpyIsDemoLocked && window.__fixpyIsDemoLocked()) {
+                var _psi = document.getElementById('pfSearchInput');
+                if (_psi && _psi.value && _psi.value.trim() !== '') {
+                    _psi.value = '';
+                    if (typeof state !== 'undefined' && state) state.search = '';
+                }
+                return;
+            }
             var curDs = (typeof CURRENT_DATASET !== 'undefined')
                         ? CURRENT_DATASET : 'tonghop';
             if (curDs === 'tonghop') {
@@ -29155,6 +29273,7 @@ window.__switchRawData = function(datasetId) {
         patchPfApplyFilter();
         NEW_IDS.forEach(bindTab);
         patchMarkActive();
+        window.__fixpyLockSearchInputs();
     }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', bindAll);
