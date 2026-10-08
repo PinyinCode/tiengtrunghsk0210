@@ -14735,44 +14735,7 @@ function updateResultCount() {
         else spanEl.innerHTML = 'Tìm thấy <b>' + total + '</b> kết quả';
     }
 }
-function parseSearchQuery(rawQuery) {
-    var q = (rawQuery || '').trim();
-    if (!q) return null;
 
-    var qLower = q.toLowerCase();
-
-    // Hỗ trợ: "hsk1", "hsk1 5", "hsk1 5 10", "hsk7", "hsk7-9", "hsk7-9 5"
-    var match = qLower.match(/^hsk\s*(7[-–\s]*9|\d+)\s*(?:(\d+)(?:\s+(\d+))?)?$/);
-    if (!match) return null;
-
-    var hskRaw = match[1].replace(/[\s–]/g, '');  // "7-9" hoặc "5"
-    var hskValue;
-
-    if (hskRaw === '7-9' || hskRaw === '7' || hskRaw === '8' || hskRaw === '9') {
-        hskValue = 'HSK7-9';
-    } else {
-        var hskNum = parseInt(hskRaw, 10);
-        if (isNaN(hskNum) || hskNum < 1 || hskNum > 6) return null;
-        hskValue = 'HSK' + hskNum;
-    }
-
-    var startStt = match[2] ? parseInt(match[2]) : null;
-    var endStt   = match[3] ? parseInt(match[3]) : startStt;
-
-    if (startStt !== null && endStt !== null && endStt < startStt) {
-        var tmp = startStt;
-        startStt = endStt;
-        endStt = tmp;
-    }
-
-    return {
-        type: 'hsk_stt',
-        hsk: hskValue,
-        startStt: startStt,
-        endStt: endStt,
-        original: q
-    };
-}
 /* ============================================================ */
 /* APPLY FILTER — Lọc câu theo search/HSK/subject                */
 /* Đã tích hợp cú pháp đặc biệt: "hsk1 5", "hsk1", "hsk1 5 10"  */
