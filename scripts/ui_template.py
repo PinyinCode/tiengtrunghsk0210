@@ -5441,7 +5441,81 @@ function populateTikTokFloat() {
         pfTiktok.title = 'Theo dõi TikTok: ' + displayName;
     } catch(e) {}
 }
+/* ═══════════════════════════════════════════════════════════ */
+/* KHÓA Ô SEARCH KHI CHƯA ĐĂNG NHẬP (DEMO)                     */
+/* ═══════════════════════════════════════════════════════════ */
+function initSearchLockDemo() {
+    function isDemo() {
+        try {
+            var info = getTierInfo();
+            return info && info.tier === 'demo';
+        } catch(e) {
+            return false;
+        }
+    }
 
+    function lockInput(inp) {
+        if (!inp) return;
+        if (inp.__searchLocked) return;
+        inp.__searchLocked = true;
+
+        inp.readOnly = true;
+        inp.style.cursor = 'pointer';
+        inp.style.background = 'linear-gradient(135deg,#fef3c7,#fde68a)';
+        inp.style.borderColor = '#f59e0b';
+        inp.style.color = '#92400e';
+        inp.style.fontWeight = '600';
+        inp.placeholder = 'Dang nhap de su dung tim kiem...';
+
+        inp.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof showLoginModal === 'function') showLoginModal();
+            return false;
+        }, true);
+        inp.addEventListener('keydown', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }, true);
+        inp.addEventListener('focus', function(e) {
+            e.preventDefault();
+            inp.blur();
+            if (typeof showLoginModal === 'function') showLoginModal();
+        }, true);
+    }
+
+    function unlockInput(inp) {
+        if (!inp) return;
+        if (!inp.__searchLocked) return;
+        inp.__searchLocked = false;
+
+        inp.readOnly = false;
+        inp.style.cursor = '';
+        inp.style.background = '';
+        inp.style.borderColor = '';
+        inp.style.color = '';
+        inp.style.fontWeight = '';
+        inp.placeholder = 'Tim kiem... (VD: hsk1 5)';
+    }
+
+    function applyLock() {
+        var isD = isDemo();
+        var si = document.getElementById('searchInput');
+        var pfSi = document.getElementById('pfSearchInput');
+
+        if (isD) {
+            lockInput(si);
+            lockInput(pfSi);
+        } else {
+            unlockInput(si);
+            unlockInput(pfSi);
+        }
+    }
+
+    setTimeout(applyLock, 500);
+    setInterval(applyLock, 2000);
+}
 /* ============================================================ */
 /* INIT APP                                                      */
 /* ============================================================ */
@@ -5470,6 +5544,9 @@ function initApp() {
 
     /* ❤️ Khởi tạo module Yêu thích */
     if (typeof initFavorites === 'function') initFavorites();
+
+    /* ⭐ KHÓA Ô SEARCH KHI DEMO */
+    initSearchLockDemo();
 
     _lastWidthMode = window.innerWidth >= 769 ? 'desktop' : 'mobile';
     if (_lastWidthMode === 'desktop') moveTikTokBarToHeader();
