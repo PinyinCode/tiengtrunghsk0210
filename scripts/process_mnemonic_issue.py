@@ -13,6 +13,14 @@ import sys
 MNEMONIC_FILE = "data/ai_mnemonics.json"
 
 
+# ⭐ EMOJI CHO TỪNG PHẦN
+EMOJI_CHIET_TU = "\U0001F4A1"      # 💡
+EMOJI_AM_THANH = "\U0001F4CC"      # 📌
+EMOJI_CAU_CHUYEN # = "\U0001F3 🎬AC"   
+EMOJI_VI_DU = "\U0001F4CE"         # 📎
+EMOJI_LIEN_QUAN = "\U0001F517"     # 🔗
+
+
 def parse_issue_body(body):
     if not body:
         return {}
@@ -75,28 +83,63 @@ def normalize_key(hsk, stt, zh):
     return hsk_str + "|" + stt_str + "|" + zh_str
 
 
+# ═══════════════════════════════════════════════════════════════
+#  GHÉP MẸO NHỚ VỚI EMOJI + DẤU
+# ═══════════════════════════════════════════════════════════════
+def strip_leading_label(text, labels):
+    """
+    Bỏ label nếu user đã gõ ở đầu (VD: "Chiết tự:", "Chiet tu:", "💡 Chiết tự:")
+    """
+    for label in labels:
+        pattern = r'^\s*' + re.escape(label) + r'\s*:?\s*'
+        new_text = re.sub(pattern, '', text, flags=re.IGNORECASE)
+        if new_text != text:
+            return new_text.strip()
+    return text.strip()
+
+
 def build_mnemonic(chiet_tu, am_thanh, cau_chuyen, vi_du, lien_quan):
+    """
+    Ghép 5 phần thành mẹo nhớ đúng format flashcard.
+
+    Kết quả:
+        💡 Chiết tự: ...
+        📌 Âm thanh: ...
+        🎬 Câu chuyện: ...
+        📎 Ví dụ: ...
+        🔗 Liên quan: ...
+    """
     parts = []
 
     if chiet_tu:
-        text = re.sub(r'^\s*Chiet tu\s*:?\s*', '', chiet_tu, flags=re.IGNORECASE)
-        parts.append("Chiet tu: " + text.strip())
+        text = strip_leading_label(chiet_tu, [
+            "💡 Chiết tự", "Chiết tự", "Chiet tu", "💡"
+        ])
+        parts.append(EMOJI_CHIET_TU + " Chiết tự: " + text)
 
     if am_thanh:
-        text = re.sub(r'^\s*Am thanh\s*:?\s*', '', am_thanh, flags=re.IGNORECASE)
-        parts.append("Am thanh: " + text.strip())
+        text = strip_leading_label(am_thanh, [
+            "📌 Âm thanh", "Âm thanh", "Am thanh", "📌"
+        ])
+        parts.append(EMOJI_AM_THANH + " Âm thanh: " + text)
 
     if cau_chuyen:
-        text = re.sub(r'^\s*Cau chuyen\s*:?\s*', '', cau_chuyen, flags=re.IGNORECASE)
-        parts.append("Cau chuyen: " + text.strip())
+        text = strip_leading_label(cau_chuyen, [
+            "🎬 Câu chuyện", "Câu chuyện", "Cau chuyen", "🎬"
+        ])
+        parts.append(EMOJI_CAU_CHUYEN + " Câu chuyện: " + text)
 
     if vi_du:
-        text = re.sub(r'^\s*Vi du\s*:?\s*', '', vi_du, flags=re.IGNORECASE)
-        parts.append("Vi du: " + text.strip())
+        text = strip_leading_label(vi_du, [
+            "📎 Ví dụ", "Ví dụ", "Vi du", "📎"
+        ])
+        parts.append(EMOJI_VI_DU + " Ví dụ: " + text)
 
     if lien_quan:
-        text = re.sub(r'^\s*Lien quan\s*:?\s*', '', lien_quan, flags=re.IGNORECASE)
-        parts.append("Lien quan: " + text.strip())
+        text = strip_leading_label(lien_quan, [
+            "🔗 Liên quan", "Liên quan", "Lien quan", "🔗"
+        ])
+        parts.append(EMOJI_LIEN_QUAN + " Liên quan: " + text)
 
     return "\n".join(parts)
 
@@ -198,7 +241,7 @@ def main():
     key = normalize_key(hsk, stt, zh)
     print("Key (normalized): " + key, file=sys.stderr)
     print("Mnemonic preview:", file=sys.stderr)
-    print(mnemonic[:300] + "...", file=sys.stderr)
+    print(mnemonic[:400] + "...", file=sys.stderr)
 
     mnemonics = load_mnemonics()
     old_count = len(mnemonics)
