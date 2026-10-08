@@ -12235,23 +12235,21 @@ function parseSearchQuery(rawQuery) {
 
     var qLower = q.toLowerCase();
 
-    // Hỗ trợ: "hsk1", "hsk1 5", "hsk7-9", "hsk7-9 5", "hsk7-9-1" (sheet 1)
+    // Hỗ trợ: "hsk1", "hsk1 5", "hsk7-9", "hsk7-9-1", "hsk7", "hsk8", "hsk9"
     var match = qLower.match(/^hsk\s*(7[-–\s]*9(?:[-–\s]*[123])?|\d+)\s*(?:(\d+)(?:\s+(\d+))?)?$/);
     if (!match) return null;
 
     var hskRaw = match[1].replace(/[\s–]/g, '');
     var hskValue;
 
-    if (hskRaw.indexOf('7-9') === 0) {
-        if (hskRaw === '7-9-1') {
-            hskValue = 'HSK 7-9 (1)';
-        } else if (hskRaw === '7-9-2') {
-            hskValue = 'HSK 7-9 ( 2)';
-        } else if (hskRaw === '7-9-3') {
-            hskValue = 'HSK 7-9 (3)';
-        } else {
-            hskValue = 'HSK 7-9';
-        }
+    if (hskRaw === '7-9-1') {
+        hskValue = 'HSK 7-9 (1)';
+    } else if (hskRaw === '7-9-2') {
+        hskValue = 'HSK 7-9 ( 2)';
+    } else if (hskRaw === '7-9-3') {
+        hskValue = 'HSK 7-9 (3)';
+    } else if (hskRaw === '7-9' || hskRaw === '7' || hskRaw === '8' || hskRaw === '9') {
+        hskValue = 'HSK 7-9';
     } else {
         var hskNum = parseInt(hskRaw, 10);
         if (isNaN(hskNum) || hskNum < 1 || hskNum > 6) return null;
