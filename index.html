@@ -29304,6 +29304,10 @@ window.__switchRawData = function(datasetId) {
                         b.classList.remove('active');
                     });
                     this.classList.add('active');
+                    /* ⭐ VẼ LẠI SUB BUTTONS VỚI ICON KHÓA */
+                    if (typeof initDatasetSelector === 'function') {
+                        try { initDatasetSelector(); } catch(err) {}
+                    }
                 }
             }, true);
         }
