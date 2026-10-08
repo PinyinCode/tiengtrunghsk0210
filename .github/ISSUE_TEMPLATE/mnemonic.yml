@@ -1,5 +1,5 @@
-name: "📚 Thêm/Sửa mẹo nhớ HSK"
-description: Nhập mẹo nhớ cho từ vựng HSK — bot tự động cập nhật file JSON
+name: 📚 Thêm/Sửa mẹo nhớ HSK
+description: Nhập mẹo nhớ đầy đủ 5 phần cho từ vựng HSK
 title: "[Mnemonic] HSK1 - "
 labels: ["mnemonic", "automated"]
 body:
@@ -8,7 +8,7 @@ body:
       value: |
         ## 📚 Nhập mẹo nhớ cho từ vựng HSK
 
-        Điền form bên dưới → bot sẽ **tự động cập nhật** file `data/ai_mnemonics.json` và commit vào repo.
+        Đingền đầy đủ **5 phần**ắ bên dưới → bot sẽ tự động ghép thành mẹo nhớ hoàn chỉnh.
 
         ⚡ **Sau khi submit, đợi 1-2 phút để web cập nhật.**
 
@@ -16,7 +16,7 @@ body:
     id: hsk
     attributes:
       label: HSK
-      description: Chọn cấp độ HSK
+      description: Chọn cấp độ (HSK 7-9 chọn đúng sheet)
       options:
         - HSK1
         - HSK2
@@ -24,7 +24,9 @@ body:
         - HSK4
         - HSK5
         - HSK6
-        - HSK7-9
+        - HSK 7-9 (1)
+        - HSK 7-9 ( 2)
+        - HSK 7-9 (3)
     validations:
       required: true
 
@@ -47,18 +49,22 @@ body:
       required: true
 
   - type: input
-    id: vi
-    attributes:
-      label: Nghĩa tiếng Việt
-      description: Nghĩa của từ (không bắt buộc)
-      placeholder: "VD: Bố; ba"
-
-  - type: input
     id: pinyin
     attributes:
       label: Pinyin
-      description: Phiên âm (không bắt buộc)
+      description: Phiên âm
       placeholder: "VD: bàba"
+    validations:
+      required: true
+
+  - type: input
+    id: vi
+    attributes:
+      label: Nghĩa tiếng Việt
+      description: Nghĩa của từ
+      placeholder: "VD: Bố; ba"
+    validations:
+      required: true
 
   - type: input
     id: radical
@@ -67,23 +73,64 @@ body:
       description: "Format: 父|fù|4|Cha"
       placeholder: "VD: 父|fù|4|Cha"
 
-  - type: textarea
-    id: mnemonic
+  - type: markdown
     attributes:
-      label: Mẹo nhớ
-      description: |
-        Nhập mẹo nhớ đầy đủ. Hỗ trợ nhiều dòng, emoji.
+      value: |
+        ---
+        ### 📝 Nhập 5 phần mẹo nhớ
+        Mỗi phần nhập **n gọn 1-3 câu**.
 
-        Format gợi ý:
-        - 💡 Chi tiết từ: ...
-        - 🔗 Âm thanh: ...
-        - 📖 Câu chuyện: ...
-        - 📎 Ví dụ: ...
-        - 🔗 Liên quan: ...
+  - type: textarea
+    id: chiet_tu
+    attributes:
+      label: 💡 Chiết tự
+      description: Phân tích chữ Hán thành các bộ thủ, ghép nghĩa
       placeholder: |
-        💡 Chi tiết từ: 父 (Cha) + 巴 (mong ước) → 爸爸 (Bố, ba)
-        🔗 Âm thanh: "bàba" nghe như "ba ba" — gọi ba 2 lần
-        📎 Ví dụ: 爸爸去哪儿了? (Bàba qù nǎr le?) — Bố đi đâu rồi?
+        VD: 父 (bộ phụ - cha) + 巴 (ba - mong ước) → Người cha mong ước điều tốt cho con = BỐ, CHA
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: am_thanh
+    attributes:
+      label: 📌 Âm thanh
+      description: Liên tưởng âm Hán-Việt + câu vè dễ nhớ
+      placeholder: |
+        VD: "bàba" ≈ "ba ba" (đọc 2 lần, gọi ba). Câu vè: "Ba ba ơi, ba ba à, bố yêu con nhất trên đời"
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: cau_chuyen
+    attributes:
+      label: 🎬 Câu chuyện
+      description: 1 đoạn ngắn 2-3 câu có ngữ cảnh sử dụng từ
+      placeholder: |
+        VD: Bé Tí tan học chạy về nhà, thấy ba đang sửa xe dưới nắng. Bé chạy tới ôm chầm lấy ba, miệng líu lo: "爸爸, 爸爸!" (bàba, bàba) — hai tiếng gọi nghe đến não lòng, khiến bố Tí rơm rớm nước mắt vì hạnh phúc.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: vi_du
+    attributes:
+      label: 📎 Ví dụ
+      description: "Câu tiếng Trung + pinyin + nghĩa (format: 中文 (pinyin) - nghĩa)"
+      placeholder: |
+        VD: 爸爸去哪儿了? (Bàba qù nǎr le?) - Bố đi đâu rồi?
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: lien_quan
+    attributes:
+      label: 🔗 Liên quan
+      description: "3-5 từ cùng chủ đề (format: từ (pinyin - nghĩa), từ (pinyin - nghĩa))"
+      placeholder: |
+        VD: 妈妈 (māma - mẹ), 哥哥 (gēge - anh trai), 姐姐 (jiějie - chị gái), 弟弟 (dìdi - em trai)
       render: text
     validations:
       required: true
