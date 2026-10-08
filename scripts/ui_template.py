@@ -5443,6 +5443,8 @@ function populateTikTokFloat() {
 }
 /* ═══════════════════════════════════════════════════════════ */
 /* KHÓA Ô SEARCH KHI CHƯA ĐĂNG NHẬP (DEMO)                     */
+/* Bao gồm: ô search chính + ô search trong practice full      */
+/*          + nút toggle search nổi (quick_search)             */
 /* ═══════════════════════════════════════════════════════════ */
 function initSearchLockDemo() {
     function isDemo() {
@@ -5453,6 +5455,92 @@ function initSearchLockDemo() {
             return false;
         }
     }
+
+    function lockInput(inp) {
+        if (!inp) return;
+        if (inp.__searchLocked) return;
+        inp.__searchLocked = true;
+
+        inp.readOnly = true;
+        inp.style.cursor = 'pointer';
+        inp.style.background = 'linear-gradient(135deg,#fef3c7,#fde68a)';
+        inp.style.borderColor = '#f59e0b';
+        inp.style.color = '#92400e';
+        inp.style.fontWeight = '600';
+        inp.placeholder = 'Dang nhap de su dung tim kiem...';
+
+        inp.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof showLoginModal === 'function') showLoginModal();
+            return false;
+        }, true);
+        inp.addEventListener('keydown', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }, true);
+        inp.addEventListener('focus', function(e) {
+            e.preventDefault();
+            inp.blur();
+            if (typeof showLoginModal === 'function') showLoginModal();
+        }, true);
+    }
+
+    function unlockInput(inp) {
+        if (!inp) return;
+        if (!inp.__searchLocked) return;
+        inp.__searchLocked = false;
+
+        inp.readOnly = false;
+        inp.style.cursor = '';
+        inp.style.background = '';
+        inp.style.borderColor = '';
+        inp.style.color = '';
+        inp.style.fontWeight = '';
+        inp.placeholder = 'Tim kiem... (VD: hsk1 5)';
+    }
+
+    /* ⭐ KHÓA NÚT TOGGLE SEARCH NỔI (quick_search.py) */
+    function lockQuickSearchToggle() {
+        var root = document.getElementById('quickSearchRoot');
+        if (!root) return;
+        if (root.__searchLocked) return;
+        root.__searchLocked = true;
+
+        /* Ẩn hẳn nút toggle đi */
+        root.style.display = 'none';
+    }
+
+    function unlockQuickSearchToggle() {
+        var root = document.getElementById('quickSearchRoot');
+        if (!root) return;
+        if (!root.__searchLocked) return;
+        root.__searchLocked = false;
+
+        /* Hiện lại */
+        root.style.display = '';
+    }
+
+    function applyLock() {
+        var isD = isDemo();
+        var si = document.getElementById('searchInput');
+        var pfSi = document.getElementById('pfSearchInput');
+
+        if (isD) {
+            lockInput(si);
+            lockInput(pfSi);
+            lockQuickSearchToggle();
+        } else {
+            unlockInput(si);
+            unlockInput(pfSi);
+            unlockQuickSearchToggle();
+        }
+    }
+
+    setTimeout(applyLock, 500);
+    setInterval(applyLock, 2000);
+}
 
     function lockInput(inp) {
         if (!inp) return;
