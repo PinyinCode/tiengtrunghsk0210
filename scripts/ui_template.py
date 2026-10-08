@@ -3689,42 +3689,35 @@ function canAccessChuyenNganh() {
     return (typeof window.APP_TIER !== 'undefined' && window.APP_TIER === 'active');
 }
 /* ═══════════════════════════════════════════════════════════ */
-/* PARSE SEARCH QUERY — Nhận diện cú pháp đặc biệt              */
-/* Hỗ trợ CẢ CHỮ HOA VÀ CHỮ THƯỜNG:                             */
-/*   "hsk1 5"     = "HSK1 5"     = "Hsk1 5"                     */
-/*   "hsk1"       = "HSK1"       = "Hsk1"                       */
-/*   "hsk1 5 10"  = "HSK1 5 10"  = "Hsk1 5 10"                  */
+/* NORMALIZE HSK — Gộp HSK 7, 8, 9 và mọi file (1)(2)(3)...    */
+/*   "HSK 7-9 (1)" / "HSK 7-9 (2)" / "HSK 7-9 (3)"  → "HSK7-9" */
+/*   "HSK 7-9" / "HSK7-9" / "HSK 7" / "HSK 8" / "HSK 9" → "HSK7-9" */
+/*   "HSK 1" / "HSK 2 (5)" / "hsk3"                 → "HSK1"/"HSK2"/"HSK3" */
 /* ═══════════════════════════════════════════════════════════ */
-function parseSearchQuery(rawQuery) {
-    var q = (rawQuery || '').trim();
-    if (!q) return null;
+function normalizeHsk(hsk) {
+    if (!hsk) return '';
+    var s = String(hsk).toUpperCase().trim();
 
-    var qLower = q.toLowerCase();
+    // Bỏ hậu tố "(1)", "(2)", "(3)"...
+    s = s.replace(/\([^)]*\)/g, '').trim();
 
-    var match = qLower.match(/^hsk\s*(\d+)(?:\s+(\d+)(?:\s+(\d+))?)?$/);
-    if (!match) return null;
+    // Bỏ mọi khoảng trắng
+    s = s.replace(/\s+/g, '');
 
-    var hskNum = parseInt(match[1]);
-    if (isNaN(hskNum) || hskNum < 1 || hskNum > 6) return null;
+    // Tách số HSK
+    var m = s.match(/^HSK(\d+)(?:[-–](\d+))?$/);
+    if (!m) return s;
 
-    var hskValue = 'HSK' + hskNum;
-    var startStt = match[2] ? parseInt(match[2]) : null;
-    var endStt   = match[3] ? parseInt(match[3]) : startStt;
+    var from = parseInt(m[1], 10);
+    var to   = m[2] ? parseInt(m[2], 10) : from;
 
-    if (startStt !== null && endStt !== null && endStt < startStt) {
-        var tmp = startStt;
-        startStt = endStt;
-        endStt = tmp;
-    }
+    // HSK 7, 8, 9 → gộp hết thành "HSK7-9"
+    if (from >= 7 || to >= 7) return 'HSK7-9';
 
-    return {
-        type: 'hsk_stt',
-        hsk: hskValue,
-        startStt: startStt,
-        endStt: endStt,
-        original: q
-    };
+    // HSK 1-6 giữ nguyên
+    return 'HSK' + from;
 }
+
 function waitForData(callback) {
     if (window.__dataLoaded) {
         callback();
@@ -6093,7 +6086,9 @@ function buildFilters() {
         allowedHsk.forEach(function(h) {
             hskHtml += '<option value="' + h + '">' + h + '</option>';
         });
-        var allHskList = ['HSK1','HSK2','HSK3','HSK4','HSK5','HSK6'];
+
+        // ⭐ DANH SÁCH ĐẦY ĐỦ BAO GỒM HSK7-9
+        var allHskList = ['HSK1','HSK2','HSK3','HSK4','HSK5','HSK6','HSK7-9'];
         allHskList.forEach(function(h) {
             if (allowedHsk.indexOf(h) === -1) {
                 var lockLabel = info.tier === 'trial' ? '(gia hạn)' : '(đăng nhập)';
@@ -6121,6 +6116,7 @@ function buildFilters() {
         });
         subjectSelect.innerHTML = subjHtml;
     } else {
+        // ⭐ THÊM HSK7-9 VÀO DROPDOWN
         hskSelect.innerHTML =
             '<option value="">Tất cả</option>' +
             '<option value="HSK1">HSK1</option>' +
@@ -6128,7 +6124,9 @@ function buildFilters() {
             '<option value="HSK3">HSK3</option>' +
             '<option value="HSK4">HSK4</option>' +
             '<option value="HSK5">HSK5</option>' +
-            '<option value="HSK6">HSK6</option>';
+            '<option value="HSK6">HSK6</option>' +
+            '<option value="HSK7-9">HSK7-9</option>';
+
         var allSubjectSet2 = {};
         RAW_DATA.forEach(function(r) { if (r.subject) allSubjectSet2[r.subject] = 1; });
         var allSubjects2 = Object.keys(allSubjectSet2).sort();
@@ -6178,19 +6176,27 @@ function updateResultCount() {
         else spanEl.innerHTML = 'Tìm thấy <b>' + total + '</b> kết quả';
     }
 }
+/* ═══════════════════════════════════════════════════════════ */
+/* PARSE SEARCH QUERY — Nhận diện cú pháp đặc biệt              */
+/* Hỗ trợ:                                                       */
+/*   "hsk1"      / "hsk1 5"    / "hsk1 5 10"                    */
+/*   "hsk7" / "hsk8" / "hsk9" / "hsk7-9" / "hsk7-9 5"           */
+/*   "HSK1"      / "HSK7-9"    (chữ hoa/thường đều OK)          */
+/* ═══════════════════════════════════════════════════════════ */
 function parseSearchQuery(rawQuery) {
     var q = (rawQuery || '').trim();
     if (!q) return null;
 
     var qLower = q.toLowerCase();
 
-    // Hỗ trợ: "hsk1", "hsk1 5", "hsk1 5 10", "hsk7", "hsk7-9", "hsk7-9 5"
-    var match = qLower.match(/^hsk\s*(7[-–\s]*9|\d+)\s*(?:(\d+)(?:\s+(\d+))?)?$/);
+    // Hỗ trợ: 1-9 hoặc dải "7-9"
+    var match = qLower.match(/^hsk\s*(7[-–\s]*9|[789]|\d+)\s*(?:(\d+)(?:\s+(\d+))?)?$/);
     if (!match) return null;
 
-    var hskRaw = match[1].replace(/[\s–]/g, '');  // "7-9" hoặc "5"
+    var hskRaw = match[1].replace(/[\s–]/g, '');
     var hskValue;
 
+    // ⭐ HSK 7, 8, 9 đều gộp về "HSK7-9"
     if (hskRaw === '7-9' || hskRaw === '7' || hskRaw === '8' || hskRaw === '9') {
         hskValue = 'HSK7-9';
     } else {
@@ -6215,8 +6221,7 @@ function parseSearchQuery(rawQuery) {
         endStt: endStt,
         original: q
     };
-}
-/* ============================================================ */
+}/* ============================================================ */
 /* APPLY FILTER — Lọc câu theo search/HSK/subject                */
 /* Đã tích hợp cú pháp đặc biệt: "hsk1 5", "hsk1", "hsk1 5 10"  */
 /* ============================================================ */
@@ -6242,10 +6247,8 @@ function applyFilter() {
     }
 
     /* ═══ 3. LẤY TOÀN BỘ KHO — KHÔNG GIỚI HẠN TIER ═══ */
-    // ⭐ LUÔN dùng getLimitedData() để áp dụng giới hạn tier
     var baseData = getLimitedData();
 
-    /* ⭐ Lấy danh sách HSK mà user được phép xem */
     var info = getTierInfo();
     var allowedHsk = getAllowedHskList();
     var isUnlimited = (info.tier === 'active');
@@ -6254,10 +6257,10 @@ function applyFilter() {
     var parsed = parseSearchQuery(rawSearch);
 
     if (parsed && parsed.type === 'hsk_stt') {
-        var targetHsk = String(parsed.hsk || '').toUpperCase().replace(/\s+/g, '');
+        var targetHsk = normalizeHsk(parsed.hsk);   // ⭐ CHUẨN HOÁ
 
-        /* ⭐ CHECK QUYỀN: HSK này có trong quyền của user không? */
-        if (!isUnlimited && allowedHsk.indexOf(parsed.hsk) === -1) {
+        /* ⭐ CHECK QUYỀN */
+        if (!isUnlimited && allowedHsk.indexOf(targetHsk) === -1) {
             var lockMsg = info.tier === 'trial'
                 ? '⚠️ ' + parsed.hsk + ' chưa mở khoá (cần gia hạn)'
                 : '⚠️ ' + parsed.hsk + ' chưa mở khoá (cần đăng nhập)';
@@ -6269,8 +6272,7 @@ function applyFilter() {
         }
 
         filtered = baseData.filter(function(r) {
-            var rHsk = String(r.hsk || '').toUpperCase().replace(/\s+/g, '');
-            if (rHsk !== targetHsk) return false;
+            if (normalizeHsk(r.hsk) !== targetHsk) return false;   // ⭐
             if (parsed.startStt === null) return true;
 
             var sttNum = parseInt(String(r.stt).trim(), 10);
@@ -6310,7 +6312,7 @@ function applyFilter() {
         return;
     }
 
-    /* ═══ 5. LỌC TEXT THÔNG THƯỜNG (TRÊN TOÀN BỘ KHO) ═══ */
+    /* ═══ 5. LỌC TEXT THÔNG THƯỜNG ═══ */
     filtered = baseData.filter(function(r) {
         if (state.search) {
             var s = state.search;
@@ -6321,7 +6323,7 @@ function applyFilter() {
             var inSubject = (r.subject || '').toLowerCase().indexOf(s) !== -1;
             if (!inVi && !inZh && !inPinyin && !inTopic && !inSubject) return false;
         }
-        if (state.hsk     && r.hsk     !== state.hsk)     return false;
+        if (state.hsk && normalizeHsk(r.hsk) !== normalizeHsk(state.hsk)) return false;   // ⭐
         if (state.subject && r.subject !== state.subject) return false;
         return true;
     });
@@ -6329,7 +6331,7 @@ function applyFilter() {
     /* ⭐ LỌC LẦN 2: CHỈ GIỮ CÂU THUỘC QUYỀN USER */
     if (!isUnlimited && allowedHsk.length > 0) {
         filtered = filtered.filter(function(r) {
-            return allowedHsk.indexOf(r.hsk) !== -1;
+            return allowedHsk.indexOf(normalizeHsk(r.hsk)) !== -1;   // ⭐
         });
     }
 
@@ -7114,22 +7116,19 @@ function pfApplyFilter() {
     state.hsk     = $('pfHskFilter').value;
     state.subject = $('pfSubjectFilter').value;
 
-    /* ═══ LẤY TOÀN BỘ KHO — KHÔNG GIỚI HẠN TIER ═══ */
     var baseData = getLimitedData();
 
     var parsed = parseSearchQuery(rawSearch);
 
-    /* ⭐ Lấy danh sách HSK mà user được phép xem */
     var info = getTierInfo();
     var allowedHsk = getAllowedHskList();
     var isUnlimited = (info.tier === 'active');
 
     /* ═══ NHÁNH 1: CÚ PHÁP ĐẶC BIỆT ═══ */
     if (parsed && parsed.type === 'hsk_stt') {
-        var targetHsk = String(parsed.hsk || '').toUpperCase().replace(/\s+/g, '');
+        var targetHsk = normalizeHsk(parsed.hsk);   // ⭐ CHUẨN HOÁ
 
-        /* ⭐ CHECK QUYỀN */
-        if (!isUnlimited && allowedHsk.indexOf(parsed.hsk) === -1) {
+        if (!isUnlimited && allowedHsk.indexOf(targetHsk) === -1) {
             var lockMsg = info.tier === 'trial'
                 ? '⚠️ ' + parsed.hsk + ' chưa mở khoá (cần gia hạn)'
                 : '⚠️ ' + parsed.hsk + ' chưa mở khoá (cần đăng nhập)';
@@ -7137,8 +7136,7 @@ function pfApplyFilter() {
             filtered = [];
         } else {
             filtered = baseData.filter(function(r) {
-                var rHsk = String(r.hsk || '').toUpperCase().replace(/\s+/g, '');
-                if (rHsk !== targetHsk) return false;
+                if (normalizeHsk(r.hsk) !== targetHsk) return false;   // ⭐
                 if (parsed.startStt === null) return true;
 
                 var sttNum = parseInt(String(r.stt).trim(), 10);
@@ -7177,15 +7175,14 @@ function pfApplyFilter() {
                 var inSubject = (r.subject || '').toLowerCase().indexOf(s) !== -1;
                 if (!inVi && !inZh && !inPinyin && !inTopic && !inSubject) return false;
             }
-            if (state.hsk     && r.hsk     !== state.hsk)     return false;
+            if (state.hsk && normalizeHsk(r.hsk) !== normalizeHsk(state.hsk)) return false;   // ⭐
             if (state.subject && r.subject !== state.subject) return false;
             return true;
         });
 
-        /* ⭐ LỌC LẦN 2: CHỈ GIỮ CÂU THUỘC QUYỀN USER */
         if (!isUnlimited && allowedHsk.length > 0) {
             filtered = filtered.filter(function(r) {
-                return allowedHsk.indexOf(r.hsk) !== -1;
+                return allowedHsk.indexOf(normalizeHsk(r.hsk)) !== -1;   // ⭐
             });
         }
     }
@@ -7253,7 +7250,6 @@ function pfApplyFilter() {
         $('pfNextBtn').disabled = true;
     }
 }
-
 function updateCharPreview() {
     var input = $('pfInput');
     var preview = $('pfPreview');
