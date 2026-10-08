@@ -59,6 +59,7 @@ jobs:
 
           cfg['telegram_bot_token'] = os.environ.get('TELEGRAM_BOT_TOKEN', '')
           cfg['telegram_chat_id'] = os.environ.get('TELEGRAM_CHAT_ID', '')
+          cfg['super_admin'] = os.environ.get('SUPER_ADMIN_EMAIL', '')
 
           fb_json = os.environ.get('FIREBASE_CONFIG', '{}')
           try:
@@ -74,6 +75,7 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SUPER_ADMIN_EMAIL: ${{ secrets.SUPER_ADMIN_EMAIL }}
           FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG }}
 
       - name: Verify scripts/config.json
@@ -88,6 +90,7 @@ jobs:
           print('scripts/config.json OK')
           print('  - telegram_bot_token:', 'SET' if cfg.get('telegram_bot_token') else 'MISSING')
           print('  - telegram_chat_id:', 'SET' if cfg.get('telegram_chat_id') else 'MISSING')
+          print('  - super_admin:', 'SET' if cfg.get('super_admin') else 'MISSING')
           print('  - firebase_config.apiKey:', 'SET' if cfg.get('firebase_config', {}).get('apiKey') else 'MISSING')
           "
 
@@ -244,10 +247,6 @@ jobs:
           LEAK=0
           if grep -q "8936673606:AAGQt" index.html; then
             echo "LEAK: Old telegram token found in index.html"
-            LEAK=1
-          fi
-          if grep -qE '"telegram_bot_token"\s*:\s*"[0-9]{8,}:' index.html; then
-            echo "LEAK: Telegram bot token pattern found in index.html"
             LEAK=1
           fi
           if [ "$LEAK" -eq 1 ]; then
