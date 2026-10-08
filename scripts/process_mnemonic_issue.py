@@ -14,12 +14,11 @@ MNEMONIC_FILE = "data/ai_mnemonics.json"
 
 
 # ⭐ EMOJI CHO TỪNG PHẦN
-EMOJI_CHIET_TU = "\U0001F4A1"      # 💡
-EMOJI_AM_THANH = "\U0001F4CC"      # 📌
-EMOJI_CAU_CHUYEN # = "\U0001F3 🎬AC"   
-EMOJI_VI_DU = "\U0001F4CE"         # 📎
-EMOJI_LIEN_QUAN = "\U0001F517"     # 🔗
-
+EMOJI_CHIET_TU = "\U0001F4A1"
+EMOJI_AM_THANH = "\U0001F4CC"
+EMOJI_CAU_CHUYEN = "\U0001F3AC"
+EMOJI_VI_DU = "\U0001F4CE"
+EMOJI_LIEN_QUAN = "\U0001F517"
 
 def parse_issue_body(body):
     if not body:
