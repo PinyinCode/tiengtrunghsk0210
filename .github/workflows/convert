@@ -122,52 +122,6 @@ jobs:
       - name: Run convert script
         run: python scripts/convert.py
 
-      - name: Verify index.html after convert
-        run: |
-          if [ ! -f index.html ]; then
-            echo "index.html not found"
-            exit 1
-          fi
-          SIZE=$(stat -c%s index.html)
-          if [ "$SIZE" -lt 500000 ]; then
-            echo "index.html too small"
-            exit 1
-          fi
-          for el in RAW_DATA DATASET_REGISTRY FIREBASE_CONFIG CURRENT_DATASET; do
-            if grep -q "$el" index.html; then
-              echo "OK $el"
-            else
-              echo "MISSING $el"
-              exit 1
-            fi
-          done
-          OPEN_SCRIPT=$(grep -o "<script" index.html | wc -l)
-          CLOSE_SCRIPT=$(grep -o "</script>" index.html | wc -l)
-          if [ "$OPEN_SCRIPT" -ne "$CLOSE_SCRIPT" ]; then
-            echo "script tags mismatch"
-            exit 1
-          fi
-
-      - name: Verify AI mnemonics file
-        id: verify_ai
-        run: |
-          if [ ! -f "data/ai_mnemonics.json" ]; then
-            echo "has_ai=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          COUNT=$(python -c "import json; print(len(json.load(open('data/ai_mnemonics.json', encoding='utf-8'))))" 2>/dev/null || echo 0)
-          if [ "$COUNT" -gt 0 ]; then
-            echo "has_ai=true" >> $GITHUB_OUTPUT
-            echo "ai_count=$COUNT" >> $GITHUB_OUTPUT
-          else
-            echo "has_ai=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Clear Python cache
-        run: |
-          find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-          find . -type f -name "*.pyc" -delete 2>/dev/null || true
-
       - name: Run fix.py
         run: |
           if [ -f fix.py ]; then
@@ -182,6 +136,63 @@ jobs:
             python quick_search.py
           else
             echo "no quick_search.py"
+          fi
+
+      - name: Clear Python cache
+        run: |
+          find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+          find . -type f -name "*.pyc" -delete 2>/dev/null || true
+
+      - name: Verify index.html after convert
+        run: |
+          if [ ! -f index.html ]; then
+            echo "index.html not found"
+            exit 1
+          fi
+          if [ ! -f "data/all_datasets.json" ]; then
+            echo "data/all_datasets.json not found"
+            exit 1
+          fi
+          if [ ! -f "data/dataset_registry.json" ]; then
+            echo "data/dataset_registry.json not found"
+            exit 1
+          fi
+          for el in FIREBASE_CONFIG CURRENT_DATASET DATASET_REGISTRY_META window.__dataLoadPromise; do
+            if grep -q "$el" index.html; then
+              echo "OK $el"
+            else
+              echo "MISSING $el"
+              exit 1
+            fi
+          done
+          OPEN_SCRIPT=$(grep -o "<script" index.html | wc -l)
+          CLOSE_SCRIPT=$(grep -o "</script>" index.html | wc -l)
+          if [ "$OPEN_SCRIPT" -ne "$CLOSE_SCRIPT" ]; then
+            echo "script tags mismatch ($OPEN_SCRIPT vs $CLOSE_SCRIPT)"
+            exit 1
+          fi
+          SIZE=$(stat -c%s index.html)
+          echo "index.html size: $((SIZE / 1024)) KB"
+          if [ "$SIZE" -gt 2097152 ]; then
+            echo "index.html too large (>2MB), data still inline?"
+            exit 1
+          fi
+
+      - name: Verify AI mnemonics file
+        id: verify_ai
+        run: |
+          if [ ! -f "data/ai_mnemonics.json" ]; then
+            echo "has_ai=false" >> $GITHUB_OUTPUT
+            echo "ai_count=0" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          COUNT=$(python -c "import json; print(len(json.load(open('data/ai_mnemonics.json', encoding='utf-8'))))" 2>/dev/null || echo 0)
+          if [ "$COUNT" -gt 0 ]; then
+            echo "has_ai=true" >> $GITHUB_OUTPUT
+            echo "ai_count=$COUNT" >> $GITHUB_OUTPUT
+          else
+            echo "has_ai=false" >> $GITHUB_OUTPUT
+            echo "ai_count=0" >> $GITHUB_OUTPUT
           fi
 
       - name: Verify quick_search in index.html
@@ -201,22 +212,9 @@ jobs:
             echo "quick_search CSS not found"
           fi
 
-      - name: Verify AI mnemonics in index.html
-        run: |
-          if [ "${{ steps.verify_ai.outputs.has_ai }}" != "true" ]; then
-            exit 0
-          fi
-          AI_MARKER_COUNT=$(grep -o 'mnemonic_source":"ai"' index.html | wc -l)
-          AI_CONTENT_COUNT=$(grep -o 'Chiet tu' index.html | wc -l)
-          if [ "$AI_MARKER_COUNT" -eq 0 ] && [ "$AI_CONTENT_COUNT" -eq 0 ]; then
-            echo "no AI mnemonics found in index.html"
-            exit 1
-          fi
-          echo "AI mnemonics OK"
-
       - name: Verify datasets loaded
         run: |
-          if grep -q '"tonghop"' index.html; then
+          if grep -q '"tonghop"' data/dataset_registry.json; then
             echo "tonghop OK"
           else
             echo "tonghop MISSING"
@@ -234,6 +232,18 @@ jobs:
           if [ -f "data/ai_mnemonics.json" ]; then
             git add data/ai_mnemonics.json
           fi
+          if [ -f "data/all_datasets.json" ]; then
+            git add data/all_datasets.json
+          fi
+          if [ -f "data/dataset_registry.json" ]; then
+            git add data/dataset_registry.json
+          fi
+          if [ -f "data/fixpy_datasets.json" ]; then
+            git add data/fixpy_datasets.json
+          fi
+          if [ -f "data/similar_chars.json" ]; then
+            git add data/similar_chars.json
+          fi
           git add -A
           if git diff --quiet && git diff --staged --quiet; then
             echo "no changes"
@@ -250,15 +260,30 @@ jobs:
 
       - name: Prepare Pages artifact
         run: |
+          rm -rf _site
           mkdir -p _site
           cp index.html _site/
           [ -d "assets" ] && cp -r assets _site/ || true
           [ -d "static" ] && cp -r static _site/ || true
           [ -f "404.html" ] && cp 404.html _site/ || true
+          mkdir -p _site/data
           if [ -f "data/ai_mnemonics.json" ]; then
-            mkdir -p _site/data
             cp data/ai_mnemonics.json _site/data/
           fi
+          if [ -f "data/all_datasets.json" ]; then
+            cp data/all_datasets.json _site/data/
+          fi
+          if [ -f "data/dataset_registry.json" ]; then
+            cp data/dataset_registry.json _site/data/
+          fi
+          if [ -f "data/fixpy_datasets.json" ]; then
+            cp data/fixpy_datasets.json _site/data/
+          fi
+          if [ -f "data/similar_chars.json" ]; then
+            cp data/similar_chars.json _site/data/
+          fi
+          echo "=== _site contents ==="
+          find _site -type f | head -30
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
