@@ -1,0 +1,12 @@
+# Secret config — KHÔNG commit
+config.json
+
+# Env files
+.env
+.env.local
+*.token
+
+# Build artifacts
+__pycache__/
+*.pyc
+.DS_Store
