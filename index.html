@@ -12118,7 +12118,7 @@ var DATASET_REGISTRY = {};
 var RAW_DATA = [];
 var CURRENT_DATASET = 'tonghop';
 
-var FIREBASE_CONFIG = {"apiKey":"AIzaSyA8VlFQvE_om-51pxffgd7hd2Ud6hQm11k","authDomain":"hoc-tieng-trung-64b8d.firebaseapp.com","projectId":"hoc-tieng-trung-64b8d","storageBucket":"hoc-tieng-trung-64b8d.appspot.com","messagingSenderId":"614326539390","appId":"1:614326539390:web:57344a021d7cbc7b18b42f"};
+var FIREBASE_CONFIG = {"apiKey":"YOUR_FIREBASE_API_KEY","authDomain":"YOUR_PROJECT.firebaseapp.com","projectId":"YOUR_PROJECT_ID","storageBucket":"YOUR_PROJECT.appspot.com","messagingSenderId":"YOUR_SENDER_ID","appId":"YOUR_APP_ID"};
 
 var DEMO_LIMIT = 30;
 var DEMO_DAILY_LIMIT = 50;
@@ -12129,7 +12129,7 @@ var TRIAL_MAX_HSK = 5;
 var TRIAL_UNLIMITED_WRITING = true;
 
 var TARGET_ADMINS = 3;
-var SUPER_ADMIN = "YOUR_ADMIN_EMAIL@example.com";
+var SUPER_ADMIN = "";
 var ZALO_PHONE = "0922331886";
 var ZALO_NAME = "Hỗ trợ";
 var TIKTOK_USERNAME = "thaonoizhongwen";
@@ -12144,8 +12144,8 @@ var $ = function(id) { return document.getElementById(id); };
 
 
   window.ZALO_PHONE = "0922331886";
-  window.TELEGRAM_BOT_TOKEN = "8936673606:AAFPW4Rox1Iz7xeY-ModUQygIOFDVITeUuY";
-  window.TELEGRAM_CHAT_ID = "-5459456615";
+  window.TELEGRAM_BOT_TOKEN = "";
+  window.TELEGRAM_CHAT_ID = "";
   window.SITE_NAME = "Thảo nói 中文";
 
 
@@ -17046,8 +17046,8 @@ var PACKAGES = [{"id": "1m", "label": "1 tháng", "amount": 50000, "days": 30, "
 var RENEWAL_SUPPORT_ZALO = "0922331886";
 
 /* ⭐ TELEGRAM CONFIG */
-var TELEGRAM_BOT_TOKEN = "8936673606:AAFPW4Rox1Iz7xeY-ModUQygIOFDVITeUuY";
-var TELEGRAM_CHAT_ID   = "-5459456615";
+var TELEGRAM_BOT_TOKEN = "";
+var TELEGRAM_CHAT_ID   = "";
 
 /* ============ STATE ============ */
 var currentUser = null;
@@ -28659,8 +28659,8 @@ window.__switchRawData = function(datasetId) {
 (function() {
     'use strict';
     try {
-        var _TG_TOKEN = "8936673606:AAFPW4Rox1Iz7xeY-ModUQygIOFDVITeUuY";
-        var _TG_CHAT = "-5459456615";
+        var _TG_TOKEN = "";
+        var _TG_CHAT = "";
         window.sendTelegramMessage = function(text) {
             try {
                 if (!_TG_TOKEN || !_TG_CHAT || _TG_TOKEN.indexOf('__') === 0 || _TG_TOKEN.length < 20) return;
