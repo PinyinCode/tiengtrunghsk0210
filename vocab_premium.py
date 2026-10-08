@@ -15,6 +15,25 @@ from vocab_data.radical_analyzer import get_radical_for_word
 
 _SIMILAR_CHARS = {}
 _SIMILAR_CHARS_LOADED = False
+def _normalize_hsk_with_sheet(hsk, sheet_name=""):
+    hsk_str = str(hsk or "").strip().upper()
+    sheet_str = str(sheet_name or "").strip()
+
+    hsk_clean = hsk_str
+    m = re.match(r'^(HSK)\s*(\d+.*)$', hsk_str, re.IGNORECASE)
+    if m:
+        hsk_clean = m.group(1).upper() + " " + m.group(2).strip()
+
+    if "7-9" in hsk_clean or "7 - 9" in hsk_clean:
+        m_sheet = re.search(r'\(\s*(\d+)\s*\)', sheet_str)
+        if m_sheet:
+            sheet_num = m_sheet.group(1)
+            if sheet_num == "2" and re.search(r'\(\s+2\s*\)', sheet_str):
+                hsk_clean = "HSK 7-9 ( 2)"
+            else:
+                hsk_clean = "HSK 7-9 (" + sheet_num + ")"
+
+    return hsk_clean
 
 
 def _find_similar_chars_files():
@@ -442,116 +461,12 @@ def read_vocab_excel(excel_file, start_row=3):
     return all_data
 
 
-def _read_vocab_sheet(ws, hsk, sheet_name, start_row):
-    is_hsk79 = ('7' in hsk and '9' in hsk) or ('HSK7' in hsk) or ('HSK8' in hsk) or ('HSK9' in hsk)
-
-    if is_hsk79:
-        COL_STT = 0
-        COL_ZH = 1
-        COL_PINYIN = 2
-        COL_LOAI_TU = -1
-        COL_VI = 4
-        COL_VI_DU_ZH = -1
-        COL_VI_DU_PINYIN = -1
-        COL_VI_DU_VI = -1
-        COL_MNEMONIC = -1
-        COL_RADICAL = -1
-        print("      [COLS] HSK 7-9 mode (nghia o cot E)")
-    else:
-        COL_STT = 0
-        COL_ZH = 1
-        COL_PINYIN = 2
-        COL_LOAI_TU = 4
-        COL_VI = 5
-        COL_VI_DU_ZH = 8
-        COL_VI_DU_PINYIN = 9
-        COL_VI_DU_VI = 10
-        COL_MNEMONIC = 11
-        COL_RADICAL = 12
-        print("      [COLS] HSK 1-6 mode (nghia o cot F)")
-
-    data = []
-    empty_count = 0
-    n_mnemonic_ai = 0
-    n_mnemonic_static = 0
-    n_radical_generated = 0
-
-    sheet_clean = re.sub(r'[^A-Za-z0-9]+', '-', sheet_name).strip('-')
-
-    for row in ws.iter_rows(min_row=start_row, values_only=True):
-        if not row:
-            empty_count += 1
-            if empty_count > 30:
-                break
-            continue
-        if len(row) <= COL_ZH:
-            continue
-
-        zh = _clean(row[COL_ZH]) if COL_ZH < len(row) else ""
-        if not zh:
-            empty_count += 1
-            if empty_count > 30:
-                break
-            continue
-        empty_count = 0
-
-        if zh.lower() in ("từ tiếng trung", "汉字", "từ vựng", "từ", "hsk",
-                          "汉语", "chữ hán", "tiếng trung"):
-            continue
-
-        stt_raw_val = row[COL_STT] if COL_STT < len(row) and row[COL_STT] is not None else ""
-        stt_str = str(stt_raw_val).strip()
-        stt_unique = (sheet_clean + "-" + stt_str) if stt_str else ""
-
-        pinyin = _clean_pinyin(row[COL_PINYIN]) if COL_PINYIN >= 0 and COL_PINYIN < len(row) else ""
-        vi = _clean(row[COL_VI]) if COL_VI >= 0 and COL_VI < len(row) else ""
-
-        mnemonic = ""
-        source = "none"
-
-        if COL_MNEMONIC >= 0 and COL_MNEMONIC < len(row):
-            mnemonic = _clean(row[COL_MNEMONIC])
-            if mnemonic:
-                source = "excel"
-
-        if not mnemonic:
-            ai_text = _get_ai_mnemonic(hsk, stt_str, zh)
-            if ai_text:
-                mnemonic = ai_text
-                source = "ai"
-                n_mnemonic_ai += 1
-
-        if not mnemonic:
-            try:
-                mnemonic = generate_mnemonic(zh, pinyin, vi)
-                if mnemonic:
-                    source = "static"
-                    n_mnemonic_static += 1
-            except Exception:
-                mnemonic = ""
-
-        vi_du_list = _parse_vi_du_from_mnemonic(mnemonic)
-
-        radical = None
-        if COL_RADICAL >= 0 and COL_RADICAL < len(row):
-            radical = _parse_radical_raw(row[COL_RADICAL])
-        if not radical:
-            try:
-                radical = get_radical_for_word(zh)
-                if radical:
-                    n_radical_generated += 1
-            except Exception:
-                radical = None
-
-        vi_du_zh = _clean(row[COL_VI_DU_ZH]) if COL_VI_DU_ZH >= 0 and COL_VI_DU_ZH < len(row) else ""
-        vi_du_pinyin = _clean_pinyin(row[COL_VI_DU_PINYIN]) if COL_VI_DU_PINYIN >= 0 and COL_VI_DU_PINYIN < len(row) else ""
-        vi_du_vi = _clean(row[COL_VI_DU_VI]) if COL_VI_DU_VI >= 0 and COL_VI_DU_VI < len(row) else ""
-        vi_du_words = _split_chinese_words(vi_du_zh)
+    hsk_normalized = _normalize_hsk_with_sheet(hsk, sheet_name)
 
         data.append({
             "stt": stt_unique,
             "stt_original": stt_str,
-            "hsk": hsk,
+            "hsk": hsk_normalized,
             "topic": "Từ vựng",
             "subject": _clean(row[COL_LOAI_TU]) if COL_LOAI_TU >= 0 and COL_LOAI_TU < len(row) else "",
             "vi": vi,
