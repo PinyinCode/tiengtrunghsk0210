@@ -1,0 +1,52 @@
+name: 🔧 Fix Mnemonic Keys
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run fix script
+        id: fix
+        run: |
+          python scripts/fix_mnemonic_keys.py
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add data/ai_mnemonics.json
+
+          if git diff --staged --quiet; then
+            echo "Khong co key nao sai"
+          else
+            OK="${{ steps.fix.outputs.ok }}"
+            FIXED="${{ steps.fix.outputs.fixed }}"
+            git commit -m "Fix $FIXED key sai format ($OK key dung) [skip ci]"
+            git pull --rebase origin ${{ github.ref_name }} || true
+            git push origin HEAD:${{ github.ref_name }}
+          fi
+
+      - name: Summary
+        run: |
+          echo "## Fix Result" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tong entries:** ${{ steps.fix.outputs.total }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Key dung format:** ${{ steps.fix.outputs.ok }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Key da fix:** ${{ steps.fix.outputs.fixed }}" >> $GITHUB_STEP_SUMMARY
