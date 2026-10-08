@@ -524,7 +524,7 @@ def _read_vocab_sheet(ws, hsk, sheet_name, start_row):
         stt_str = str(stt_raw_val).strip()
         stt_unique = (sheet_clean + "-" + stt_str) if stt_str else ""
 
-        pinyin = _clean_pinyin(row[COL_PINYIN]) if COL_PINYIN >= 0 and COL_PINY else ""
+        pinyin = _clean_pinyin(row[COL_PINYIN]) if COL_PINYIN >= 0 and COL_PINYIN else ""
         vi = _clean(row[COL_VI]) if COL_VI >= 0 and COL_VI < len(row) else ""
 
         mnemonic = ""
