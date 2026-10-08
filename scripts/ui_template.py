@@ -4198,7 +4198,8 @@ function computeLockStats(selectedTopics, allowedHsk, maxQ, isUnlimited) {
     RAW_DATA.forEach(function(r) {
         var s = (r.subject || '').trim();
         if (selectedTopics.indexOf(s) === -1) return;
-        if (allowedHsk && allowedHsk.length > 0 && allowedHsk.indexOf(r.hsk) === -1) return;
+        // ⭐ DÙNG normalizeHsk
+        if (allowedHsk && allowedHsk.length > 0 && allowedHsk.indexOf(normalizeHsk(r.hsk)) === -1) return;
         stats.totalInSelected++;
     });
 
@@ -4233,8 +4234,9 @@ function getLimitedData() {
         return RAW_DATA.slice(0, max);
     }
 
+    // ⭐ DÙNG normalizeHsk ĐỂ SO SÁNH
     var poolByHsk = RAW_DATA.filter(function(r) {
-        return allowedHsk.indexOf(r.hsk) !== -1;
+        return allowedHsk.indexOf(normalizeHsk(r.hsk)) !== -1;
     });
 
     var maxPerTopic = getMaxPerTopic(max, RAW_DATA);
@@ -4249,10 +4251,13 @@ function getLimitedData() {
         var r = poolByHsk[i];
         var s = (r.subject || '').trim() || '__no_subject__';
         if ((topicCount[s] || 0) >= maxPerTopic) continue;
-        if (r.hsk && hskCount[r.hsk] !== undefined && hskCount[r.hsk] >= perHsk) continue;
+
+        var rHskNorm = normalizeHsk(r.hsk);   // ⭐ CHUẨN HOÁ
+        if (rHskNorm && hskCount[rHskNorm] !== undefined && hskCount[rHskNorm] >= perHsk) continue;
+
         result.push(r);
         topicCount[s] = (topicCount[s] || 0) + 1;
-        if (r.hsk && hskCount[r.hsk] !== undefined) hskCount[r.hsk]++;
+        if (rHskNorm && hskCount[rHskNorm] !== undefined) hskCount[rHskNorm]++;
     }
 
     if (result.length < max) {
@@ -4534,7 +4539,8 @@ function getAvailableTopicsForTier() {
 
     var subjectMap = {};
     RAW_DATA.forEach(function(r) {
-        if (info.tier !== 'active' && allowedHsk.indexOf(r.hsk) === -1) return;
+        // ⭐ DÙNG normalizeHsk
+        if (info.tier !== 'active' && allowedHsk.indexOf(normalizeHsk(r.hsk)) === -1) return;
         var s = (r.subject || '').trim();
         if (!s) return;
         subjectMap[s] = (subjectMap[s] || 0) + 1;
@@ -4672,7 +4678,8 @@ function renderOnboardingTopics() {
 
     var allTopicsFirstStt = {};
     RAW_DATA.forEach(function(r) {
-        if (allowedHsk.indexOf(r.hsk) === -1) return;
+        // ⭐ DÙNG normalizeHsk
+        if (allowedHsk.indexOf(normalizeHsk(r.hsk)) === -1) return;
         var s = (r.subject || '').trim();
         if (!s) return;
         var stt = parseInt(r.stt);
@@ -4750,7 +4757,6 @@ function renderOnboardingTopics() {
         container.appendChild(btn);
     });
 }
-
 function onToggleOnboardingTopic(topicName) {
     if (!_onboardingConfig) return;
     var max = _onboardingConfig.topics_per_user;
@@ -4970,7 +4976,6 @@ function applyOnboardingSelection(topics, scrollTop) {
     var maxQ = cfg.max_questions;
     var isUnlimitedQ = (maxQ === -1 || maxQ === Infinity);
 
-    // ⭐ HSK từ config
     var allowedHsk;
     if (cfg.hsk_allowed && Array.isArray(cfg.hsk_allowed) && cfg.hsk_allowed.length > 0) {
         allowedHsk = cfg.hsk_allowed.map(function(n) { return 'HSK' + n; });
@@ -4981,10 +4986,10 @@ function applyOnboardingSelection(topics, scrollTop) {
     // ⭐ Mở 50% số chủ đề (hardcode 0.5)
     var UNLOCK_RATIO = 0.5;
 
-    // ⭐ Bước 1: Lấy TẤT CẢ chủ đề (theo HSK config)
+    // ⭐ Bước 1: Lấy TẤT CẢ chủ đề (theo HSK config) — DÙNG normalizeHsk
     var allTopicsFirstStt = {};
     RAW_DATA.forEach(function(r) {
-        if (allowedHsk.indexOf(r.hsk) === -1) return;
+        if (allowedHsk.indexOf(normalizeHsk(r.hsk)) === -1) return;   // ⭐
         var s = (r.subject || '').trim();
         if (!s) return;
         var stt = parseInt(r.stt);
@@ -5005,9 +5010,9 @@ function applyOnboardingSelection(topics, scrollTop) {
     });
     var unlockedTopics = sortedAllTopics.slice(0, unlockedCount);
 
-    // ⭐ Bước 3: Lọc pool
+    // ⭐ Bước 3: Lọc pool — DÙNG normalizeHsk
     var pool = RAW_DATA.filter(function(r) {
-        if (allowedHsk.indexOf(r.hsk) === -1) return false;
+        if (allowedHsk.indexOf(normalizeHsk(r.hsk)) === -1) return false;   // ⭐
         var s = (r.subject || '').trim();
         if (topics.indexOf(s) === -1) return false;
         if (unlockedTopics.indexOf(s) === -1) return false;
@@ -5033,10 +5038,13 @@ function applyOnboardingSelection(topics, scrollTop) {
             var r = pool[i];
             var s = (r.subject || '').trim() || '__no_subject__';
             if ((topicCount[s] || 0) >= maxPerTopic) continue;
-            if (r.hsk && hskCount[r.hsk] !== undefined && hskCount[r.hsk] >= perHsk) continue;
+
+            var rHskNorm = normalizeHsk(r.hsk);   // ⭐
+            if (rHskNorm && hskCount[rHskNorm] !== undefined && hskCount[rHskNorm] >= perHsk) continue;
+
             final.push(r);
             topicCount[s] = (topicCount[s] || 0) + 1;
-            if (r.hsk && hskCount[r.hsk] !== undefined) hskCount[r.hsk]++;
+            if (rHskNorm && hskCount[rHskNorm] !== undefined) hskCount[rHskNorm]++;
         }
 
         if (final.length < maxQ) {
@@ -7040,11 +7048,16 @@ function pfBuildFilterOptions() {
     var subjSel = $('pfSubjectFilter');
     var info = getTierInfo();
     var isLimited = info.tier !== 'active';
+
     if (isLimited) {
         var allowedHsk = getAllowedHskList();
         var hskHtml = '<option value="">Tất cả</option>';
-        allowedHsk.forEach(function(h) { hskHtml += '<option value="' + h + '">' + h + '</option>'; });
-        var allHskList = ['HSK1','HSK2','HSK3','HSK4','HSK5','HSK6'];
+        allowedHsk.forEach(function(h) {
+            hskHtml += '<option value="' + h + '">' + h + '</option>';
+        });
+
+        // ⭐ DANH SÁCH ĐẦY ĐỦ BAO GỒM HSK7-9
+        var allHskList = ['HSK1','HSK2','HSK3','HSK4','HSK5','HSK6','HSK7-9'];
         allHskList.forEach(function(h) {
             if (allowedHsk.indexOf(h) === -1) {
                 var lockLabel = info.tier === 'trial' ? '(gia hạn)' : '(đăng nhập)';
@@ -7052,6 +7065,7 @@ function pfBuildFilterOptions() {
             }
         });
         hskSel.innerHTML = hskHtml;
+
         var allowedSubjects = getAllowedSubjectList();
         var allSubjectSet = {};
         RAW_DATA.forEach(function(r) { if (r.subject) allSubjectSet[r.subject] = 1; });
@@ -7062,13 +7076,16 @@ function pfBuildFilterOptions() {
             else locked.push(s);
         });
         var subjHtml = '<option value="">Tất cả chủ đề</option>';
-        unlocked.forEach(function(s) { subjHtml += '<option value="' + escapeHtml(s) + '">' + escapeHtml(s) + '</option>'; });
+        unlocked.forEach(function(s) {
+            subjHtml += '<option value="' + escapeHtml(s) + '">' + escapeHtml(s) + '</option>';
+        });
         locked.forEach(function(s) {
             var lockLabel = info.tier === 'trial' ? '(gia hạn)' : '(đăng nhập)';
             subjHtml += '<option value="' + escapeHtml(s) + '" disabled>' + escapeHtml(s) + ' ' + lockLabel + '</option>';
         });
         subjSel.innerHTML = subjHtml;
     } else {
+        // ⭐ THÊM HSK7-9 VÀO DROPDOWN
         hskSel.innerHTML =
             '<option value="">Tất cả</option>' +
             '<option value="HSK1">HSK1</option>' +
@@ -7076,19 +7093,23 @@ function pfBuildFilterOptions() {
             '<option value="HSK3">HSK3</option>' +
             '<option value="HSK4">HSK4</option>' +
             '<option value="HSK5">HSK5</option>' +
-            '<option value="HSK6">HSK6</option>';
+            '<option value="HSK6">HSK6</option>' +
+            '<option value="HSK7-9">HSK7-9</option>';
+
         var allSubjectSet2 = {};
         RAW_DATA.forEach(function(r) { if (r.subject) allSubjectSet2[r.subject] = 1; });
         var allSubjects2 = Object.keys(allSubjectSet2).sort();
         subjSel.innerHTML = '<option value="">Tất cả chủ đề</option>' +
-            allSubjects2.map(function(v){ return '<option value="'+escapeHtml(v)+'">'+escapeHtml(v)+'</option>'; }).join('');
+            allSubjects2.map(function(v) {
+                return '<option value="' + escapeHtml(v) + '">' + escapeHtml(v) + '</option>';
+            }).join('');
     }
+
     hskSel.value = $('hskFilter').value;
     subjSel.value = $('subjectFilter').value;
     $('pfSearchInput').value = $('searchInput').value;
     pfUpdateFilterUI();
 }
-
 function pfUpdateFilterUI() {
     var hsk = $('pfHskFilter').value;
     var subject = $('pfSubjectFilter').value;
