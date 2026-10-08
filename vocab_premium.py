@@ -471,9 +471,9 @@ def _read_vocab_sheet(ws, hsk, sheet_name, start_row):
         COL_PINYIN = 2
         COL_LOAI_TU = -1
         COL_VI = 4
-clean        COL_VI_DU_ZH_p = -1inyin
-        COL_VI_DU_PIN(rowYIN = -1
-        COL_VI[_DU_VICOL = -1
+        COL_VI_DU_ZH = -1
+        COL_VI_DU_PINYIN = -1
+        COL_VI_DU_VI = -1
         COL_MNEMONIC = -1
         COL_RADICAL = -1
         print("      [COLS] HSK 7-9 mode (nghia o cot E)")
