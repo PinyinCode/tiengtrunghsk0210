@@ -523,7 +523,7 @@ def _read_vocab_sheet(ws, hsk, sheet_name, start_row):
         stt_str = str(stt_raw_val).strip()
         stt_unique = (sheet_clean + "-" + stt_str) if stt_str else ""
 
-        pinyin = __PINYIN]) if COL_PINYIN >= 0 and COL_PINYIN < len(row) else ""
+        pinyin = _clean_pinyin(row[COL_PINYIN]) if COL_PINYIN >= 0 and COL_PINYIN < len(row) else ""
         vi = _clean(row[COL_VI]) if COL_VI >= 0 and COL_VI < len(row) else ""
 
         hsk_normalized = _normalize_hsk_with_sheet(hsk, sheet_name)
