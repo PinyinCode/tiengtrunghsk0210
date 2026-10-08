@@ -29232,6 +29232,7 @@ window.__switchRawData = function(datasetId) {
         patchPfApplyFilter();
         NEW_IDS.forEach(bindTab);
         patchMarkActive();
+        bindFixedTabs();
     }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', bindAll);
@@ -29247,6 +29248,68 @@ window.__switchRawData = function(datasetId) {
     if (document.body) {
         observer.observe(document.body, { childList: true, subtree: true });
     }
+
+    /* === BIND LAI 2 TAB GOC (tonghop + chuyen-nganh) === */
+    function bindFixedTabs() {
+        var tonghopBtn = document.querySelector('.ds-btn[data-dataset="tonghop"]');
+        if (tonghopBtn && !tonghopBtn.__fixedBind) {
+            tonghopBtn.__fixedBind = true;
+            tonghopBtn.addEventListener('click', function(e) {
+                e.stopImmediatePropagation();
+                e.stopPropagation();
+                var sub = document.getElementById('dsSubWrap');
+                if (sub) sub.style.display = 'none';
+                document.querySelectorAll('.ds-btn, .ds-sub-btn').forEach(function(b) {
+                    b.classList.remove('active');
+                });
+                this.classList.add('active');
+                if (typeof window.__switchRawData === 'function') {
+                    window.__switchRawData('tonghop');
+                }
+                if (typeof state !== 'undefined' && state) {
+                    state.search = '';
+                    state.hsk = '';
+                    state.subject = '';
+                }
+                try {
+                    var si = document.getElementById('searchInput');
+                    var hf = document.getElementById('hskFilter');
+                    var sf = document.getElementById('subjectFilter');
+                    if (si) si.value = '';
+                    if (hf) hf.value = '';
+                    if (sf) sf.value = '';
+                } catch(err) {}
+                try {
+                    if (typeof buildFilters === 'function') buildFilters();
+                    if (typeof applyFilter === 'function') applyFilter();
+                    if (typeof updateResultCount === 'function') updateResultCount();
+                } catch(err) {}
+            }, true);
+        }
+        var cnBtn = document.querySelector('.ds-btn[data-dataset-group="chuyen-nganh"]');
+        if (cnBtn && !cnBtn.__fixedBind) {
+            cnBtn.__fixedBind = true;
+            cnBtn.addEventListener('click', function(e) {
+                e.stopImmediatePropagation();
+                e.stopPropagation();
+                var sub = document.getElementById('dsSubWrap');
+                if (!sub) return;
+                var isOpen = sub.style.display === 'block';
+                if (isOpen) {
+                    sub.style.display = 'none';
+                    this.classList.remove('active');
+                } else {
+                    sub.style.display = 'block';
+                    document.querySelectorAll('.ds-btn').forEach(function(b) {
+                        b.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                }
+            }, true);
+        }
+    }
+    setTimeout(bindFixedTabs, 1500);
+    setInterval(bindFixedTabs, 2000);
 
     console.log('[fix.py] Da bind ' + NEW_IDS.length + ' tab:', NEW_IDS);
 })();
