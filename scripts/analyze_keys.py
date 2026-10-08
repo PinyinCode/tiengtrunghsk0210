@@ -6,7 +6,7 @@ nemonics.json khong            match Excel
 """
 
 import os
- ifimport re
+import re
 import json
 import json sys
 from collections import Counter
