@@ -9,6 +9,10 @@ Environment variables:
     ISSUE_BODY: nội dung body của issue
     ISSUE_NUMBER: số issue
     GITHUB_OUTPUT: file output của GitHub Actions
+
+FIX (2026-10):
+- Chuẩn hóa key có space: "HSK1" → "HSK 1"
+- Match format key cũ trong file ai_mnemonics.json
 """
 
 import os
@@ -34,7 +38,6 @@ def parse_issue_body(body):
     if not body:
         return {}
 
-    # Split theo "### "
     sections = re.split(r'^###\s+', body, flags=re.MULTILINE)
     data = {}
 
@@ -49,7 +52,6 @@ def parse_issue_body(body):
         field_name = lines[0].strip()
         field_value = lines[1].strip()
 
-        # Bỏ dấu _No response_ của GitHub
         if field_value == '_No response_':
             field_value = ''
 
@@ -62,10 +64,34 @@ def clean_issue_field(value):
     """Làm sạch giá trị từ issue."""
     if not value:
         return ""
-    # Bỏ markdown code block
     value = re.sub(r'^```\w*\n?', '', value)
     value = re.sub(r'\n?```$', '', value)
     return value.strip()
+
+
+# ═══════════════════════════════════════════════════════════════
+#  CHUẨN HÓA KEY
+# ═══════════════════════════════════════════════════════════════
+def normalize_key(hsk, stt, zh):
+    """
+    Chuẩn hóa key có space format giống file cũ:
+    "HSK1" → "HSK 1"
+    "HSK7-9" → "HSK 7-9"
+    
+    Kết quả: "HSK 1|4|爸爸"
+    """
+    hsk_str = str(hsk or "").strip().upper()
+    stt_str = str(stt or "").strip()
+    zh_str = str(zh or "").strip()
+
+    # Tách HSK và số
+    m = re.match(r'^(HSK)\s*(\d+.*)$', hsk_str, re.IGNORECASE)
+    if m:
+        hsk_norm = m.group(1).upper() + " " + m.group(2).strip()
+    else:
+        hsk_norm = hsk_str
+
+    return f"{hsk_norm}|{stt_str}|{zh_str}"
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -79,7 +105,7 @@ def load_mnemonics():
             data = json.load(f)
         return data if isinstance(data, dict) else {}
     except Exception as e:
-        print("⚠️  Load error: " + str(e), file=sys.stderr)
+        print("WARN Load error: " + str(e), file=sys.stderr)
         return {}
 
 
@@ -93,11 +119,9 @@ def save_mnemonics(data):
 #  GITHUB ACTIONS OUTPUT
 # ═══════════════════════════════════════════════════════════════
 def set_output(key, value):
-    """Ghi output cho GitHub Actions."""
     output_file = os.environ.get("GITHUB_OUTPUT")
     if output_file:
         with open(output_file, "a", encoding="utf-8") as f:
-            # Escape multiline
             if "\n" in str(value):
                 delimiter = "EOF_MARKER"
                 f.write(f"{key}<<{delimiter}\n{value}\n{delimiter}\n")
@@ -120,10 +144,8 @@ def main():
         set_output("message", "Issue body rỗng")
         return 1
 
-    # Parse
     fields = parse_issue_body(issue_body)
 
-    # Lấy dữ liệu
     hsk = clean_issue_field(fields.get("HSK", "")).upper()
     stt = clean_issue_field(fields.get("STT", ""))
     zh = clean_issue_field(fields.get("Chữ Hán", ""))
@@ -132,7 +154,6 @@ def main():
     radical = clean_issue_field(fields.get("Bộ thủ (tùy chọn)", ""))
     mnemonic = clean_issue_field(fields.get("Mẹo nhớ", ""))
 
-    # Validate
     errors = []
     if not hsk:
         errors.append("Thiếu HSK")
@@ -151,25 +172,33 @@ def main():
         print(f"❌ Validation errors: {errors}", file=sys.stderr)
         return 1
 
-    # Tạo key
-    key = f"{hsk}|{stt}|{zh}"
-    print(f"🔑 Key: {key}", file=sys.stderr)
+    # ⭐ TẠO KEY CÓ SPACE
+    key = normalize_key(hsk, stt, zh)
+    print(f"🔑 Key (normalized): {key}", file=sys.stderr)
 
-    # Load data cũ
     mnemonics = load_mnemonics()
     old_count = len(mnemonics)
 
-    # Kiểm tra trùng
+    # ⭐ XÓA KEY SAI FORMAT NẾU CÓ (không space)
+    key_wrong = f"{hsk}|{stt}|{zh}"  # "HSK1|4|爸爸"
+    if key_wrong in mnemonics and key_wrong != key:
+        del mnemonics[key_wrong]
+        print(f"🗑️ Đã xóa key sai format: {key_wrong}", file=sys.stderr)
+
+    # ⭐ XÓA KEY CÓ SPACE KHÁC NẾU CÓ (lowercase)
+    key_lower_wrong = f"{hsk.lower()}|{stt}|{zh}"
+    if key_lower_wrong in mnemonics and key_lower_wrong != key:
+        del mnemonics[key_lower_wrong]
+        print(f"🗑️ Đã xóa key lowercase: {key_lower_wrong}", file=sys.stderr)
+
     is_update = key in mnemonics
 
     # Update
     mnemonics[key] = mnemonic
 
-    # Save
     save_mnemonics(mnemonics)
     new_count = len(mnemonics)
 
-    # Output
     action = "cập nhật" if is_update else "thêm mới"
     set_output("status", "success")
     set_output("action", action)
