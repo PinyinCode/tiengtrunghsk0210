@@ -28676,14 +28676,23 @@ window.__switchRawData = function(datasetId) {
     })();
 
     window.__findByHskStt = function(hskTarget, sttTarget) {
+        function _normH(hsk) {
+            if (!hsk) return '';
+            var s = String(hsk).toUpperCase().trim();
+            s = s.replace(/\([^)]*\)/g, '').trim();
+            s = s.replace(/\s+/g, '');
+            var m = s.match(/^HSK(\d+)(?:[-–](\d+))?$/);
+            if (!m) return s;
+            var from = parseInt(m[1], 10);
+            var to = m[2] ? parseInt(m[2], 10) : from;
+            if (from >= 7 || to >= 7) return 'HSK7-9';
+            return 'HSK' + from;
+        }
         var pool = (typeof RAW_DATA !== 'undefined' && Array.isArray(RAW_DATA))
                    ? RAW_DATA : [];
-        var target = String(hskTarget || '').toUpperCase().replace(/\s+/g, '');
-        if (target === 'HSK7' || target === 'HSK8' || target === 'HSK9') {
-            target = 'HSK7-9';
-        }
+        var target = _normH(hskTarget);
         return pool.filter(function(r) {
-            var rh = String(r.hsk || '').toUpperCase().replace(/\s+/g, '');
+            var rh = _normH(r.hsk);
             if (rh !== target) return false;
             if (sttTarget === null) return true;
             var sttStr = (r.stt_original != null && String(r.stt_original).trim() !== '')
